@@ -441,48 +441,78 @@ const BackupManager = {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
 
-                // Leer Usuarios
-                if (workbook.Sheets["Usuarios"]) {
-                    const newUsers = XLSX.utils.sheet_to_json(workbook.Sheets["Usuarios"]);
+                // Función auxiliar para normalizar claves (convierte "Nombre" o "NAME" -> "name")
+                const normalizeData = (items) => {
+                    return items.map(item => {
+                        const newItem = {};
+                        Object.keys(item).forEach(key => {
+                            // Convertir clave a minúscula para evitar errores de mayúsculas
+                            let newKey = key.toLowerCase().trim();
+                            // Mapeo de nombres comunes en Excel a variables del sistema
+                            if(newKey === 'nombre') newKey = 'name';
+                            if(newKey === 'documento') newKey = 'document';
+                            if(newKey === 'telefono' || newKey === 'teléfono') newKey = 'phone';
+                            if(newKey === 'estado') newKey = 'status';
+                            if(newKey === 'fecha') newKey = 'date';
+                            // Asignar valor
+                            newItem[newKey] = item[key];
+                        });
+                        // Asegurar que ID exista
+                        if (!newItem.id) newItem.id = '_' + Math.random().toString(36).substr(2, 9);
+                        return newItem;
+                    });
+                };
+
+                // 1. LEER USUARIOS
+                // Intenta buscar la hoja "Usuarios", si no existe, busca la primera hoja
+                const sheetNameUsers = workbook.SheetNames.find(n => n.toLowerCase().includes('usuario')) || workbook.SheetNames[0];
+                if (sheetNameUsers) {
+                    let rawUsers = XLSX.utils.sheet_to_json(workbook.Sheets[sheetNameUsers]);
+                    const cleanUsers = normalizeData(rawUsers);
+                    
                     if (replaceData) {
-                        AppState.users = newUsers;
+                        AppState.users = cleanUsers;
                     } else {
-                        // Fusionar evitando duplicados por ID
-                        newUsers.forEach(u => {
-                            if (!AppState.users.some(existing => existing.id === u.id)) {
+                        cleanUsers.forEach(u => {
+                            // Evitar duplicados por Documento o ID
+                            if (!AppState.users.some(existing => existing.document === u.document)) {
                                 AppState.users.push(u);
                             }
                         });
                     }
                 }
 
-                // Leer Asistencias
-                if (workbook.Sheets["Asistencias"]) {
-                    const newAtt = XLSX.utils.sheet_to_json(workbook.Sheets["Asistencias"]);
-                    if (replaceData) AppState.attendance = newAtt;
-                    else AppState.attendance = [...AppState.attendance, ...newAtt];
+                // 2. LEER ASISTENCIAS (Busca hoja que contenga "asistencia")
+                const sheetNameAtt = workbook.SheetNames.find(n => n.toLowerCase().includes('asistencia'));
+                if (sheetNameAtt) {
+                    let rawAtt = XLSX.utils.sheet_to_json(workbook.Sheets[sheetNameAtt]);
+                    const cleanAtt = normalizeData(rawAtt);
+                    
+                    if (replaceData) AppState.attendance = cleanAtt;
+                    else AppState.attendance = [...AppState.attendance, ...cleanAtt];
                 }
 
-                // Leer Pagos
-                if (workbook.Sheets["Pagos"]) {
-                    const newInc = XLSX.utils.sheet_to_json(workbook.Sheets["Pagos"]);
-                    if (replaceData) AppState.income = newInc;
-                    else AppState.income = [...AppState.income, ...newInc];
+                // 3. LEER PAGOS (Busca hoja que contenga "pago" o "income")
+                const sheetNameInc = workbook.SheetNames.find(n => n.toLowerCase().includes('pago') || n.toLowerCase().includes('income'));
+                if (sheetNameInc) {
+                    let rawInc = XLSX.utils.sheet_to_json(workbook.Sheets[sheetNameInc]);
+                    const cleanInc = normalizeData(rawInc);
+                    
+                    if (replaceData) AppState.income = cleanInc;
+                    else AppState.income = [...AppState.income, ...cleanInc];
                 }
 
-                // Guardar todo
+                // GUARDAR Y RENDERIZAR
                 Utils.saveToLocal();
                 
-                // Intentar subir a la nube los datos restaurados (Opcional, puede tardar)
-                // newUsers.forEach(u => CloudService.saveUser(u)); 
-                
-                Utils.showAlert('Datos restaurados correctamente desde el archivo');
-                
-                // Refrescar interfaz
+                // Forzar actualización de la vista
+                console.log("Datos cargados:", AppState.users.length, "usuarios.");
                 UserManager.renderUsers();
                 AttendanceManager.renderList();
                 IncomeManager.renderHistory();
                 Utils.updateDashboardStats();
+                
+                Utils.showAlert(`Restauración completada. Usuarios: ${AppState.users.length}`);
                 
                 // Limpiar input
                 fileInput.value = '';
@@ -490,13 +520,12 @@ const BackupManager = {
                 document.getElementById('restoreData').disabled = true;
 
             } catch (error) {
-                console.error(error);
-                Utils.showAlert('Error al leer el archivo Excel. Asegúrate de que sea un respaldo válido.', 'error');
+                console.error("Error al restaurar:", error);
+                Utils.showAlert('Error leyendo el Excel. Revisa la consola (F12) para más detalles.', 'error');
             }
         };
         reader.readAsArrayBuffer(file);
     }
-};
 // ==========================================
 // 7. MÓDULO WHATSAPP Y AUXILIARES
 // ==========================================
@@ -565,4 +594,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.UserManager = UserManager;
     window.WhatsAppManager = WhatsAppManager;
 });
+
 
