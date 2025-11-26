@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+<!-- <base href="/antologia-box23/"> --> 
+    
+    <title>Antología Box23 - Sistema de Gestión</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="modal fade" id="whatsappModal" tabindex="-1" aria-labelledby="whatsappModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); color: var(--color-dark);">
+                    <h5 class="modal-title" id="whatsappModalLabel"><i class="fab fa-whatsapp"></i> Enviar mensaje por WhatsApp</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body whatsapp-modal">
+                    <div class="mb-3">
+                        <label for="whatsappNumber" class="form-label">Número de teléfono *</label>
+                        <input type="tel" class="form-control" id="whatsappNumber" placeholder="3001234567" required>
+                        <div class="phone-validation-error" id="whatsappPhoneError">Formato inválido. Use 10 dígitos sin espacios ni símbolos.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="whatsappMessage" class="form-label">Mensaje personalizado *</label>
+                        <textarea class="form-control" id="whatsappMessage" rows="4" required></textarea>
+                    </div>
+                    <div class="message-preview">
+                        <strong>Vista previa:</strong>
+                        <div id="messagePreview"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <a id="whatsappLink" class="btn btn-success" target="_blank">
+                        <i class="fab fa-whatsapp"></i> Enviar por WhatsApp
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); color: var(--color-dark);">
+                    <h5 class="modal-title" id="editUserModalLabel"><i class="fas fa-user-edit"></i> Editar Usuario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editUserForm">
+                        <input type="hidden" id="editUserId">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="editName" class="form-label">Nombre completo *</label>
+                                <input type="text" class="form-control" id="editName" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editDocument" class="form-label">Documento *</label>
+                                <input type="text" class="form-control" id="editDocument" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="editBirthdate" class="form-label">Fecha de nacimiento</label>
+                                <input type="date" class="form-control" id="editBirthdate">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editPhone" class="form-label">Teléfono *</label>
+                                <input type="tel" class="form-control" id="editPhone" placeholder="3001234567" required>
+                                <div class="phone-validation-error" id="editPhoneError">Formato inválido. Use 10 dígitos sin espacios ni símbolos.</div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="editEps" class="form-label">EPS</label>
+                                <input type="text" class="form-control" id="editEps">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editRh" class="form-label">RH *</label>
+                                <select class="form-select" id="editRh" required>
+                                    <option value="">Seleccionar tipo de sangre</option>
+                                    <option value="A+">A+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="B+">B+</option>
+                                    <option value="B-">B-</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="AB-">AB-</option>
+                                    <option value="O+">O+</option>
+                                    <option value="O-">O-</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="editPathology" class="form-label">Patología</label>
+                                <input type="text" class="form-control" id="editPathology">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editEmergencyContact" class="form-label">Contacto de emergencia *</label>
+                                <input type="text" class="form-control" id="editEmergencyContact" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="editEmergencyPhone" class="form-label">Teléfono de emergencia *</label>
+                                <input type="tel" class="form-control" id="editEmergencyPhone" placeholder="3001234567" required>
+                                <div class="phone-validation-error" id="editEmergencyPhoneError">Formato inválido. Use 10 dígitos sin espacios ni símbolos.</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editClassTime" class="form-label">Clase habitual *</label>
+                                <select class="form-select" id="editClassTime" required>
+                                    <option value="">Seleccionar clase</option>
+                                    <option value="5:00 am">5:00 am</option>
+                                    <option value="6:00 am">6:00 am</option>
+                                    <option value="7:00 am">7:00 am</option>
+                                    <option value="8:00 am">8:00 am</option>
+                                    <option value="4:00 pm">4:00 pm</option>
+                                    <option value="5:30 pm">5:30 pm</option>
+                                    <option value="6:30 pm">6:30 pm</option>
+                                    <option value="7:30 pm">7:30 pm</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="editAffiliationType" class="form-label">Tipo de afiliación *</label>
+                                <select class="form-select" id="editAffiliationType" required>
+                                    <option value="">Seleccionar tipo</option>
+                                    <option value="mensualidad">Mensualidad</option>
+                                    <option value="paquete 10 clases">Paquete 10 clases</option>
+                                    <option value="personalizado Diana">Personalizado Diana</option>
+                                    <option value="clase suelta">Clase suelta</option>
+                                    <option value="pole">Pole</option>
+                                    <option value="telas">Telas</option>
+                                    <option value="gap">GAP</option>
+                                    <option value="flex">FLEX</option>
+                                    <option value="Entrenador(a)">Entrenador(a)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editStatus" class="form-label">Estado *</label>
+                                <select class="form-select" id="editStatus" required>
+                                    <option value="active">Activo</option>
+                                    <option value="inactive">Inactivo</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="saveEditUser">Guardar Cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="emergencyInfoModal" tabindex="-1" aria-labelledby="emergencyInfoModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); color: var(--color-dark);">
+                    <h5 class="modal-title" id="emergenceInfoModalLabel"><i class="fas fa-first-aid"></i> Información de Emergencia</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="emergencyInfoContent">
+                        </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="paymentConfirmationModal" tabindex="-1" aria-labelledby="paymentConfirmationModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); color: var(--color-dark);">
+                    <h5 class="modal-title" id="paymentConfirmationModalLabel"><i class="fas fa-check-circle"></i> Pago Registrado</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>El pago se ha registrado correctamente. ¿Desea enviar un mensaje de confirmación por WhatsApp?</p>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="sendWhatsAppConfirmation" checked>
+                        <label class="form-check-label" for="sendWhatsAppConfirmation">
+                            Enviar mensaje de confirmación
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-success" id="sendConfirmationBtn">
+                        <i class="fab fa-whatsapp"></i> Enviar Confirmación
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="whatsappFormModal" tabindex="-1" aria-labelledby="whatsappFormModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); color: var(--color-dark);">
+                    <h5 class="modal-title" id="whatsappFormModalLabel"><i class="fab fa-whatsapp"></i> Formulario de Recolección de Datos</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Este formulario genera un mensaje para solicitar datos a nuevos usuarios por WhatsApp.
+                    </div>
+                    <form id="whatsappDataForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="clientName" class="form-label">Nombre del Cliente</label>
+                                <input type="text" class="form-control" id="clientName">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="clientPhone" class="form-label">Teléfono</label>
+                                <input type="tel" class="form-control" id="clientPhone" placeholder="3001234567">
+                                <div class="phone-validation-error" id="clientPhoneError">Formato inválido. Use 10 dígitos sin espacios ni símbolos.</div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="whatsappGroupLink" class="form-label">Enlace del Grupo de WhatsApp</label>
+                            <input type="url" class="form-control" id="whatsappGroupLink" value="https://chat.whatsapp.com/DSJzYAb6h58FQDA8yEAzwN" placeholder="https://chat.whatsapp.com/...">
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="includeGroupLink" checked>
+                            <label class="form-check-label" for="includeGroupLink">
+                                Incluir enlace al grupo en el mensaje
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="includeGoogleForm" checked>
+                            <label class="form-check-label" for="includeGoogleForm">
+                                Incluir enlace al formulario de Google
+                            </label>
+                        </div>
+                    </form>
+                    <div class="whatsapp-survey">
+                        <h6>Vista previa del mensaje:</h6>
+                        <div id="whatsappFormPreview" class="message-preview">
+                            El mensaje se generará automáticamente...
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <a id="whatsappFormLink" class="btn btn-success" target="_blank">
+                        <i class="fab fa-whatsapp"></i> Abrir en WhatsApp
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="importSummaryModal" tabindex="-1" aria-labelledby="importSummaryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); color: var(--color-dark);">
+                    <h5 class="modal-title" id="importSummaryModalLabel"><i class="fas fa-file-import"></i> Resumen de Importación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="importSummaryContent">
+                        </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-primary" id="confirmImportBtn">Confirmar Importación</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="birthdayModal" tabindex="-1" aria-labelledby="birthdayModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); color: var(--color-dark);">
+                    <h5 class="modal-title" id="birthdayModalLabel"><i class="fas fa-birthday-cake"></i> <span id="birthdayModalTitle">Cumpleaños</span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="birthdayContent">
+                        </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-success" id="sendBirthdayWishes">
+                        <i class="fab fa-whatsapp"></i> Enviar Felicitaciones
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid py-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="text-center flex-grow-1 mb-4" style="color: var(--color-primary);">Sistema de Gestión Antología Box23</h1>
+            <img src="antologia_logo.png" alt="Logo Antología Box23" class="img-fluid" style="max-height: 100px;">
+        </div>
+        
+        <div id="autorestoreSection" class="autorestore-section d-none">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5><i class="fas fa-sync-alt"></i> Restauración automática de datos</h5>
+                    <p class="mb-0">Se encontró un archivo de respaldo previo. ¿Desea restaurar los datos?</p>
+                </div>
+                <div>
+                    <button id="restoreAutoBtn" class="btn btn-success me-2">
+                        <i class="fas fa-check"></i> Sí, restaurar
+                    </button>
+                    <button id="skipRestoreBtn" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> No, empezar nuevo
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab">Usuarios</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="attendance-tab" data-bs-toggle="tab" data-bs-target="#attendance" type="button" role="tab">Asistencias</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="income-tab" data-bs-toggle="tab" data-bs-target="#income" type="button" role="tab">Pagos</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports" type="button" role="tab">Reportes</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="data-tab" data-bs-toggle="tab" data-bs-target="#data" type="button" role="tab">Datos</button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="myTabContent">
+            <div class="tab-pane fade show active" id="users" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-5">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0"><i class="fas fa-user-plus"></i> Registrar Nuevo Usuario</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="userForm">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="name" class="form-label">Nombre completo *</label>
+                                            <input type="text" class="form-control" id="name" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="document" class="form-label">Documento *</label>
+                                            <input type="text" class="form-control" id="document" required>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="birthdate" class="form-label">Fecha de nacimiento</label>
+                                            <input type="date" class="form-control" id="birthdate">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="phone" class="form-label">Teléfono *</label>
+                                            <input type="tel" class="form-control" id="phone" placeholder="3001234567" required>
+                                            <div class="phone-validation-error" id="phoneError">Formato inválido. Use 10 dígitos sin espacios ni símbolos.</div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="eps" class="form-label">EPS</label>
+                                            <input type="text" class="form-control" id="eps">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="rh" class="form-label">RH *</label>
+                                            <select class="form-select" id="rh" required>
+                                                <option value="">Seleccionar tipo de sangre</option>
+                                                <option value="A+">A+</option>
+                                                <option value="A-">A-</option>
+                                                <option value="B+">B+</option>
+                                                <option value="B-">B-</option>
+                                                <option value="AB+">AB+</option>
+                                                <option value="AB-">AB-</option>
+                                                <option value="O+">O+</option>
+                                                <option value="O-">O-</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="pathology" class="form-label">Patología</label>
+                                            <input type="text" class="form-control" id="pathology">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="emergencyContact" class="form-label">Contacto de emergencia *</label>
+                                            <input type="text" class="form-control" id="emergencyContact" required>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="emergencyPhone" class="form-label">Teléfono de emergencia *</label>
+                                            <input type="tel" class="form-control" id="emergencyPhone" placeholder="3001234567" required>
+                                            <div class="phone-validation-error" id="emergencyPhoneError">Formato inválido. Use 10 dígitos sin espacios ni símbolos.</div>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="classTime" class="form-label">Clase habitual *</label>
+                                            <select class="form-select" id="classTime" required>
+                                                <option value="">Seleccionar clase</option>
+                                                <option value="5:00 am">5:00 am</option>
+                                                <option value="6:00 am">6:00 am</option>
+                                                <option value="7:00 am">7:00 am</option>
+                                                <option value="8:00 am">8:00 am</option>
+                                                <option value="4:00 pm">4:00 pm</option>
+                                                <option value="5:30 pm">5:30 pm</option>
+                                                <option value="6:30 pm">6:30 pm</option>
+                                                <option value="7:30 pm">7:30 pm</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="affiliationType" class="form-label">Tipo de afiliación *</label>
+                                            <select class="form-select" id="affiliationType" required>
+                                                <option value="">Seleccionar tipo</option>
+                                                <option value="mensualidad">Mensualidad</option>
+                                                <option value="paquete 10 clases">Paquete 10 clases</option>
+                                                <option value="personalizado Diana">Personalizado Diana</option>
+                                                <option value="clase suelta">Clase suelta</option>
+                                                <option value="pole">Pole</option>
+                                                <option value="gap">GAP</option>
+                                                <option value="flex">FLEX</option>
+                                                <option value="telas">Telas</option>
+                                                <option value="Entrenador(a)">Entrenador(a)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="status" class="form-label">Estado *</label>
+                                            <select class="form-select" id="status" required>
+                                                <option value="active">Activo</option>
+                                                <option value="inactive">Inactivo</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100">Guardar Usuario</button>
+                                </form>
+                                <div class="mt-3 text-center">
+                                    <button class="btn btn-outline-info" id="openWhatsAppForm">
+                                        <i class="fab fa-whatsapp"></i> Generar formulario para WhatsApp
+                                    </button>
+                                    <div class="mt-2">
+                                        <small class="text-muted">O utiliza nuestro <a href="https://forms.gle/ZHUj1Q7YiDhE5P498" target="_blank" class="google-form-link">formulario de Google</a> para recopilar información</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-7">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0"><i class="fas fa-users"></i> Usuarios Registrados</h5>
+                                <button class="btn btn-sm btn-outline-warning" id="showBirthdaysThisMonth">
+                                    <i class="fas fa-birthday-cake"></i> Cumpleaños del Mes
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div class="search-box">
+                                    <input type="text" class="form-control" id="searchUserInput" placeholder="Buscar usuario por nombre, documento o información de emergencia...">
+                                </div>
+                                <div class="table-responsive table-container">
+                                    <table class="table table-striped table-hover" id="usersTable">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Nombre</th>
+                                                <th>Documento</th>
+                                                <th>Teléfono</th>
+                                                <th>Clase</th>
+                                                <th>Estado</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="usersList">
+                                            </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-pane fade" id="attendance" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0"><i class="fas fa-calendar-check"></i> Registrar Asistencias</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="attendanceDate" class="form-label">Fecha *</label>
+                                        <input type="date" class="form-control" id="attendanceDate" required>
+                                    </div>
+                                    <div class="col-md-6 d-flex align-items-end">
+                                        <button class="btn btn-outline-primary w-100" id="refreshAttendance">
+                                            <i class="fas fa-sync-alt"></i> Actualizar Lista
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="attendance-stats mb-4">
+                                    <div class="attendance-stat-item">
+                                        <div class="attendance-stat-icon">
+                                            <i class="fas fa-users"></i>
+                                        </div>
+                                        <div class="attendance-stat-content">
+                                            <h5 id="totalUsersCount">0</h5>
+                                            <p>Usuarios Activos</p>
+                                        </div>
+                                    </div>
+                                    <div class="attendance-stat-item">
+                                        <div class="attendance-stat-icon">
+                                            <i class="fas fa-user-check"></i>
+                                        </div>
+                                        <div class="attendance-stat-content">
+                                            <h5 id="presentUsersCount">0</h5>
+                                            <p>Asistencias Hoy</p>
+                                        </div>
+                                    </div>
+                                    <div class="attendance-stat-item">
+                                        <div class="attendance-stat-icon">
+                                            <i class="fas fa-clock"></i>
+                                        </div>
+                                        <div class="attendance-stat-content">
+                                            <h5 id="pendingUsersCount">0</h5>
+                                            <p>Pendientes</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="attendance-quick-actions">
+                                    <button class="btn btn-outline-success" id="markAllPresent">
+                                        <i class="fas fa-check-circle"></i> Marcar Todos Presentes
+                                    </button>
+                                    <button class="btn btn-outline-secondary" id="clearAllAttendance">
+                                        <i class="fas fa-times-circle"></i> Limpiar Todo
+                                    </button>
+                                </div>
+
+                                <div class="search-box mb-3">
+                                    <input type="text" class="form-control" id="attendanceSearchInput" placeholder="Buscar usuario por nombre...">
+                                </div>
+                                
+                                <div class="attendance-user-list">
+                                    <div id="attendanceUsersList">
+                                        </div>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <button class="btn btn-success w-100" id="saveAttendance">
+                                        <i class="fas fa-save"></i> Guardar Todas las Asistencias
+                                    </button>
+                                </div>
+                                
+                                <div class="mt-4">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h5 class="card-title mb-0"><i class="fas fa-list"></i> Historial de Asistencias</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="attendance-filters">
+                                                <div class="row">
+                                                    <div class="col-md-3">
+                                                        <label for="attendanceStartDateFilter" class="form-label">Fecha inicial</label>
+                                                        <input type="date" class="form-control" id="attendanceStartDateFilter">
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label for="attendanceEndDateFilter" class="form-label">Fecha final</label>
+                                                        <input type="date" class="form-control" id="attendanceEndDateFilter">
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label for="attendanceUserFilter" class="form-label">Usuario</label>
+                                                        <select class="form-select" id="attendanceUserFilter">
+                                                            <option value="">Todos los usuarios</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-3 d-flex align-items-end">
+                                                        <button class="btn btn-primary w-100" id="filterAttendanceBtn">Filtrar</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="table-responsive table-container">
+                                                <table class="table table-striped table-hover" id="attendanceTable">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Fecha</th>
+                                                            <th>Usuario</th>
+                                                            <th>Clase</th>
+                                                            <th>Estado</th>
+                                                            <th>Acciones</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="attendanceList">
+                                                        </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="card mt-4">
+                                    <div class="card-header bg-warning text-dark">
+                                        <h5 class="card-title mb-0"><i class="fas fa-exclamation-triangle"></i> Alertas de Inasistencias</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="absenceAlertsList">
+                                            </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-pane fade" id="income" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-5">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0"><i class="fas fa-money-bill-wave"></i> Registrar Pago</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="incomeForm">
+                                    <div class="mb-3">
+                                        <label for="incomeUserSearch" class="form-label">Buscar usuario</label>
+                                        <input type="text" class="form-control" id="incomeUserSearch" placeholder="Escriba nombre, documento o clase...">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="incomeUserSelect" class="form-label">Usuario *</label>
+                                        <select class="form-select" id="incomeUserSelect" required>
+                                            <option value="">Seleccionar usuario</option>
+                                        </select>
+                                    </div>
+                                    <div class="date-range">
+                                        <h6 class="mb-3">Rango de vigencia</h6>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="startDate" class="form-label">Fecha inicial *</label>
+                                                <input type="date" class="form-control" id="startDate" required>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="endDate" class="form-label">Fecha final *</label>
+                                                <input type="date" class="form-control" id="endDate" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="paymentMethod" class="form-label">Medio de pago *</label>
+                                        <select class="form-select" id="paymentMethod" required>
+                                            <option value="">Seleccionar medio</option>
+                                            <option value="efectivo">Efectivo</option>
+                                            <option value="transferencia">Transferencia</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="amount" class="form-label">Monto ($) *</label>
+                                        <input type="number" step="0.01" class="form-control" id="amount" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="description" class="form-label">Descripción</label>
+                                        <textarea class="form-control" id="description" rows="2"></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Registrar Pago</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-7">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0"><i class="fas fa-chart-line"></i> Registro de Pagos</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-3">
+                                        <label for="incomeStartDateFilter" class="form-label">Fecha inicial</label>
+                                        <input type="date" class="form-control" id="incomeStartDateFilter">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="incomeEndDateFilter" class="form-label">Fecha final</label>
+                                        <input type="date" class="form-control" id="incomeEndDateFilter">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="incomeFilterUser" class="form-label">Usuario</label>
+                                        <select class="form-select" id="incomeFilterUser">
+                                            <option value="">Todos los usuarios</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3 d-flex align-items-end">
+                                        <button class="btn btn-primary w-100" id="filterIncomeBtn">Filtrar</button>
+                                    </div>
+                                </div>
+                                <div class="table-responsive table-container">
+                                    <table class="table table-striped table-hover" id="incomeTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Fecha Pago</th>
+                                                <th>Usuario</th>
+                                                <th>Monto</th>
+                                                <th>Método</th>
+                                                <th>Válido hasta</th>
+                                                <th>Descripción</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="incomeList">
+                                            </tbody>
+                                        <tfoot>
+                                            <tr class="total-row">
+                                                <td colspan="2"><strong>Total</strong></td>
+                                                <td><strong id="incomeTotal">$0.00</strong></td>
+                                                <td colspan="4"></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                                <div id="packageWarning" class="alert mt-3 d-none package-warning">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span id="warningText"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-pane fade" id="reports" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0"><i class="fas fa-chart-pie"></i> Reportes y Estadísticas</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-4">
+                                    <div class="col-md-3">
+                                        <div class="card summary-card">
+                                            <div class="card-body text-center">
+                                                <h5 class="card-title" id="reportTotalUsers">0</h5>
+                                                <p class="card-text">Usuarios activos</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card summary-card">
+                                            <div class="card-body text-center">
+                                                <h5 class="card-title" id="reportTotalIncome">$0</h5>
+                                                <p class="card-text">Ingresos mensuales</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card summary-card">
+                                            <div class="card-body text-center">
+                                                <h5 class="card-title" id="reportAttendanceRate">0%</h5>
+                                                <p class="card-text">Tasa de asistencia</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card summary-card">
+                                            <div class="card-body text-center">
+                                                <h5 class="card-title" id="reportPackagesCompleted">0</h5>
+                                                <p class="card-text">Paquetes completados</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <div class="card">
+                                            <div class="card-header">
+                                                <h6 class="card-title mb-0">Distribución por tipo de afiliación</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="chart-container">
+                                                    <canvas id="affiliationChart"></canvas>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card">
+                                            <div class="card-header">
+                                                <h6 class="card-title mb-0">Asistencia por clase</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="chart-container">
+                                                    <canvas id="attendanceChart"></canvas>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title mb-0">Reporte detallado</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row mb-3">
+                                            <div class="col-md-3">
+                                                <label for="reportStartDate" class="form-label">Fecha inicial</label>
+                                                <input type="date" class="form-control" id="reportStartDate">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label for="reportEndDate" class="form-label">Fecha final</label>
+                                                <input type="date" class="form-control" id="reportEndDate">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label for="reportType" class="form-label">Tipo de reporte</label>
+                                                <select class="form-select" id="reportType">
+                                                    <option value="attendance">Asistencias</option>
+                                                    <option value="income">Pagos</option>
+                                                    <option value="users">Usuarios</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3 d-flex align-items-end">
+                                                <button class="btn btn-primary w-100" id="generateReportBtn">
+                                                    <i class="fas fa-download"></i> Generar Reporte
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="table-responsive table-container">
+                                            <table class="table table-striped table-hover" id="reportTable">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Fecha</th>
+                                                        <th>Descripción</th>
+                                                        <th>Usuario</th>
+                                                        <th>Monto/Estado</th>
+                                                        <th>Detalles</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="reportList">
+                                                    </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-pane fade" id="data" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card import-export-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0"><i class="fas fa-database"></i> Respaldo de Datos</h5>
+                            </div>
+                            <div class="card-body text-center">
+                                <p class="card-text">Realice una copia de seguridad de todos los datos del sistema</p>
+                                <button class="btn btn-success mb-3" id="backupData">
+                                    <i class="fas fa-download"></i> Descargar Respaldo Completo
+                                </button>
+                                <p class="text-muted">Se descargará un archivo Excel con todos los datos actuales</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card import-export-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0"><i class="fas fa-upload"></i> Restaurar Datos</h5>
+                            </div>
+                            <div class="card-body text-center">
+                                <p class="card-text">Restaurar datos desde un archivo Excel previamente exportado</p>
+                                <div class="file-input-container btn btn-primary mb-2">
+                                    <i class="fas fa-file-excel"></i> Seleccionar archivo Excel
+                                    <input type="file" id="restoreFile" class="file-input" accept=".xlsx, .xls">
+                                </div>
+                                <div id="selectedFileName" class="text-muted mt-2">Ningún archivo seleccionado</div>
+                                <button class="btn btn-warning mt-3" id="restoreData" disabled>
+                                    <i class="fas fa-upload"></i> Restaurar Datos
+                                </button>
+                                <div class="form-check mt-3">
+                                    <input class="form-check-input" type="checkbox" id="replaceData">
+                                    <label class="form-check-label" for="replaceData">
+                                        Reemplazar datos existentes
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0"><i class="fas fa-info-circle"></i> Información del Sistema</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="card summary-card">
+                                            <div class="card-body text-center">
+                                                <h5 class="card-title" id="infoUsers">0</h5>
+                                                <p class="card-text">Usuarios registrados</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card summary-card">
+                                            <div class="card-body text-center">
+                                                <h5 class="card-title" id="infoAttendance">0</h5>
+                                                <p class="card-text">Registros de asistencia</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card summary-card">
+                                            <div class="card-body text-center">
+                                                <h5 class="card-title" id="infoIncome">0</h5>
+                                                <p class="card-text">Registros de pagos</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card summary-card">
+                                            <div class="card-body text-center">
+                                                <h5 class="card-title" id="infoLastBackup">Nunca</h5>
+                                                <p class="card-text">Último respaldo</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="alert alert-warning mt-4">
+                                    <h6><i class="fas fa-exclamation-triangle"></i> Importante</h6>
+                                    <p>Los datos se almacenan localmente en su navegador. Para evitar pérdida de información:</p>
+                                    <ol>
+                                        <li>Realice respaldos regularmente</li>
+                                        <li>Guarde los archivos de respaldo en un lugar seguro</li>
+                                        <li>Si cambia de dispositivo o navegador, deberá restaurar los datos desde un archivo</li>
+                                    </ol>
+                                </div>
+                                
+                                <div class="form-check mt-3">
+                                    <input class="form-check-input" type="checkbox" id="autoBackupCheckbox">
+                                    <label class="form-check-label" for="autoBackupCheckbox">
+                                        Realizar respaldo automático cada 15 minutos
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header" style="background: linear-gradient(135deg, #7C77B9, #1D8A99);">
+                        <h5 class="card-title mb-0"><i class="fas fa-cloud"></i> Respaldo en la Nube (Neon PostgreSQL)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> 
+                            <strong>Respaldo automático en base de datos segura</strong><br>
+                            Tus datos se respaldan automáticamente en Neon PostgreSQL cada vez que guardas cambios.
+                            Los respaldos en la nube te permiten recuperar tus datos desde cualquier dispositivo.
+                        </div>
+            
+                        <div class="row text-center">
+                            <div class="col-md-4 mb-3">
+                                <button class="btn btn-success w-100" id="manualBackupBtn">
+                                    <i class="fas fa-cloud-upload-alt"></i> Respaldar Manualmente
+                                </button>
+                                <small class="text-muted">Forzar respaldo inmediato</small>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <button class="btn btn-warning w-100" id="restoreCloudBtn">
+                                    <i class="fas fa-cloud-download-alt"></i> Restaurar desde Nube
+                                </button>
+                                <small class="text-muted">Recuperar último respaldo</small>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <button class="btn btn-info w-100" id="checkCloudStatusBtn">
+                                    <i class="fas fa-sync-alt"></i> Verificar Estado
+                                </button>
+                                <small class="text-muted">Comprobar conexión</small>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 p-3" style="background-color: rgba(39, 249, 212, 0.1); border-radius: 8px;">
+                            <h6><i class="fas fa-database"></i> Estado de la Nube</h6>
+                            <div id="cloudStatus">
+                                <p class="mb-1"><span id="cloudStatusIcon">🔵</span> <span id="cloudStatusText">Conectado a Neon PostgreSQL</span></p>
+                                <p class="mb-1">💾 Respaldo automático: <strong>ACTIVADO</strong></p>
+                                <p class="mb-0">🕒 Última sincronización: <span id="lastCloudSync">Nunca</span></p>
+                            </div>
+                        </div>
+                            
+                        <div class="mt-3">
+                            <h6><i class="fas fa-history"></i> Últimos Respaldos</h6>
+                            <div id="backupHistory" class="text-muted">
+                                <small>Los respaldos se mostrarán aquí...</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>        
+        
+        <button class="btn btn-success rounded-circle p-3" id="exportBtn" data-bs-toggle="tooltip" data-bs-placement="left" title="Exportar a Excel">
+            <i class="fas fa-file-excel fa-2x"></i>
+        </button>
+    </div>
+
+    <div class="backup-notification" id="backupNotification">
+        <i class="fas fa-info-circle me-2"></i>
+        <span id="backupNotificationText">Respaldo automático realizado</span>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
+
+
