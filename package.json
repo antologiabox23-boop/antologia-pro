@@ -7,10 +7,14 @@
   },
   "scripts": {
     "dev": "vercel dev",
-    "deploy": "vercel --prod"
+    "deploy": "vercel --prod",
+    "env:set": "vercel env add"
   },
   "dependencies": {
     "pg": "^8.11.3",
     "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "@vercel/node": "^3.0.0"
   }
 }
