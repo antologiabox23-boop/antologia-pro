@@ -1,16 +1,8 @@
 {
   "name": "antologia-box23",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "type": "module",
-  "engines": {
-    "node": "24.x"
-  },
-  "scripts": {
-    "dev": "vercel dev",
-    "deploy": "vercel --prod"
-  },
   "dependencies": {
-    "pg": "^8.11.3",
-    "cors": "^2.8.5"
+    "pg": "^8.11.3"
   }
 }
