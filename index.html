@@ -1945,6 +1945,19 @@
                     return [];
                 }
             }
+            // Ejemplo para poner dentro de tu <script> en index.html
+            async function probarConexion() {
+                try {
+                    const respuesta = await fetch('/api/usuarios'); // Llama a tu nuevo backend
+                    const datos = await respuesta.json();
+                    console.log("Datos recibidos de Neon:", datos);
+                    alert("Conectado a Neon: " + JSON.stringify(datos));
+                } catch (error) {
+                    console.error("Error:", error);
+                }
+            }
+
+// Puedes llamar a esta función en tu 'DOMContentLoaded' para probar.    
             // Configurar validación de teléfonos
             setupPhoneValidation();
 
@@ -4349,4 +4362,5 @@ El equipo de Antología Box23`;
 </body>
 
 </html>
+
 
