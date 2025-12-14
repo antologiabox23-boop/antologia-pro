@@ -1,35 +1,101 @@
-// api/usuarios.js
-const { Pool } = require('pg');
+import { Pool } from 'pg';
 
-// Vercel inyectará automáticamente la variable POSTGRES_URL o DATABASE_URL
-// Usamos process.env para leerla de forma segura
+// Configuración de la conexión (Vercel inyecta esto automáticamente)
 const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL,
+  connectionString: process.env.POSTGRES_URL,
   ssl: {
-    rejectUnauthorized: false // Necesario para Neon en algunos entornos
+    rejectUnauthorized: false
   }
 });
 
 export default async function handler(request, response) {
-  try {
-    // 1. Intentamos conectar
-    const client = await pool.connect();
-    
-    // 2. Hacemos una consulta simple.
-    // (Asegúrate de tener alguna tabla creada, o usa 'SELECT NOW()' para probar fecha)
-    const result = await client.query('SELECT NOW() as tiempo_actual');
-    
-    // 3. Liberamos el cliente
-    client.release();
+  const client = await pool.connect();
 
-    // 4. Respondemos al Frontend con los datos
-    return response.status(200).json({ 
-      status: 'Conexión Exitosa con Neon', 
-      data: result.rows 
-    });
+  try {
+    // 1. OBTENER TODOS LOS USUARIOS (GET)
+    if (request.method === 'GET') {
+      // Usamos "AS" para cambiar snake_case (BD) a camelCase (Frontend)
+      const result = await client.query(`
+        SELECT 
+          id, name, document, 
+          TO_CHAR(birthdate, 'YYYY-MM-DD') as birthdate, 
+          phone, eps, rh, pathology,
+          emergency_contact as "emergencyContact",
+          emergency_phone as "emergencyPhone",
+          class_time as "classTime",
+          affiliation_type as "affiliationType",
+          status,
+          created_at as "createdAt"
+        FROM users 
+        ORDER BY name ASC
+      `);
+      return response.status(200).json(result.rows);
+    }
+
+    // 2. CREAR UN USUARIO NUEVO (POST)
+    if (request.method === 'POST') {
+      const { 
+        id, name, document, birthdate, phone, eps, rh, pathology, 
+        emergencyContact, emergencyPhone, classTime, affiliationType, status 
+      } = request.body;
+
+      // Importante: El orden de los $1, $2 debe coincidir con el array de values
+      const query = `
+        INSERT INTO users (
+          id, name, document, birthdate, phone, eps, rh, pathology, 
+          emergency_contact, emergency_phone, class_time, affiliation_type, status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        RETURNING *
+      `;
+      
+      const values = [
+        id, name, document, birthdate, phone, eps, rh, pathology, 
+        emergencyContact, emergencyPhone, classTime, affiliationType, status || 'active'
+      ];
+
+      const result = await client.query(query, values);
+      return response.status(201).json(result.rows[0]);
+    }
+
+    // 3. ACTUALIZAR UN USUARIO (PUT)
+    if (request.method === 'PUT') {
+      const { 
+        id, name, document, birthdate, phone, eps, rh, pathology, 
+        emergencyContact, emergencyPhone, classTime, affiliationType, status 
+      } = request.body;
+
+      const query = `
+        UPDATE users SET 
+          name = $1, document = $2, birthdate = $3, phone = $4, 
+          eps = $5, rh = $6, pathology = $7, 
+          emergency_contact = $8, emergency_phone = $9, 
+          class_time = $10, affiliation_type = $11, status = $12
+        WHERE id = $13
+        RETURNING *
+      `;
+
+      const values = [
+        name, document, birthdate, phone, eps, rh, pathology, 
+        emergencyContact, emergencyPhone, classTime, affiliationType, status,
+        id // El ID va al final porque es el $13
+      ];
+
+      const result = await client.query(query, values);
+      return response.status(200).json(result.rows[0]);
+    }
+
+    // 4. ELIMINAR UN USUARIO (DELETE)
+    if (request.method === 'DELETE') {
+      const { id } = request.query; // El ID viene en la URL ?id=ATG...
+      
+      await client.query('DELETE FROM users WHERE id = $1', [id]);
+      return response.status(200).json({ message: 'Usuario eliminado' });
+    }
 
   } catch (error) {
-    console.error('Error de base de datos:', error);
-    return response.status(500).json({ error: 'Error conectando a la BD', detalle: error.message });
+    console.error('Error en API Usuarios:', error);
+    return response.status(500).json({ error: error.message });
+  } finally {
+    client.release();
   }
 }
