@@ -626,6 +626,11 @@
         // Listener para el formulario de PAGOS (INGRESOS)
         incomeForm.addEventListener('submit', function (e) {
             e.preventDefault();
+            // Obtenemos el valor del monto como STRING (puede tener comas o estar vacío)
+            const amountValue = document.getElementById('amount').value;
+            // Intentamos parsearlo a Float
+            const parsedAmount = parseFloat(amountValue);
+            
             const data = {
                 type: 'income',
                 userId: userSelectIncome.value,
@@ -633,19 +638,18 @@
                 startDate: document.getElementById('startDate').value || null,
                 endDate: document.getElementById('endDate').value || null,
                 paymentMethod: document.getElementById('paymentMethod').value,
-                amount: parseFloat(document.getElementById('amount').value),
+                amount: arsedAmount,
                 description: document.getElementById('description').value
             };
             
-            if (!data.userId || !data.date || isNaN(data.amount)) {
-                alert('Por favor, complete todos los campos requeridos (Usuario, Fecha y Monto).');
+            if (!data.userId || !data.date || isNaN(data.amount) || data.amount <= 0) {
+                alert('ERROR: Asegúrese de que el Usuario, la Fecha y un Monto (mayor a 0) estén correctamente ingresados.');
                 return;
             }
             
             registerAction(data);
             incomeForm.reset();
         });
-
 
         // Función para renderizar la lista de usuarios en la pestaña "Usuarios"
         function renderUsersList(filteredUsers = users) {
@@ -898,3 +902,4 @@
 </body>
 
 </html>
+
