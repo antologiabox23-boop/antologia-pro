@@ -4,7 +4,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Antología Box23 - Sistema de Gestión</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,102 +27,114 @@
         .navbar,
         .card,
         .modal-content,
-        .accordion-item,
-        .input-group-text,
-        .form-control,
-        .form-select {
-            background-color: var(--color-table);
+        .nav-tabs .nav-link.active {
+            background-color: var(--color-dark) !important;
+            color: var(--color-light) !important;
+            border: none;
+        }
+
+        .nav-tabs .nav-link {
             color: var(--color-light);
-            border-color: var(--color-dark);
+            border: none;
         }
 
-        .form-control:focus,
-        .form-select:focus {
-            background-color: var(--color-table);
-            color: var(--color-light);
-            border-color: var(--color-primary);
-            box-shadow: 0 0 0 0.25rem rgba(39, 249, 212, 0.25);
-        }
-
-        .table> :not(caption)>*>* {
-            background-color: var(--color-table);
-            color: var(--color-light);
-            border-color: var(--color-dark);
-        }
-
-        .table thead {
-            background-color: var(--color-table-header);
-        }
-
-        .table tbody tr:hover {
-            background-color: var(--color-table-hover);
+        .nav-tabs .nav-link:hover {
+            border: none;
+            color: var(--color-primary);
         }
 
         .btn-primary {
             background-color: var(--color-primary);
             border-color: var(--color-primary);
             color: var(--color-dark);
+            font-weight: bold;
         }
 
         .btn-primary:hover {
-            background-color: #1ed0b0;
-            border-color: #1ed0b0;
+            background-color: #1ed1b1;
+            border-color: #1ed1b1;
+            color: var(--color-dark);
         }
 
-        .nav-link {
-            color: var(--color-light);
-        }
-
-        .nav-link.active {
+        .text-primary {
             color: var(--color-primary) !important;
-            border-bottom: 2px solid var(--color-primary);
         }
 
-        /* Utilidades específicas */
-        .user-status-badge {
-            min-width: 60px;
-        }
-
-        .whatsapp-preview-box {
-            background-color: #25d3661a;
-            border: 1px solid #25d366;
-            padding: 10px;
-            border-radius: 8px;
-            white-space: pre-wrap;
+        .table {
             color: var(--color-light);
+            background-color: var(--color-table);
+        }
+
+        .table thead {
+            background-color: var(--color-table-header);
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: var(--color-table-hover);
+            color: var(--color-light);
+        }
+
+        .form-control,
+        .form-select {
+            background-color: #3a4357;
+            border: 1px solid #424b5f;
+            color: white;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            background-color: #424b5f;
+            color: white;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 0.25rem rgba(39, 249, 212, 0.25);
+        }
+
+        .badge-active {
+            background-color: var(--color-primary);
+            color: var(--color-dark);
+        }
+
+        .badge-inactive {
+            background-color: var(--color-secondary);
+            color: white;
+        }
+        
+        /* Estilos para impresión de reportes */
+        @media print {
+            body * { visibility: hidden; }
+            #reportResultContainer, #reportResultContainer * { visibility: visible; }
+            #reportResultContainer { position: absolute; left: 0; top: 0; width: 100%; }
+            .btn { display: none; }
         }
     </style>
 </head>
 
 <body>
-    <div class="container-fluid py-3">
-        <h1 class="text-center mb-4 text-white">Antología Box23 <span style="color:var(--color-primary)">Manager</span>
-        </h1>
+    <nav class="navbar navbar-expand-lg mb-4 shadow">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <i class="fas fa-dumbbell me-2 text-primary fs-3"></i>
+                <span class="fw-bold text-uppercase">Antología Box23</span>
+            </a>
+        </div>
+    </nav>
 
-        <ul class="nav nav-tabs justify-content-center mb-4" id="mainTab" role="tablist">
+    <div class="container mb-5">
+        <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home" type="button"
-                    role="tab" aria-controls="home" aria-selected="true"><i class="fas fa-home me-2"></i>Inicio</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="register-tab" data-bs-toggle="tab" data-bs-target="#register" type="button"
-                    role="tab" aria-controls="register" aria-selected="false"><i
-                        class="fas fa-user-plus me-2"></i>Registro</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="search-tab" data-bs-toggle="tab" data-bs-target="#search" type="button"
-                    role="tab" aria-controls="search" aria-selected="false"><i
+                <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button"
+                    role="tab" aria-controls="users" aria-selected="true"><i
                         class="fas fa-users me-2"></i>Usuarios</button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="attendance-tab" data-bs-toggle="tab" data-bs-target="#attendance"
                     type="button" role="tab" aria-controls="attendance" aria-selected="false"><i
-                        class="fas fa-clipboard-list me-2"></i>Asistencia</button>
+                        class="fas fa-clipboard-check me-2"></i>Asistencia</button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="finance-tab" data-bs-toggle="tab" data-bs-target="#finance" type="button"
                     role="tab" aria-controls="finance" aria-selected="false"><i
-                        class="fas fa-money-bill-wave me-2"></i>Finanzas</button>
+                        class="fas fa-wallet me-2"></i>Finanzas</button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports" type="button"
@@ -132,460 +143,286 @@
             </li>
         </ul>
 
-        <div class="tab-content" id="mainTabContent">
-            <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">
-                <div class="card p-3 mb-4">
-                    <h5 class="card-title text-center text-primary">Información Rápida del Sistema</h5>
-                    <div class="row text-center mt-3">
-                        <div class="col-md-4 mb-3">
-                            <div class="p-3 bg-dark rounded">
-                                <i class="fas fa-users fa-2x text-primary"></i>
-                                <p class="mb-0 mt-2">Usuarios Activos</p>
-                                <h3 id="activeUsersCount">0</h3>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="p-3 bg-dark rounded">
-                                <i class="fas fa-birthday-cake fa-2x text-secondary"></i>
-                                <p class="mb-0 mt-2">Próximos Cumpleaños</p>
-                                <h3 id="birthdayCount">0</h3>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="p-3 bg-dark rounded">
-                                <i class="fas fa-clipboard-check fa-2x text-success"></i>
-                                <p class="mb-0 mt-2">Asistencias Hoy</p>
-                                <h3 id="todayAttendanceCount">0</h3>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card p-3">
-                    <h5 class="card-title text-primary">Cumpleaños Próximos</h5>
-                    <div id="upcomingBirthdaysList" class="list-group">
-                        <p class="text-center">No hay cumpleaños próximos.</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="register" role="tabpanel" aria-labelledby="register-tab">
-                <div class="card p-4">
-                    <h5 class="card-title text-primary">Formulario de Registro</h5>
-                    <form id="userForm">
-                        <input type="hidden" id="userId">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="accordion" id="accordionPersonal">
-                                    <div class="accordion-item">
-                                        <h2 class="accordion-header" id="headingPersonal">
-                                            <button class="accordion-button" type="button" data-bs-toggle="collapse"
-                                                data-bs-target="#collapsePersonal" aria-expanded="true"
-                                                aria-controls="collapsePersonal">
-                                                Datos Personales
-                                            </button>
-                                        </h2>
-                                        <div id="collapsePersonal" class="accordion-collapse collapse show"
-                                            aria-labelledby="headingPersonal" data-bs-parent="#accordionPersonal">
-                                            <div class="accordion-body">
-                                                <div class="mb-3">
-                                                    <label for="name" class="form-label">Nombre Completo</label>
-                                                    <input type="text" class="form-control" id="name" required>
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label for="document" class="form-label">Documento</label>
-                                                    <input type="text" class="form-control" id="document">
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label for="birthdate" class="form-label">Fecha de
-                                                        Nacimiento</label>
-                                                    <input type="date" class="form-control" id="birthdate">
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label for="phone" class="form-label">Teléfono</label>
-                                                    <input type="tel" class="form-control" id="phone">
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+        <div class="tab-content" id="mainTabsContent">
+            <div class="tab-pane fade show active" id="users" role="tabpanel" aria-labelledby="users-tab">
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <div class="card p-4 h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h5 class="card-title text-primary mb-0">Listado de Atletas</h5>
+                                <div class="input-group w-50">
+                                    <span class="input-group-text bg-transparent border-end-0"><i
+                                            class="fas fa-search text-muted"></i></span>
+                                    <input type="text" id="userSearch" class="form-control border-start-0"
+                                        placeholder="Buscar por nombre...">
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="accordion" id="accordionMedicalPlan">
-                                    <div class="accordion-item">
-                                        <h2 class="accordion-header" id="headingMedical">
-                                            <button class="accordion-button" type="button" data-bs-toggle="collapse"
-                                                data-bs-target="#collapseMedical" aria-expanded="true"
-                                                aria-controls="collapseMedical">
-                                                Datos Médicos y Emergencia
-                                            </button>
-                                        </h2>
-                                        <div id="collapseMedical" class="accordion-collapse collapse show"
-                                            aria-labelledby="headingMedical" data-bs-parent="#accordionMedicalPlan">
-                                            <div class="accordion-body">
-                                                <div class="mb-3">
-                                                    <label for="eps" class="form-label">EPS</label>
-                                                    <input type="text" class="form-control" id="eps">
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label for="rh" class="form-label">RH</label>
-                                                    <input type="text" class="form-control" id="rh">
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label for="pathology" class="form-label">Patología/Alergias</label>
-                                                    <textarea class="form-control" id="pathology"></textarea>
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label for="emergencyContact" class="form-label">Contacto de
-                                                        Emergencia</label>
-                                                    <input type="text" class="form-control" id="emergencyContact">
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label for="emergencyPhone" class="form-label">Teléfono de
-                                                        Emergencia</label>
-                                                    <input type="tel" class="form-control" id="emergencyPhone">
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="accordion-item">
-                                        <h2 class="accordion-header" id="headingPlan">
-                                            <button class="accordion-button collapsed" type="button"
-                                                data-bs-toggle="collapse" data-bs-target="#collapsePlan"
-                                                aria-expanded="false" aria-controls="collapsePlan">
-                                                Datos del Plan
-                                            </button>
-                                        </h2>
-                                        <div id="collapsePlan" class="accordion-collapse collapse"
-                                            aria-labelledby="headingPlan" data-bs-parent="#accordionMedicalPlan">
-                                            <div class="accordion-body">
-                                                <div class="mb-3">
-                                                    <label for="classTime" class="form-label">Horario de Clase</label>
-                                                    <select class="form-select" id="classTime">
-                                                        <option value="">Seleccione</option>
-                                                        <option value="5:00 am">5:00 am</option>
-                                                        <option value="6:00 am">6:00 am</option>
-                                                        <option value="7:00 am">7:00 am</option>
-                                                        <option value="5:00 pm">5:00 pm</option>
-                                                        <option value="6:00 pm">6:00 pm</option>
-                                                        <option value="7:00 pm">7:00 pm</option>
-                                                        <option value="8:00 pm">8:00 pm</option>
-                                                    </select>
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label for="affiliationType" class="form-label">Tipo de
-                                                        Afiliación</label>
-                                                    <select class="form-select" id="affiliationType" required>
-                                                        <option value="">Seleccione</option>
-                                                        <option value="mensualidad">Mensualidad</option>
-                                                        <option value="trimestral">Trimestral</option>
-                                                        <option value="semestral">Semestral</option>
-                                                        <option value="diario">Diario</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Nombre</th>
+                                            <th>Plan</th>
+                                            <th>Horario</th>
+                                            <th>Estado</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="userTableBody">
+                                        </tbody>
+                                </table>
                             </div>
                         </div>
-                        <div class="d-grid mt-4">
-                            <button type="submit" class="btn btn-primary" id="userFormSubmit">Registrar Usuario</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="search" role="tabpanel" aria-labelledby="search-tab">
-                <div class="card p-3">
-                    <h5 class="card-title text-primary">Lista de Usuarios</h5>
-                    <div class="mb-3">
-                        <input type="text" class="form-control" id="searchUser" placeholder="Buscar por nombre o ID...">
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Nombre</th>
-                                    <th>Documento</th>
-                                    <th>Teléfono</th>
-                                    <th>Horario</th>
-                                    <th>Estado</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="usersList">
-                                </tbody>
-                        </table>
+                    <div class="col-md-4">
+                        <div class="card p-4 shadow">
+                            <h5 class="card-title text-primary mb-4">Registro de Usuario</h5>
+                            <form id="userForm">
+                                <input type="hidden" id="userId">
+                                <div class="mb-3">
+                                    <label for="userName" class="form-label">Nombre Completo</label>
+                                    <input type="text" class="form-control" id="userName" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="userBirthdate" class="form-label">Fecha de Nacimiento</label>
+                                    <input type="date" class="form-control" id="userBirthdate">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="userPhone" class="form-label">WhatsApp (ej: 54911...)</label>
+                                    <input type="tel" class="form-control" id="userPhone" placeholder="549...">
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col">
+                                        <label for="userPlan" class="form-label">Plan</label>
+                                        <select class="form-select" id="userPlan">
+                                            <option value="Mensual">Mensual</option>
+                                            <option value="Quincenal">Quincenal</option>
+                                            <option value="Semanal">Semanal</option>
+                                            <option value="Por Clase">Por Clase</option>
+                                        </select>
+                                    </div>
+                                    <div class="col">
+                                        <label for="classTime" class="form-label">Horario</label>
+                                        <select class="form-select" id="classTime">
+                                            <option value="07:00">07:00</option>
+                                            <option value="08:00">08:00</option>
+                                            <option value="09:00">09:00</option>
+                                            <option value="17:00">17:00</option>
+                                            <option value="18:00">18:00</option>
+                                            <option value="19:00">19:00</option>
+                                            <option value="20:00">20:00</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <label for="userStatus" class="form-label">Estado</label>
+                                    <select class="form-select" id="userStatus">
+                                        <option value="Activo">Activo</option>
+                                        <option value="Inactivo">Inactivo</option>
+                                    </select>
+                                </div>
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary" id="btnSaveUser">Guardar Atleta</button>
+                                    <button type="button" class="btn btn-outline-secondary" id="btnResetForm"
+                                        style="display:none;">Cancelar Edición</button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="tab-pane fade" id="attendance" role="tabpanel" aria-labelledby="attendance-tab">
-                <div class="card p-4">
-                    <h5 class="card-title text-primary">Registro de Asistencia</h5>
-                    <form id="attendanceForm">
-                        <div class="mb-3">
-                            <label for="userSelectAttendance" class="form-label">Seleccionar Usuario</label>
-                            <select class="form-select" id="userSelectAttendance" required>
-                                </select>
+                <div class="row">
+                    <div class="col-md-6 mx-auto">
+                        <div class="card p-4">
+                            <h5 class="card-title text-primary mb-4 text-center">Registrar Asistencia</h5>
+                            <form id="attendanceForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Seleccionar Atleta</label>
+                                    <select class="form-select" id="userSelectAttendance" required>
+                                        <option value="">-- Seleccione un usuario --</option>
+                                    </select>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label">Fecha de Clase</label>
+                                    <input type="date" class="form-control" id="dateAttendance" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100 py-2">Registrar Presente</button>
+                            </form>
                         </div>
-                        <div class="mb-3">
-                            <label for="dateAttendance" class="form-label">Fecha de Asistencia</label>
-                            <input type="date" class="form-control" id="dateAttendance" required>
-                        </div>
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary"><i
-                                    class="fas fa-check-circle me-2"></i>Registrar Asistencia</button>
-                        </div>
-                    </form>
-                    <hr>
-                    <h5 class="card-title text-primary mt-4">Asistencias del Día</h5>
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Hora</th>
-                                    <th>Usuario</th>
-                                    <th>Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody id="todayAttendanceList">
-                                </tbody>
-                        </table>
                     </div>
                 </div>
             </div>
 
             <div class="tab-pane fade" id="finance" role="tabpanel" aria-labelledby="finance-tab">
-                <div class="card p-4">
-                    <h5 class="card-title text-primary">Registro de Pagos (Ingresos)</h5>
-                    <form id="incomeForm">
-                        <div class="mb-3">
-                            <label for="userSelectIncome" class="form-label">Usuario que Paga</label>
-                            <select class="form-select" id="userSelectIncome" required>
-                                </select>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="paymentDate" class="form-label">Fecha de Pago</label>
-                                <input type="date" class="form-control" id="paymentDate" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="amount" class="form-label">Monto ($)</label>
-                                <input type="number" class="form-control" id="amount" required step="0.01">
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="startDate" class="form-label">Inicio del Periodo</label>
-                                <input type="date" class="form-control" id="startDate">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="endDate" class="form-label">Fin del Periodo</label>
-                                <input type="date" class="form-control" id="endDate">
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="paymentMethod" class="form-label">Método de Pago</label>
-                            <select class="form-select" id="paymentMethod" required>
-                                <option value="Mensualidad">Mensualidad</option>
-                                <option value="Clase suelta">Clase suelta</option>
-                                <option value="Paquete 10 clases">Paquete 10 clases</option>
-                                <option value="Personalizado Diana">Personalizado Diana</option>                                
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="description" class="form-label">Descripción / Concepto</label>
-                            <textarea class="form-control" id="description"></textarea>
-                        </div>
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary"><i
-                                    class="fas fa-money-check-alt me-2"></i>Registrar Ingreso</button>
-                        </div>
-                        <div class="tab-pane fade" id="reports" role="tabpanel" aria-labelledby="reports-tab">
-                        <div class="card p-4">
-                            <h5 class="card-title text-primary mb-4">Generación de Reportes</h5>
-                            
-                            <div class="row g-3 mb-4">
-                                <div class="col-md-6">
-                                    <button class="btn btn-outline-primary w-100" onclick="fetchReport('asistencia')">
-                                        <i class="fas fa-clipboard-list me-2"></i>Ver Reporte de Asistencias
-                                    </button>
+                <div class="row">
+                    <div class="col-md-8 mx-auto">
+                        <div class="card p-4 shadow">
+                            <h5 class="card-title text-primary mb-4">Registro de Pago / Ingreso</h5>
+                            <form id="incomeForm">
+                                <div class="row g-3">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Atleta</label>
+                                        <select class="form-select" id="userSelectIncome" required>
+                                            <option value="">-- Seleccione --</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Fecha del Pago</label>
+                                        <input type="date" class="form-control" id="paymentDate" required>
+                                    </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <button class="btn btn-outline-success w-100" onclick="fetchReport('pagos')">
-                                        <i class="fas fa-money-bill-wave me-2"></i>Ver Reporte de Pagos
-                                    </button>
+                                <div class="row g-3">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Cobertura Desde</label>
+                                        <input type="date" class="form-control" id="startDate">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Cobertura Hasta</label>
+                                        <input type="date" class="form-control" id="endDate">
+                                    </div>
                                 </div>
-                            </div>
-                    
-                            <div id="reportResultContainer" style="display:none;">
-                                <h6 id="reportTitle" class="text-secondary mt-3 mb-3 text-uppercase"></h6>
-                                <div class="table-responsive">
-                                    <table class="table table-dark table-hover table-sm">
-                                        <thead id="reportTableHeader"></thead>
-                                        <tbody id="reportTableBody"></tbody>
-                                    </table>
+                                <div class="row g-3">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Método de Pago</label>
+                                        <select class="form-select" id="paymentMethod">
+                                            <option value="Efectivo">Efectivo</option>
+                                            <option value="Transferencia">Transferencia</option>
+                                            <option value="Tarjeta">Tarjeta</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Monto ($)</label>
+                                        <input type="number" class="form-control" id="amount" placeholder="0.00" required step="0.01">
+                                    </div>
                                 </div>
-                                <div class="d-grid mt-3">
-                                    <button class="btn btn-secondary btn-sm" onclick="printReport()">Imprimir / Guardar PDF</button>
+                                <div class="mb-4">
+                                    <label class="form-label">Descripción / Notas</label>
+                                    <input type="text" class="form-control" id="description" placeholder="Ej: Pago de Septiembre">
                                 </div>
-                            </div>
+                                <button type="submit" class="btn btn-success w-100 py-2 text-white fw-bold">Guardar Pago</button>
+                            </form>
                         </div>
                     </div>
-                    </form>
-                    <hr>
-                    <h5 class="card-title text-primary mt-4">Resumen Financiero (Pendiente)</h5>
-                    <p>Esta sección se completará para leer los datos de la tabla `income`.</p>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="reports" role="tabpanel" aria-labelledby="reports-tab">
+                <div class="card p-4 shadow">
+                    <h5 class="card-title text-primary mb-4">Generación de Reportes</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-primary w-100" onclick="fetchReport('asistencia')">
+                                <i class="fas fa-clipboard-list me-2"></i>Ver Reporte de Asistencias
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-success w-100" onclick="fetchReport('pagos')">
+                                <i class="fas fa-money-bill-wave me-2"></i>Ver Reporte de Pagos
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="reportResultContainer" style="display:none;" class="mt-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 id="reportTitle" class="text-primary text-uppercase mb-0"></h6>
+                            <button class="btn btn-secondary btn-sm" onclick="printReport()">
+                                <i class="fas fa-print me-2"></i>Imprimir / PDF
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover table-sm">
+                                <thead id="reportTableHeader"></thead>
+                                <tbody id="reportTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <div class="modal fade" id="emergencyModal" tabindex="-1" aria-labelledby="emergencyModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="emergencyModalLabel"><i class="fas fa-first-aid me-2"></i>Info. de
-                        Emergencia</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <h6 class="text-primary" id="emergencyUserName"></h6>
-                    <p><strong>Contacto:</strong> <span id="emergencyContactName"></span></p>
-                    <p><strong>Teléfono:</strong> <span id="emergencyContactPhone"></span></p>
-                    <p><strong>EPS:</strong> <span id="emergencyEps"></span></p>
-                    <p><strong>RH:</strong> <span id="emergencyRh"></span></p>
-                    <p><strong>Patología/Alergias:</strong> <span id="emergencyPathology"></span></p>
-                </div>
-                <div class="modal-footer">
-                    <a id="whatsappEmergency" href="#" target="_blank" class="btn btn-success"><i
-                            class="fab fa-whatsapp me-2"></i>Enviar WhatsApp</a>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="whatsappModal" tabindex="-1" aria-labelledby="whatsappModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="whatsappModalLabel"><i class="fab fa-whatsapp me-2"></i>Enviar WhatsApp
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="whatsappPhone" class="form-label">Teléfono Destino (Formato 57XXXXXXXXXX)</label>
-                        <input type="tel" class="form-control" id="whatsappPhone">
-                    </div>
-                    <div class="mb-3">
-                        <label for="whatsappMessage" class="form-label">Mensaje</label>
-                        <textarea class="form-control" id="whatsappMessage" rows="5"></textarea>
-                        <small class="form-text text-muted">Previsualización del mensaje:</small>
-                        <div class="whatsapp-preview-box mt-2" id="messagePreview"></div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <a id="sendWhatsappLink" href="#" target="_blank" class="btn btn-success"><i
-                            class="fab fa-whatsapp me-2"></i>Abrir WhatsApp</a>
-                </div>
-            </div>
-        </div>
-    </div>
-
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
     <script>
-        // Variables Globales
-        let users = [];
-        const USERS_KEY = 'antologia_box23_users'; // Ya no se usa, pero se mantiene por si acaso
-        const ATTENDANCE_KEY = 'antologia_box23_attendance'; // Ya no se usa
-
-        // Referencias del DOM
-        const usersList = document.getElementById('usersList');
         const userForm = document.getElementById('userForm');
-        const userFormSubmit = document.getElementById('userFormSubmit');
-        const searchUser = document.getElementById('searchUser');
-        const attendanceForm = document.getElementById('attendanceForm');
-        const incomeForm = document.getElementById('incomeForm');
+        const userTableBody = document.getElementById('userTableBody');
         const userSelectAttendance = document.getElementById('userSelectAttendance');
         const userSelectIncome = document.getElementById('userSelectIncome');
-        const todayAttendanceList = document.getElementById('todayAttendanceList');
+        const attendanceForm = document.getElementById('attendanceForm');
+        const incomeForm = document.getElementById('incomeForm');
 
-        // Función de utilidad para obtener ID de usuario
-        function generateUserId() {
-            const numUsers = users.length + 1;
-            return `ATG${String(numUsers).padStart(4, '0')}`;
-        }
-
-        // --- FUNCIONES DE CONEXIÓN A NEON (Vía Vercel Serverless) ---
-
-        /**
-         * Carga los usuarios de la base de datos Neon (GET /api/usuarios).
-         */
+        // Cargar usuarios desde la API
         async function loadUsers() {
             try {
-                const response = await fetch('/api/usuarios', {
-                    method: 'GET',
-                    headers: { 'Content-Type': 'application/json' },
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Error HTTP: ${response.status}`);
-                }
-
-                users = await response.json();
+                const response = await fetch('/api/usuarios');
+                const users = await response.json();
                 
-                // Mantiene el resto de la lógica de renderizado
-                renderUsersList();
-                loadUserSelects();
-                updateSystemInfo();
-
+                renderUserTable(users);
+                updateUserSelects(users);
             } catch (error) {
-                console.error("Error cargando usuarios desde Neon:", error);
-                alert("Error crítico al cargar usuarios. Intente recargar la página.");
+                console.error("Error al cargar usuarios:", error);
             }
         }
 
-        /**
-         * Guarda o actualiza un usuario en la base de datos Neon (POST/PUT /api/usuarios).
-         */
-        async function saveUser(userData, isEdit) {
+        function renderUserTable(users) {
+            userTableBody.innerHTML = '';
+            users.forEach(user => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${user.name}</td>
+                    <td>${user.plan}</td>
+                    <td>${user.class_time}</td>
+                    <td><span class="badge ${user.status === 'Activo' ? 'badge-active' : 'badge-inactive'}">${user.status}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-info me-1" onclick="editUser('${user.id}')"><i class="fas fa-edit"></i></button>
+                    </td>
+                `;
+                userTableBody.appendChild(tr);
+            });
+        }
+
+        function updateUserSelects(users) {
+            const options = users
+                .filter(u => u.status === 'Activo')
+                .map(u => `<option value="${u.id}">${u.name}</option>`)
+                .join('');
+            
+            const defaultOption = '<option value="">-- Seleccione un usuario --</option>';
+            userSelectAttendance.innerHTML = defaultOption + options;
+            userSelectIncome.innerHTML = defaultOption + options;
+        }
+
+        // Registrar Usuario
+        userForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const userData = {
+                name: document.getElementById('userName').value,
+                birthdate: document.getElementById('userBirthdate').value,
+                phone: document.getElementById('userPhone').value,
+                plan: document.getElementById('userPlan').value,
+                class_time: document.getElementById('classTime').value,
+                status: document.getElementById('userStatus').value
+            };
+
             try {
-                const method = isEdit ? 'PUT' : 'POST';
                 const response = await fetch('/api/usuarios', {
-                    method: method,
+                    method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(userData)
                 });
-
-                const result = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(result.error || `Error al guardar usuario. Código: ${response.status}`);
+                
+                if (response.ok) {
+                    alert("Usuario guardado con éxito en Neon");
+                    userForm.reset();
+                    loadUsers();
                 }
-
-                alert(`Usuario ${isEdit ? 'actualizado' : 'registrado'} con éxito.`);
-                userForm.reset();
-                document.getElementById('userId').value = '';
-                userFormSubmit.textContent = 'Registrar Usuario';
-                loadUsers(); // Recarga los datos
-
             } catch (error) {
-                console.error("Error al guardar usuario en Neon:", error);
-                alert("Error al guardar usuario: " + error.message);
+                alert("Error al guardar usuario");
             }
-        }
-        
-        /**
-         * Registra asistencia o pago en la base de datos Neon (POST /api/asistencia).
-         */
+        });
+
+        // Registrar Acción (Asistencia o Pago)
         async function registerAction(data) {
             try {
                 const response = await fetch('/api/asistencia', {
@@ -593,22 +430,53 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
-
                 const result = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(result.error || `Error al registrar acción. Código: ${response.status}`);
+                if (response.ok) {
+                    alert(result.message);
+                } else {
+                    alert("Error: " + (result.detalle || result.error));
                 }
-
-                alert(result.message);
-                loadUsers(); // Podría ser necesario para actualizar contadores
-
             } catch (error) {
-                console.error("Error al registrar acción en Neon:", error);
-                alert("Error al registrar: " + error.message);
+                alert("Error de conexión con el servidor");
             }
         }
-        
+
+        attendanceForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const data = {
+                type: 'attendance',
+                userId: userSelectAttendance.value,
+                date: document.getElementById('dateAttendance').value
+            };
+            registerAction(data);
+            attendanceForm.reset();
+            document.getElementById('dateAttendance').valueAsDate = new Date();
+        });
+
+        incomeForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const data = {
+                type: 'income',
+                userId: userSelectIncome.value,
+                date: document.getElementById('paymentDate').value,
+                startDate: document.getElementById('startDate').value || null,
+                endDate: document.getElementById('endDate').value || null,
+                paymentMethod: document.getElementById('paymentMethod').value,
+                amount: document.getElementById('amount').value,
+                description: document.getElementById('description').value
+            };
+            
+            if (!data.userId || !data.date || !data.amount) {
+                alert('Por favor, complete los campos obligatorios: Usuario, Fecha y Monto.');
+                return;
+            }
+            
+            registerAction(data);
+            incomeForm.reset();
+            document.getElementById('paymentDate').valueAsDate = new Date();
+        });
+
+        // --- FUNCIONES DE REPORTES ---
         async function fetchReport(tipo) {
             const container = document.getElementById('reportResultContainer');
             const header = document.getElementById('reportTableHeader');
@@ -620,7 +488,7 @@
                 const data = await response.json();
                 
                 if (!response.ok) throw new Error(data.error);
-        
+
                 container.style.display = 'block';
                 body.innerHTML = '';
                 
@@ -637,360 +505,26 @@
                     header.innerHTML = `<tr><th>Fecha</th><th>Usuario</th><th>Monto</th><th>Método</th><th>Concepto</th></tr>`;
                     data.forEach(row => {
                         const tr = document.createElement('tr');
-                        tr.innerHTML = `<td>${row.payment_date}</td><td>${row.name}</td><td>$${parseFloat(row.amount).toLocaleString()}</td><td>${row.payment_method}</td><td>${row.description || '-'}</td>`;
+                        const formattedAmount = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(row.amount);
+                        tr.innerHTML = `<td>${row.payment_date}</td><td>${row.name}</td><td>${formattedAmount}</td><td>${row.payment_method}</td><td>${row.description || '-'}</td>`;
                         body.appendChild(tr);
                     });
                 }
-        
             } catch (error) {
                 alert("Error al cargar el reporte: " + error.message);
             }
         }
-        
+
         function printReport() {
-            const content = document.getElementById('reportResultContainer').innerHTML;
-            const win = window.open('', '', 'height=700,width=900');
-            win.document.write('<html><head><title>Reporte Antología Box23</title>');
-            win.document.write('<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">');
-            win.document.write('</head><body class="p-4">');
-            win.document.write('<h1 class="text-center">Antología Box23 - Reporte</h1>');
-            win.document.write(content);
-            win.document.write('</body></html>');
-            win.document.close();
-            setTimeout(() => { win.print(); }, 500);
+            window.print();
         }
 
-        // --- LÓGICA DE MANEJO DE FORMULARIOS Y EVENTOS ---
-
-        // Listener para el formulario de USUARIOS (Guardar/Actualizar)
-        userForm.addEventListener('submit', function (e) {
-            e.preventDefault();
-
-            const userId = document.getElementById('userId').value;
-            const isEdit = !!userId;
-            const userData = {
-                id: isEdit ? userId : generateUserId(),
-                name: document.getElementById('name').value,
-                document: document.getElementById('document').value,
-                birthdate: document.getElementById('birthdate').value || null, // Permite nulo
-                phone: document.getElementById('phone').value,
-                eps: document.getElementById('eps').value,
-                rh: document.getElementById('rh').value,
-                pathology: document.getElementById('pathology').value,
-                emergencyContact: document.getElementById('emergencyContact').value,
-                emergencyPhone: document.getElementById('emergencyPhone').value,
-                classTime: document.getElementById('classTime').value,
-                affiliationType: document.getElementById('affiliationType').value,
-                // Si es edición, puedes agregar el status si lo modificaste
-                status: isEdit ? (users.find(u => u.id === userId)?.status || 'active') : 'active' 
-            };
-
-            saveUser(userData, isEdit);
-        });
-
-        // Listener para el formulario de ASISTENCIA
-        attendanceForm.addEventListener('submit', function (e) {
-            e.preventDefault();
-            const userId = userSelectAttendance.value;
-            const date = document.getElementById('dateAttendance').value;
-
-            if (!userId || !date) {
-                alert('Por favor, seleccione un usuario y una fecha.');
-                return;
-            }
-
-            const data = {
-                type: 'attendance',
-                userId: userId,
-                date: date
-            };
-            
-            registerAction(data);
-            attendanceForm.reset();
-            document.getElementById('dateAttendance').valueAsDate = new Date(); // Resetear a hoy
-        });
-        
-        // Listener para el formulario de PAGOS (INGRESOS)
-        incomeForm.addEventListener('submit', function (e) {
-            e.preventDefault();
-            // Obtenemos el valor del monto como STRING (puede tener comas o estar vacío)
-            const amountValue = document.getElementById('amount').value;
-            // Intentamos parsearlo a Float
-            const parsedAmount = parseFloat(amountValue);
-            
-            const data = {
-                type: 'income',
-                userId: userSelectIncome.value,
-                date: document.getElementById('paymentDate').value,
-                startDate: document.getElementById('startDate').value || null,
-                endDate: document.getElementById('endDate').value || null,
-                paymentMethod: document.getElementById('paymentMethod').value,
-                amount: parsedAmount,
-                description: document.getElementById('description').value
-            };
-            
-            if (!data.userId || !data.date || isNaN(data.amount) || data.amount <= 0) {
-                alert('ERROR: Asegúrese de que el Usuario, la Fecha y un Monto (mayor a 0) estén correctamente ingresados.');
-                return;
-            }
-            
-            registerAction(data);
-            incomeForm.reset();
-        });
-
-        // Función para renderizar la lista de usuarios en la pestaña "Usuarios"
-        function renderUsersList(filteredUsers = users) {
-            usersList.innerHTML = '';
-            filteredUsers.forEach(user => {
-                const statusBadge = user.status === 'active'
-                    ? '<span class="badge bg-success user-status-badge">Activo</span>'
-                    : '<span class="badge bg-danger user-status-badge">Inactivo</span>';
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${user.id}</td>
-                    <td>${user.name}</td>
-                    <td>${user.document || '-'}</td>
-                    <td>${user.phone || '-'}</td>
-                    <td>${user.classTime || '-'}</td>
-                    <td>${statusBadge}</td>
-                    <td>
-                        <button class="btn btn-sm btn-info me-1" onclick="editUser('${user.id}')"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-sm btn-warning me-1" onclick="showEmergencyInfo('${user.id}')"><i class="fas fa-first-aid"></i></button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteUser('${user.id}')"><i class="fas fa-trash"></i></button>
-                    </td>
-                `;
-                usersList.appendChild(row);
-            });
-        }
-
-
-        // Función para cargar los selectores de usuario
-        function loadUserSelects() {
-            userSelectAttendance.innerHTML = '<option value="">Seleccione Usuario</option>';
-            userSelectIncome.innerHTML = '<option value="">Seleccione Usuario</option>';
-
-            users.filter(u => u.status === 'active').forEach(user => {
-                const option = `<option value="${user.id}">${user.name} (${user.id})</option>`;
-                userSelectAttendance.innerHTML += option;
-                userSelectIncome.innerHTML += option;
-            });
-        }
-
-        // Búsqueda de usuarios
-        searchUser.addEventListener('input', function () {
-            const searchTerm = this.value.toLowerCase();
-            const filtered = users.filter(user =>
-                user.name.toLowerCase().includes(searchTerm) ||
-                user.id.toLowerCase().includes(searchTerm) ||
-                user.document.toLowerCase().includes(searchTerm)
-            );
-            renderUsersList(filtered);
-        });
-
-        // --- FUNCIONES DE ACCIÓN (Editar, Eliminar, Info) ---
-
-        // Rellena el formulario para edición
-        function editUser(id) {
-            const user = users.find(u => u.id === id);
-            if (!user) return;
-
-            // Rellenar todos los campos del formulario
-            document.getElementById('userId').value = user.id;
-            document.getElementById('name').value = user.name;
-            document.getElementById('document').value = user.document || '';
-            document.getElementById('birthdate').value = user.birthdate || '';
-            document.getElementById('phone').value = user.phone || '';
-            document.getElementById('eps').value = user.eps || '';
-            document.getElementById('rh').value = user.rh || '';
-            document.getElementById('pathology').value = user.pathology || '';
-            document.getElementById('emergencyContact').value = user.emergencyContact || '';
-            document.getElementById('emergencyPhone').value = user.emergencyPhone || '';
-            document.getElementById('classTime').value = user.classTime || '';
-            document.getElementById('affiliationType').value = user.affiliationType || '';
-
-            userFormSubmit.textContent = 'Actualizar Usuario';
-            const registerTabBtn = document.getElementById('register-tab');
-            const registerTab = bootstrap.Tab.getOrCreateInstance(registerTabBtn);
-            registerTab.show();
-        }
-
-        // Elimina un usuario
-        async function deleteUser(id) {
-            if (!confirm('¿Está seguro de que desea eliminar a este usuario? Esta acción es irreversible.')) {
-                return;
-            }
-
-            try {
-                const response = await fetch(`/api/usuarios?id=${id}`, {
-                    method: 'DELETE',
-                });
-                
-                const result = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(result.error || `Error al eliminar usuario. Código: ${response.status}`);
-                }
-
-                alert('Usuario eliminado con éxito.');
-                loadUsers(); // Recargar la lista
-                
-            } catch (error) {
-                console.error("Error al eliminar usuario en Neon:", error);
-                alert("Error al eliminar usuario: " + error.message);
-            }
-        }
-
-
-        // Muestra la información de emergencia
-        function showEmergencyInfo(id) {
-            const user = users.find(u => u.id === id);
-            if (!user) return;
-
-            document.getElementById('emergencyUserName').textContent = user.name;
-            document.getElementById('emergencyContactName').textContent = user.emergencyContact || 'N/A';
-            document.getElementById('emergencyContactPhone').textContent = user.emergencyPhone || 'N/A';
-            document.getElementById('emergencyEps').textContent = user.eps || 'N/A';
-            document.getElementById('emergencyRh').textContent = user.rh || 'N/A';
-            document.getElementById('emergencyPathology').textContent = user.pathology || 'Ninguna';
-
-            // WhatsApp para emergencia
-            const phone = user.emergencyPhone ? `57${user.emergencyPhone.replace(/\D/g, '')}` : '';
-            const message = encodeURIComponent(`Hola, somos de Antología Box23. Estamos llamando por una emergencia médica con ${user.name}. Por favor, conteste la llamada.`);
-            document.getElementById('whatsappEmergency').href = `https://wa.me/${phone}?text=${message}`;
-
-
-            const emergencyModal = new bootstrap.Modal(document.getElementById('emergencyModal'));
-            emergencyModal.show();
-        }
-
-
-        // --- FUNCIONES DE INFORMACIÓN Y WIDGETS ---
-
-        function updateSystemInfo() {
-            const activeCount = users.filter(u => u.status === 'active').length;
-            document.getElementById('activeUsersCount').textContent = activeCount;
-
-            // TODO: Cargar el conteo de asistencia de la tabla `attendance`
-            document.getElementById('todayAttendanceCount').textContent = '0 (Próximamente)';
-        }
-
-        function checkUpcomingBirthdays() {
-            const today = new Date();
-            const next30Days = new Date();
-            next30Days.setDate(today.getDate() + 30);
-            
-            const list = document.getElementById('upcomingBirthdaysList');
-            list.innerHTML = '';
-            let birthdayCount = 0;
-
-            // Filtramos usuarios cuya fecha de nacimiento cae entre hoy y los próximos 30 días
-            const upcoming = users.filter(user => {
-                if (!user.birthdate) return false;
-
-                const userDate = new Date(user.birthdate);
-                // Creamos una fecha para este año
-                const thisYearBirthday = new Date(today.getFullYear(), userDate.getMonth(), userDate.getDate());
-                
-                // Si la fecha ya pasó este año, verificamos el próximo año (para el margen de 30 días)
-                if (thisYearBirthday < today) {
-                    thisYearBirthday.setFullYear(today.getFullYear() + 1);
-                }
-
-                return thisYearBirthday >= today && thisYearBirthday <= next30Days;
-            }).sort((a, b) => {
-                // Ordenar por fecha más cercana
-                const dateA = new Date(a.birthdate);
-                const dateB = new Date(b.birthdate);
-                // Ajustar al año actual/próximo para la comparación
-                dateA.setFullYear(today.getFullYear() + (dateA < today ? 1 : 0));
-                dateB.setFullYear(today.getFullYear() + (dateB < today ? 1 : 0));
-                return dateA - dateB;
-            });
-
-
-            if (upcoming.length > 0) {
-                upcoming.forEach(user => {
-                    const userBirthDate = new Date(user.birthdate);
-                    const formattedDate = new Date(today.getFullYear(), userBirthDate.getMonth(), userBirthDate.getDate()).toLocaleDateString('es-ES', { month: 'long', day: 'numeric' });
-                    
-                    const listItem = document.createElement('div');
-                    listItem.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center', 'bg-dark', 'text-white');
-                    listItem.innerHTML = `
-                        <span class="text-primary">${user.name}</span>
-                        <span class="badge bg-secondary rounded-pill">${formattedDate}</span>
-                        <button class="btn btn-sm btn-success" onclick="prepareBirthdayWishes('${user.phone || ''}', '${user.name}')"><i class="fab fa-whatsapp"></i> Felicitación</button>
-                    `;
-                    list.appendChild(listItem);
-                    birthdayCount++;
-                });
-            } else {
-                list.innerHTML = '<p class="text-center p-3">No hay cumpleaños en los próximos 30 días.</p>';
-            }
-            document.getElementById('birthdayCount').textContent = birthdayCount;
-        }
-        
-        // Preparar mensaje de WhatsApp para cumpleaños
-        function prepareBirthdayWishes(phone, name) {
-            let message = `¡Feliz cumpleaños, ${name}! 🎉🎂\n\nEn nombre de todo el equipo de Antología Box23, queremos desearte un día maravilloso lleno de alegría, salud y muchas bendiciones. Que este nuevo año de vida esté cargado de éxitos y momentos inolvidables.\n\n¡Disfruta tu día especial! 🥳`;
-
-            // Rellenar el formulario de WhatsApp
-            document.getElementById('whatsappPhone').value = phone ? `57${phone.replace(/\D/g, '')}` : '';
-            document.getElementById('whatsappMessage').value = message;
-            document.getElementById('messagePreview').textContent = message;
-
-            // Actualizar link de envío
-            updateWhatsappLink();
-
-            // Mostrar modal de WhatsApp
-            const whatsappModal = new bootstrap.Modal(document.getElementById('whatsappModal'));
-            whatsappModal.show();
-        }
-
-        // Función para actualizar el enlace de WhatsApp
-        function updateWhatsappLink() {
-            const phone = document.getElementById('whatsappPhone').value.replace(/\D/g, '');
-            const message = encodeURIComponent(document.getElementById('whatsappMessage').value);
-            document.getElementById('sendWhatsappLink').href = `https://wa.me/${phone}?text=${message}`;
-        }
-        
-        // Asegurar que el link de WhatsApp se actualice al cambiar teléfono o mensaje
-        document.getElementById('whatsappPhone').addEventListener('input', updateWhatsappLink);
-        document.getElementById('whatsappMessage').addEventListener('input', updateWhatsappLink);
-        
-
-        // No necesitas checkAutoBackup() ya que ahora usas una DB en la nube.
-        // La información ya está segura en Neon.
-
-        // Inicializar la aplicación cuando el DOM esté listo
+        // Inicializar
         document.addEventListener('DOMContentLoaded', function () {
-            // Inicializar la fecha de asistencia a HOY por defecto
             document.getElementById('dateAttendance').valueAsDate = new Date();
             document.getElementById('paymentDate').valueAsDate = new Date();
-            
-            // 1. Carga inicial de datos desde Neon
-            loadUsers(); 
-
-            // 2. Verificar cumpleaños próximos después de cargar los usuarios
-            setTimeout(() => {
-                checkUpcomingBirthdays();
-            }, 1500); // Pequeño delay para asegurar que loadUsers terminó
-
+            loadUsers();
         });
-        
-        // Manejo de rutas para SPA en GitHub Pages (Mantenido)
-        (function () {
-            var redirect = sessionStorage.redirect;
-            delete sessionStorage.redirect;
-            if (redirect && redirect != location.href) {
-                history.replaceState(null, null, redirect);
-            }
-        })();
     </script>
 </body>
-
 </html>
-
-
-
-
-
