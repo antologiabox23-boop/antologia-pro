@@ -125,11 +125,6 @@
                     role="tab" aria-controls="finance" aria-selected="false"><i
                         class="fas fa-money-bill-wave me-2"></i>Finanzas</button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports" type="button"
-                    role="tab" aria-controls="reports" aria-selected="false"><i
-                        class="fas fa-chart-line me-2"></i>Reportes</button>
-            </li>
         </ul>
 
         <div class="tab-content" id="mainTabContent">
@@ -390,10 +385,9 @@
                         <div class="mb-3">
                             <label for="paymentMethod" class="form-label">Método de Pago</label>
                             <select class="form-select" id="paymentMethod" required>
-                                <option value="Mensualidad">Mensualidad</option>
-                                <option value="Clase suelta">Clase suelta</option>
-                                <option value="Paquete 10 clases">Paquete 10 clases</option>
-                                <option value="Personalizado Diana">Personalizado Diana</option>                                
+                                <option value="efectivo">Efectivo</option>
+                                <option value="transferencia">Transferencia</option>
+                                <option value="tarjeta">Tarjeta</option>
                             </select>
                         </div>
                         <div class="mb-3">
@@ -404,37 +398,6 @@
                             <button type="submit" class="btn btn-primary"><i
                                     class="fas fa-money-check-alt me-2"></i>Registrar Ingreso</button>
                         </div>
-                        <div class="tab-pane fade" id="reports" role="tabpanel" aria-labelledby="reports-tab">
-                        <div class="card p-4">
-                            <h5 class="card-title text-primary mb-4">Generación de Reportes</h5>
-                            
-                            <div class="row g-3 mb-4">
-                                <div class="col-md-6">
-                                    <button class="btn btn-outline-primary w-100" onclick="fetchReport('asistencia')">
-                                        <i class="fas fa-clipboard-list me-2"></i>Ver Reporte de Asistencias
-                                    </button>
-                                </div>
-                                <div class="col-md-6">
-                                    <button class="btn btn-outline-success w-100" onclick="fetchReport('pagos')">
-                                        <i class="fas fa-money-bill-wave me-2"></i>Ver Reporte de Pagos
-                                    </button>
-                                </div>
-                            </div>
-                    
-                            <div id="reportResultContainer" style="display:none;">
-                                <h6 id="reportTitle" class="text-secondary mt-3 mb-3 text-uppercase"></h6>
-                                <div class="table-responsive">
-                                    <table class="table table-dark table-hover table-sm">
-                                        <thead id="reportTableHeader"></thead>
-                                        <tbody id="reportTableBody"></tbody>
-                                    </table>
-                                </div>
-                                <div class="d-grid mt-3">
-                                    <button class="btn btn-secondary btn-sm" onclick="printReport()">Imprimir / Guardar PDF</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                     </form>
                     <hr>
                     <h5 class="card-title text-primary mt-4">Resumen Financiero (Pendiente)</h5>
@@ -608,57 +571,7 @@
                 alert("Error al registrar: " + error.message);
             }
         }
-        
-        async function fetchReport(tipo) {
-            const container = document.getElementById('reportResultContainer');
-            const header = document.getElementById('reportTableHeader');
-            const body = document.getElementById('reportTableBody');
-            const title = document.getElementById('reportTitle');
-            
-            try {
-                const response = await fetch(`/api/reportes?tipo=${tipo}`);
-                const data = await response.json();
-                
-                if (!response.ok) throw new Error(data.error);
-        
-                container.style.display = 'block';
-                body.innerHTML = '';
-                
-                if (tipo === 'asistencia') {
-                    title.innerText = 'Historial de Asistencias';
-                    header.innerHTML = `<tr><th>Fecha</th><th>Usuario</th><th>Horario</th></tr>`;
-                    data.forEach(row => {
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `<td>${row.date}</td><td>${row.name}</td><td>${row.class_time}</td>`;
-                        body.appendChild(tr);
-                    });
-                } else {
-                    title.innerText = 'Historial de Pagos / Ingresos';
-                    header.innerHTML = `<tr><th>Fecha</th><th>Usuario</th><th>Monto</th><th>Método</th><th>Concepto</th></tr>`;
-                    data.forEach(row => {
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `<td>${row.payment_date}</td><td>${row.name}</td><td>$${parseFloat(row.amount).toLocaleString()}</td><td>${row.payment_method}</td><td>${row.description || '-'}</td>`;
-                        body.appendChild(tr);
-                    });
-                }
-        
-            } catch (error) {
-                alert("Error al cargar el reporte: " + error.message);
-            }
-        }
-        
-        function printReport() {
-            const content = document.getElementById('reportResultContainer').innerHTML;
-            const win = window.open('', '', 'height=700,width=900');
-            win.document.write('<html><head><title>Reporte Antología Box23</title>');
-            win.document.write('<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">');
-            win.document.write('</head><body class="p-4">');
-            win.document.write('<h1 class="text-center">Antología Box23 - Reporte</h1>');
-            win.document.write(content);
-            win.document.write('</body></html>');
-            win.document.close();
-            setTimeout(() => { win.print(); }, 500);
-        }
+
 
         // --- LÓGICA DE MANEJO DE FORMULARIOS Y EVENTOS ---
 
@@ -725,7 +638,7 @@
                 startDate: document.getElementById('startDate').value || null,
                 endDate: document.getElementById('endDate').value || null,
                 paymentMethod: document.getElementById('paymentMethod').value,
-                amount: parsedAmount,
+                amount: arsedAmount,
                 description: document.getElementById('description').value
             };
             
