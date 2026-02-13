@@ -1,424 +1,312 @@
 /**
- * Módulo de Almacenamiento
- * Gestión centralizada de datos en localStorage con validación y respaldo
+ * Storage v3.0 — Google Sheets como base de datos
+ *
+ * Arquitectura:
+ *   App (Vercel) ──fetch──► Google Apps Script (Web App) ──► Google Sheets
+ *
+ * ⚠️  ÚNICO PASO DE CONFIGURACIÓN:
+ *     Reemplaza SCRIPT_URL con la URL de tu Google Apps Script desplegado.
+ *     Ver instrucciones en: CONFIGURACION_GOOGLE_SHEETS.md
  */
 
 const Storage = (() => {
-    const STORAGE_KEYS = {
-        USERS: 'antologia_users',
-        ATTENDANCE: 'antologia_attendance',
-        INCOME: 'antologia_income',
-        SETTINGS: 'antologia_settings',
-        BACKUP_DATE: 'antologia_last_backup'
-    };
+
+    // ─── CONFIGURACIÓN ───────────────────────────────────────────────────────
+    // Pega aquí la URL de tu Apps Script después de desplegarlo:
+    const SCRIPT_URL = 'PEGA_AQUI_TU_URL_DE_APPS_SCRIPT';
+    // ─────────────────────────────────────────────────────────────────────────
 
     const DEFAULT_SETTINGS = {
-        theme: 'dark',
-        itemsPerPage: 25,
-        notifications: true,
-        autoBackup: false,
-        language: 'es'
+        theme: 'dark', itemsPerPage: 25, notifications: true, language: 'es'
     };
 
-    // Inicializar storage si no existe
-    function initialize() {
+    // Cache en memoria — evita peticiones repetidas en la misma sesión
+    const cache = {
+        users:      null,
+        attendance: null,
+        income:     null,
+        settings:   null,
+        dirty:      { users: false, attendance: false, income: false }
+    };
+
+    // Settings siempre en localStorage (son preferencias del navegador, no datos)
+    const LS_SETTINGS = 'antologia_settings';
+    const LS_LAST_BACKUP = 'antologia_last_backup';
+
+    // ─── HELPERS HTTP ────────────────────────────────────────────────────────
+
+    async function apiCall(action, payload = {}) {
+        if (!SCRIPT_URL || SCRIPT_URL === 'PEGA_AQUI_TU_URL_DE_APPS_SCRIPT') {
+            throw new Error('⚙️ Configura SCRIPT_URL en storage.js primero.');
+        }
+        const url = `${SCRIPT_URL}?action=${action}`;
+        const res = await fetch(url, {
+            method:  'POST',
+            mode:    'cors',
+            headers: { 'Content-Type': 'text/plain' },   // text/plain evita preflight CORS
+            body:    JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
+        return json.data;
+    }
+
+    // ─── INICIALIZACIÓN ──────────────────────────────────────────────────────
+
+    async function initialize() {
+        // Settings siempre desde localStorage
+        if (!localStorage.getItem(LS_SETTINGS)) {
+            localStorage.setItem(LS_SETTINGS, JSON.stringify(DEFAULT_SETTINGS));
+        }
+        // Cargar datos desde Sheets en paralelo
+        await loadAllData();
+    }
+
+    async function loadAllData() {
         try {
-            if (!get(STORAGE_KEYS.USERS)) {
-                set(STORAGE_KEYS.USERS, []);
-            }
-            if (!get(STORAGE_KEYS.ATTENDANCE)) {
-                set(STORAGE_KEYS.ATTENDANCE, []);
-            }
-            if (!get(STORAGE_KEYS.INCOME)) {
-                set(STORAGE_KEYS.INCOME, []);
-            }
-            if (!get(STORAGE_KEYS.SETTINGS)) {
-                set(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS);
-            }
-            return true;
-        } catch (error) {
-            console.error('Error al inicializar storage:', error);
-            return false;
+            const [users, attendance, income] = await Promise.all([
+                apiCall('getUsers'),
+                apiCall('getAttendance'),
+                apiCall('getIncome')
+            ]);
+            cache.users      = users      || [];
+            cache.attendance = attendance || [];
+            cache.income     = income     || [];
+        } catch (err) {
+            console.error('Error cargando datos desde Sheets:', err.message);
+            // Fallback a arrays vacíos para que la UI no rompa
+            cache.users      = cache.users      || [];
+            cache.attendance = cache.attendance || [];
+            cache.income     = cache.income     || [];
+            throw err;   // re-lanzar para que app.js muestre aviso al usuario
         }
     }
 
-    // Guardar datos en localStorage
-    function set(key, value) {
-        try {
-            const jsonString = JSON.stringify(value);
-            localStorage.setItem(key, jsonString);
-            return true;
-        } catch (error) {
-            console.error(`Error al guardar ${key}:`, error);
-            if (error.name === 'QuotaExceededError') {
-                console.warn('Almacenamiento lleno. Por favor, exporta un respaldo y limpia datos antiguos.');
-                if (window.UI) UI.showToast('Almacenamiento lleno. Exporta un respaldo y limpia datos antiguos.', 'error');
-            }
-            return false;
-        }
-    }
-
-    // Obtener datos de localStorage
-    function get(key) {
-        try {
-            const item = localStorage.getItem(key);
-            return item ? JSON.parse(item) : null;
-        } catch (error) {
-            console.error(`Error al leer ${key}:`, error);
-            return null;
-        }
-    }
-
-    // Eliminar clave específica
-    function remove(key) {
-        try {
-            localStorage.removeItem(key);
-            return true;
-        } catch (error) {
-            console.error(`Error al eliminar ${key}:`, error);
-            return false;
-        }
-    }
-
-    // Limpiar todo el storage
-    function clear() {
-        try {
-            Object.values(STORAGE_KEYS).forEach(key => {
-                localStorage.removeItem(key);
-            });
-            return true;
-        } catch (error) {
-            console.error('Error al limpiar storage:', error);
-            return false;
-        }
-    }
-
-    // ===== USUARIOS =====
+    // ─── USUARIOS ────────────────────────────────────────────────────────────
 
     function getUsers() {
-        return get(STORAGE_KEYS.USERS) || [];
+        return cache.users || [];
     }
 
-    function setUsers(users) {
-        return set(STORAGE_KEYS.USERS, users);
-    }
-
-    function addUser(user) {
-        const users = getUsers();
+    async function addUser(user) {
         const newUser = {
-            id: Utils.generateUUID(),
+            id:        Utils.generateUUID(),
             ...user,
             createdAt: Utils.getCurrentDateTime(),
             updatedAt: Utils.getCurrentDateTime()
         };
-        users.push(newUser);
-        setUsers(users);
-        return newUser;
+        const saved = await apiCall('addRow', { sheet: 'Usuarios', row: newUser });
+        cache.users.push(saved || newUser);
+        return saved || newUser;
     }
 
-    function updateUser(id, updates) {
-        const users = getUsers();
-        const index = users.findIndex(u => u.id === id);
-        if (index === -1) return null;
-        
-        users[index] = {
-            ...users[index],
-            ...updates,
-            updatedAt: Utils.getCurrentDateTime()
-        };
-        setUsers(users);
-        return users[index];
+    async function updateUser(id, updates) {
+        const idx = cache.users.findIndex(u => u.id === id);
+        if (idx === -1) return null;
+        const updated = { ...cache.users[idx], ...updates, updatedAt: Utils.getCurrentDateTime() };
+        await apiCall('updateRow', { sheet: 'Usuarios', id, data: updated });
+        cache.users[idx] = updated;
+        return updated;
     }
 
-    function deleteUser(id) {
-        const users = getUsers();
-        const filtered = users.filter(u => u.id !== id);
-        if (filtered.length === users.length) return false;
-        
-        setUsers(filtered);
-        
-        // Eliminar datos relacionados
-        deleteUserAttendance(id);
-        deleteUserIncome(id);
-        
+    async function deleteUser(id) {
+        await apiCall('deleteRow', { sheet: 'Usuarios', id });
+        cache.users      = cache.users.filter(u => u.id !== id);
+        cache.attendance = cache.attendance.filter(a => a.userId !== id);
+        cache.income     = cache.income.filter(i => i.userId !== id);
+        // Borrar también en Sheets
+        await Promise.all([
+            apiCall('deleteByField', { sheet: 'Asistencia', field: 'userId', value: id }),
+            apiCall('deleteByField', { sheet: 'Ingresos',   field: 'userId', value: id })
+        ]);
         return true;
     }
 
     function getUserById(id) {
-        const users = getUsers();
-        return users.find(u => u.id === id) || null;
+        return (cache.users || []).find(u => u.id === id) || null;
     }
 
-    // ===== ASISTENCIA =====
+    // ─── ASISTENCIA ──────────────────────────────────────────────────────────
 
     function getAttendance() {
-        return get(STORAGE_KEYS.ATTENDANCE) || [];
+        return cache.attendance || [];
     }
 
-    function setAttendance(attendance) {
-        return set(STORAGE_KEYS.ATTENDANCE, attendance);
-    }
-
-    function addAttendance(record) {
-        const attendance = getAttendance();
+    async function addAttendance(record) {
         const newRecord = {
-            id: Utils.generateUUID(),
+            id:        Utils.generateUUID(),
             ...record,
             createdAt: Utils.getCurrentDateTime()
         };
-        attendance.push(newRecord);
-        setAttendance(attendance);
+        await apiCall('addRow', { sheet: 'Asistencia', row: newRecord });
+        cache.attendance.push(newRecord);
         return newRecord;
     }
 
-    function updateAttendance(id, updates) {
-        const attendance = getAttendance();
-        const index = attendance.findIndex(a => a.id === id);
-        if (index === -1) return null;
-        
-        attendance[index] = {
-            ...attendance[index],
-            ...updates,
-            updatedAt: Utils.getCurrentDateTime()
-        };
-        setAttendance(attendance);
-        return attendance[index];
+    async function updateAttendance(id, updates) {
+        const idx = cache.attendance.findIndex(a => a.id === id);
+        if (idx === -1) return null;
+        const updated = { ...cache.attendance[idx], ...updates };
+        await apiCall('updateRow', { sheet: 'Asistencia', id, data: updated });
+        cache.attendance[idx] = updated;
+        return updated;
     }
 
-    function deleteAttendance(id) {
-        const attendance = getAttendance();
-        const filtered = attendance.filter(a => a.id !== id);
-        if (filtered.length === attendance.length) return false;
-        
-        setAttendance(filtered);
+    async function deleteAttendance(id) {
+        await apiCall('deleteRow', { sheet: 'Asistencia', id });
+        cache.attendance = cache.attendance.filter(a => a.id !== id);
         return true;
-    }
-
-    function deleteUserAttendance(userId) {
-        const attendance = getAttendance();
-        const filtered = attendance.filter(a => a.userId !== userId);
-        setAttendance(filtered);
     }
 
     function getAttendanceByDate(date) {
-        const attendance = getAttendance();
-        return attendance.filter(a => a.date === date);
+        return (cache.attendance || []).filter(a => a.date === date);
     }
 
     function getAttendanceByUser(userId) {
-        const attendance = getAttendance();
-        return attendance.filter(a => a.userId === userId);
+        return (cache.attendance || []).filter(a => a.userId === userId);
     }
 
-    // ===== INGRESOS =====
+    // ─── INGRESOS ────────────────────────────────────────────────────────────
 
     function getIncome() {
-        return get(STORAGE_KEYS.INCOME) || [];
+        return cache.income || [];
     }
 
-    function setIncome(income) {
-        return set(STORAGE_KEYS.INCOME, income);
-    }
-
-    function addIncome(payment) {
-        const income = getIncome();
+    async function addIncome(payment) {
         const newPayment = {
-            id: Utils.generateUUID(),
+            id:        Utils.generateUUID(),
             ...payment,
             createdAt: Utils.getCurrentDateTime()
         };
-        income.push(newPayment);
-        setIncome(income);
+        await apiCall('addRow', { sheet: 'Ingresos', row: newPayment });
+        cache.income.push(newPayment);
         return newPayment;
     }
 
-    function updateIncome(id, updates) {
-        const income = getIncome();
-        const index = income.findIndex(i => i.id === id);
-        if (index === -1) return null;
-        
-        income[index] = {
-            ...income[index],
-            ...updates,
-            updatedAt: Utils.getCurrentDateTime()
-        };
-        setIncome(income);
-        return income[index];
+    async function updateIncome(id, updates) {
+        const idx = cache.income.findIndex(i => i.id === id);
+        if (idx === -1) return null;
+        const updated = { ...cache.income[idx], ...updates };
+        await apiCall('updateRow', { sheet: 'Ingresos', id, data: updated });
+        cache.income[idx] = updated;
+        return updated;
     }
 
-    function deleteIncome(id) {
-        const income = getIncome();
-        const filtered = income.filter(i => i.id !== id);
-        if (filtered.length === income.length) return false;
-        
-        setIncome(filtered);
+    async function deleteIncome(id) {
+        await apiCall('deleteRow', { sheet: 'Ingresos', id });
+        cache.income = cache.income.filter(i => i.id !== id);
         return true;
     }
 
-    function deleteUserIncome(userId) {
-        const income = getIncome();
-        const filtered = income.filter(i => i.userId !== userId);
-        setIncome(filtered);
+    function getIncomeByDateRange(start, end) {
+        return (cache.income || []).filter(i => i.paymentDate >= start && i.paymentDate <= end);
     }
 
-    function getIncomeByDateRange(startDate, endDate) {
-        const income = getIncome();
-        return income.filter(i => 
-            i.paymentDate >= startDate && i.paymentDate <= endDate
-        );
-    }
-
-    // ===== CONFIGURACIÓN =====
+    // ─── CONFIGURACIÓN (localStorage — son preferencias del navegador) ───────
 
     function getSettings() {
-        return get(STORAGE_KEYS.SETTINGS) || DEFAULT_SETTINGS;
+        try {
+            return JSON.parse(localStorage.getItem(LS_SETTINGS)) || DEFAULT_SETTINGS;
+        } catch { return DEFAULT_SETTINGS; }
     }
 
     function updateSettings(updates) {
-        const settings = getSettings();
-        const newSettings = { ...settings, ...updates };
-        return set(STORAGE_KEYS.SETTINGS, newSettings);
+        const current = getSettings();
+        localStorage.setItem(LS_SETTINGS, JSON.stringify({ ...current, ...updates }));
+        return true;
     }
 
     function getSetting(key) {
-        const settings = getSettings();
-        return settings[key];
+        return getSettings()[key];
     }
 
-    // ===== BACKUP Y RESTAURACIÓN =====
+    // ─── BACKUP ──────────────────────────────────────────────────────────────
 
     function exportData() {
         try {
             const data = {
-                version: '2.0',
+                version:    '3.0',
                 exportDate: Utils.getCurrentDateTime(),
-                users: getUsers(),
+                users:      getUsers(),
                 attendance: getAttendance(),
-                income: getIncome(),
-                settings: getSettings()
+                income:     getIncome(),
+                settings:   getSettings()
             };
-            
-            const jsonString = JSON.stringify(data, null, 2);
-            const filename = `antologia_backup_${Utils.getCurrentDate()}.json`;
-            
-            Utils.downloadFile(jsonString, filename, 'application/json');
-            
-            // Actualizar fecha de último backup
-            set(STORAGE_KEYS.BACKUP_DATE, Utils.getCurrentDateTime());
-            
+            Utils.downloadFile(JSON.stringify(data, null, 2),
+                `antologia_backup_${Utils.getCurrentDate()}.json`, 'application/json');
+            localStorage.setItem(LS_LAST_BACKUP, Utils.getCurrentDateTime());
             return true;
-        } catch (error) {
-            console.error('Error al exportar datos:', error);
+        } catch (err) {
+            console.error('Error al exportar:', err);
             return false;
         }
     }
 
-    function importData(jsonData) {
+    async function importData(jsonData) {
         try {
             const data = JSON.parse(jsonData);
-            
-            // Validar estructura de datos
-            if (!data.users || !data.attendance || !data.income) {
-                throw new Error('Formato de datos inválido');
+            if (!Array.isArray(data.users) || !Array.isArray(data.attendance) || !Array.isArray(data.income)) {
+                throw new Error('Formato de backup inválido');
             }
-            
-            // Validar que los datos son arrays
-            if (!Array.isArray(data.users) || 
-                !Array.isArray(data.attendance) || 
-                !Array.isArray(data.income)) {
-                throw new Error('Los datos deben ser arrays');
-            }
-            
-            // Importar datos
-            setUsers(data.users);
-            setAttendance(data.attendance);
-            setIncome(data.income);
-            
-            if (data.settings) {
-                updateSettings(data.settings);
-            }
-            
+            // Enviar todo a Sheets de una vez
+            await apiCall('importAll', {
+                users:      data.users,
+                attendance: data.attendance,
+                income:     data.income
+            });
+            // Actualizar cache
+            cache.users      = data.users;
+            cache.attendance = data.attendance;
+            cache.income     = data.income;
+            if (data.settings) updateSettings(data.settings);
             return true;
-        } catch (error) {
-            console.error('Error al importar datos:', error);
+        } catch (err) {
+            console.error('Error al importar:', err);
             return false;
         }
     }
 
     function getLastBackupDate() {
-        return get(STORAGE_KEYS.BACKUP_DATE);
+        return localStorage.getItem(LS_LAST_BACKUP);
     }
 
-    // ===== ESTADÍSTICAS =====
+    // ─── UTILIDADES ──────────────────────────────────────────────────────────
 
-    function getStorageSize() {
-        let total = 0;
-        for (let key in localStorage) {
-            if (localStorage.hasOwnProperty(key)) {
-                total += localStorage[key].length + key.length;
-            }
-        }
-        return (total / 1024).toFixed(2); // KB
+    async function clear() {
+        await apiCall('clearAll');
+        cache.users = []; cache.attendance = []; cache.income = [];
+        return true;
     }
 
     function getStorageUsage() {
         return {
-            users: getUsers().length,
+            users:      getUsers().length,
             attendance: getAttendance().length,
-            income: getIncome().length,
-            totalSize: getStorageSize() + ' KB'
+            income:     getIncome().length,
+            source:     'Google Sheets'
         };
     }
 
-    // Inicializar al cargar
-    initialize();
+    // Exponer cache para depuración
+    function getCache() { return cache; }
 
-    // API Pública
     return {
-        // Inicialización
-        initialize,
-        
+        initialize, loadAllData,
         // Usuarios
-        getUsers,
-        setUsers,
-        addUser,
-        updateUser,
-        deleteUser,
-        getUserById,
-        
+        getUsers, addUser, updateUser, deleteUser, getUserById,
         // Asistencia
-        getAttendance,
-        setAttendance,
-        addAttendance,
-        updateAttendance,
-        deleteAttendance,
-        getAttendanceByDate,
-        getAttendanceByUser,
-        
+        getAttendance, addAttendance, updateAttendance, deleteAttendance,
+        getAttendanceByDate, getAttendanceByUser,
         // Ingresos
-        getIncome,
-        setIncome,
-        addIncome,
-        updateIncome,
-        deleteIncome,
-        getIncomeByDateRange,
-        
+        getIncome, addIncome, updateIncome, deleteIncome, getIncomeByDateRange,
         // Configuración
-        getSettings,
-        updateSettings,
-        getSetting,
-        
+        getSettings, updateSettings, getSetting,
         // Backup
-        exportData,
-        importData,
-        getLastBackupDate,
-        
+        exportData, importData, getLastBackupDate,
         // Utilidades
-        clear,
-        getStorageUsage,
-        getStorageSize
+        clear, getStorageUsage, getCache
     };
 })();
 
-// Exponer globalmente
 window.Storage = Storage;

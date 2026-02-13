@@ -132,16 +132,16 @@ const Validation = (() => {
         }
     }
 
-    // FIX: recibe { userEmail, userPhone, userId } con nombres correctos
-    function validateUserData({ userEmail, userPhone, userId }) {
+    // Valida unicidad de documento y teléfono
+    function validateUserData({ userDocument, userPhone, userId }) {
         const errors = [];
         const users = Storage.getUsers();
-        const currentId = (userId || '').trim();
-        const emailNorm  = (userEmail || '').toLowerCase().trim();
+        const currentId  = (userId || '').trim();
+        const docNorm    = (userDocument || '').trim();
         const phoneNorm  = (userPhone || '').replace(/\D/g, '');
 
-        if (emailNorm && users.some(u => u.email === emailNorm && u.id !== currentId)) {
-            errors.push('El email ya está registrado por otro usuario');
+        if (docNorm && users.some(u => (u.document||'').trim() === docNorm && u.id !== currentId)) {
+            errors.push('El documento ya está registrado por otro usuario');
         }
         if (phoneNorm && users.some(u => (u.phone||'').replace(/\D/g,'') === phoneNorm && u.id !== currentId)) {
             errors.push('El teléfono ya está registrado por otro usuario');
@@ -168,15 +168,24 @@ const Validation = (() => {
 
     const schemas = {
         user: {
-            userName:       [
+            userName: [
                 { rule: 'required' },
                 { rule: 'minLength', params: [3], message: 'El nombre debe tener al menos 3 caracteres' },
                 { rule: 'maxLength', params: [100], message: 'El nombre es demasiado largo' }
             ],
-            userEmail:      [{ rule: 'required' }, { rule: 'email' }],
-            userPhone:      [{ rule: 'required' }, { rule: 'phone' }],
-            userAffiliation:[{ rule: 'required', message: 'Selecciona un tipo de afiliación' }],
-            userClassTime:  [{ rule: 'required', message: 'Selecciona un horario' }]
+            userDocument: [
+                { rule: 'required', message: 'Ingresa el número de documento' },
+                { rule: 'minLength', params: [5], message: 'Documento muy corto' }
+            ],
+            userBirthdate: [
+                { rule: 'required', message: 'Selecciona la fecha de nacimiento' },
+                { rule: 'date' }
+            ],
+            userPhone:            [{ rule: 'required' }, { rule: 'phone' }],
+            userEmergencyContact: [{ rule: 'required', message: 'Ingresa el contacto de emergencia' }],
+            userEmergencyPhone:   [{ rule: 'required', message: 'Ingresa el teléfono de emergencia' }, { rule: 'phone' }],
+            userClassTime:        [{ rule: 'required', message: 'Selecciona un horario' }],
+            userAffiliation:      [{ rule: 'required', message: 'Selecciona un tipo de afiliación' }]
         },
         income: {
             incomeUser:   [{ rule: 'required', message: 'Selecciona un usuario' }],
