@@ -451,6 +451,7 @@
                                         <th>Tipo</th>
                                         <th>Monto</th>
                                         <th>Método</th>
+                                        <th>Vigencia</th>
                                         <th>Acciones</th>
                                     </tr>
                                 </thead>
@@ -908,6 +909,24 @@
                             <label for="incomeDate" class="form-label">Fecha de Pago *</label>
                             <input type="date" class="form-control" id="incomeDate" required>
                             <div class="invalid-feedback">Por favor selecciona una fecha.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-calendar-alt me-1 text-primary"></i>Vigencia del Pago
+                            </label>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label for="incomeStartDate" class="form-label small text-muted mb-1">Desde</label>
+                                    <input type="date" class="form-control" id="incomeStartDate" required>
+                                    <div class="invalid-feedback">Selecciona fecha de inicio.</div>
+                                </div>
+                                <div class="col-6">
+                                    <label for="incomeEndDate" class="form-label small text-muted mb-1">Hasta</label>
+                                    <input type="date" class="form-control" id="incomeEndDate" required>
+                                    <div class="invalid-feedback">Selecciona fecha de fin.</div>
+                                </div>
+                            </div>
+                            <div id="vigenciaInfo" class="form-text text-success mt-1" style="display:none"></div>
                         </div>
                         <div class="mb-3">
                             <label for="incomeNotes" class="form-label">Notas</label>
