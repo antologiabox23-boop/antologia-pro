@@ -314,12 +314,14 @@
                             <table class="table table-hover table-striped">
                                 <thead>
                                     <tr>
-                                        <th style="width: 50px">#</th>
+                                        <th style="width:40px">#</th>
                                         <th>Nombre</th>
-                                        <th>Email</th>
+                                        <th>Documento</th>
                                         <th>Teléfono</th>
-                                        <th>Tipo</th>
-                                        <th>Horario</th>
+                                        <th>EPS</th>
+                                        <th>RH</th>
+                                        <th>Clase</th>
+                                        <th>Afiliación</th>
                                         <th>Estado</th>
                                         <th>Acciones</th>
                                     </tr>
@@ -722,36 +724,79 @@
                     <form id="userForm">
                         <input type="hidden" id="userId">
                         <div class="row">
+
+                            <!-- Fila 1: Nombre + Documento -->
                             <div class="col-md-6 mb-3">
                                 <label for="userName" class="form-label">Nombre Completo *</label>
-                                <input type="text" class="form-control" id="userName" required>
-                                <div class="invalid-feedback">Por favor ingresa un nombre válido.</div>
+                                <input type="text" class="form-control" id="userName"
+                                       placeholder="Ej: Juan Pérez" required>
+                                <div class="invalid-feedback">Ingresa el nombre completo (mín. 3 caracteres).</div>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="userEmail" class="form-label">Email *</label>
-                                <input type="email" class="form-control" id="userEmail" required>
-                                <div class="invalid-feedback">Por favor ingresa un email válido.</div>
+                                <label for="userDocument" class="form-label">Documento *</label>
+                                <input type="text" class="form-control" id="userDocument"
+                                       placeholder="Ej: 1234567890" required>
+                                <div class="invalid-feedback">Ingresa el número de documento.</div>
+                            </div>
+
+                            <!-- Fila 2: Fecha Nacimiento + Teléfono -->
+                            <div class="col-md-6 mb-3">
+                                <label for="userBirthdate" class="form-label">Fecha de Nacimiento *</label>
+                                <input type="date" class="form-control" id="userBirthdate" required>
+                                <div class="invalid-feedback">Selecciona la fecha de nacimiento.</div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="userPhone" class="form-label">Teléfono *</label>
-                                <input type="tel" class="form-control" id="userPhone" required 
-                                       pattern="[0-9]{10}" placeholder="10 dígitos">
-                                <div class="invalid-feedback">Por favor ingresa un teléfono válido de 10 dígitos.</div>
+                                <input type="tel" class="form-control" id="userPhone"
+                                       placeholder="10 dígitos" required>
+                                <div class="invalid-feedback">Ingresa un teléfono de 10 dígitos.</div>
+                            </div>
+
+                            <!-- Fila 3: EPS + RH -->
+                            <div class="col-md-6 mb-3">
+                                <label for="userEps" class="form-label">EPS</label>
+                                <input type="text" class="form-control" id="userEps"
+                                       placeholder="Ej: Sura, Compensar...">
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="userAffiliation" class="form-label">Tipo de Afiliación *</label>
-                                <select class="form-select" id="userAffiliation" required>
+                                <label for="userBloodType" class="form-label">RH (Grupo Sanguíneo)</label>
+                                <select class="form-select" id="userBloodType">
                                     <option value="">Seleccionar...</option>
-                                    <option value="Mensual">Mensual</option>
-                                    <option value="Trimestral">Trimestral</option>
-                                    <option value="Semestral">Semestral</option>
-                                    <option value="Anual">Anual</option>
-                                    <option value="Entrenador(a)">Entrenador(a)</option>
+                                    <option value="O+">O+</option>
+                                    <option value="O-">O-</option>
+                                    <option value="A+">A+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="B+">B+</option>
+                                    <option value="B-">B-</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="AB-">AB-</option>
                                 </select>
-                                <div class="invalid-feedback">Por favor selecciona un tipo de afiliación.</div>
+                            </div>
+
+                            <!-- Fila 4: Patología (ancho completo) -->
+                            <div class="col-12 mb-3">
+                                <label for="userPathology" class="form-label">Patología / Condición médica</label>
+                                <input type="text" class="form-control" id="userPathology"
+                                       placeholder="Ej: Hipertensión, Diabetes, Ninguna...">
+                            </div>
+
+                            <!-- Fila 5: Contacto Emergencia + Teléfono Emergencia -->
+                            <div class="col-md-6 mb-3">
+                                <label for="userEmergencyContact" class="form-label">Contacto de Emergencia *</label>
+                                <input type="text" class="form-control" id="userEmergencyContact"
+                                       placeholder="Nombre del contacto" required>
+                                <div class="invalid-feedback">Ingresa el nombre del contacto de emergencia.</div>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="userClassTime" class="form-label">Horario de Clase *</label>
+                                <label for="userEmergencyPhone" class="form-label">Teléfono Emergencia *</label>
+                                <input type="tel" class="form-control" id="userEmergencyPhone"
+                                       placeholder="10 dígitos" required>
+                                <div class="invalid-feedback">Ingresa el teléfono de emergencia.</div>
+                            </div>
+
+                            <!-- Fila 6: Clase + Tipo Afiliación -->
+                            <div class="col-md-6 mb-3">
+                                <label for="userClassTime" class="form-label">Clase (Horario) *</label>
                                 <select class="form-select" id="userClassTime" required>
                                     <option value="">Seleccionar...</option>
                                     <option value="5:30 AM">5:30 AM</option>
@@ -763,8 +808,22 @@
                                     <option value="6:30 PM">6:30 PM</option>
                                     <option value="7:30 PM">7:30 PM</option>
                                 </select>
-                                <div class="invalid-feedback">Por favor selecciona un horario.</div>
+                                <div class="invalid-feedback">Selecciona un horario.</div>
                             </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="userAffiliation" class="form-label">Tipo de Afiliación *</label>
+                                <select class="form-select" id="userAffiliation" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="Mensual">Mensual</option>
+                                    <option value="Trimestral">Trimestral</option>
+                                    <option value="Semestral">Semestral</option>
+                                    <option value="Anual">Anual</option>
+                                    <option value="Entrenador(a)">Entrenador(a)</option>
+                                </select>
+                                <div class="invalid-feedback">Selecciona un tipo de afiliación.</div>
+                            </div>
+
+                            <!-- Fila 7: Estado -->
                             <div class="col-md-6 mb-3">
                                 <label for="userStatus" class="form-label">Estado *</label>
                                 <select class="form-select" id="userStatus" required>
@@ -772,11 +831,7 @@
                                     <option value="inactive">Inactivo</option>
                                 </select>
                             </div>
-                            <div class="col-12 mb-3">
-                                <label for="userNotes" class="form-label">Notas</label>
-                                <textarea class="form-control" id="userNotes" rows="3" 
-                                          placeholder="Información adicional del usuario..."></textarea>
-                            </div>
+
                         </div>
                     </form>
                 </div>
