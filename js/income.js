@@ -143,7 +143,8 @@ const Income = (() => {
     return {
         initialize,
         renderIncome,
-        deletePayment
+        deletePayment,
+        populateSelect: populateUserSelect
     };
 })();
 window.Income = Income;

@@ -1,46 +1,48 @@
 /**
- * Aplicación Principal - Antología Box23
- * Coordinación de todos los módulos y gestión del dashboard
+ * Aplicación Principal - Antología Box23 v2.0
  */
 
 const Dashboard = (() => {
     function initialize() {
-        updateStats();
-        updateRecentActivity();
+        try { updateStats(); } catch(e) { console.warn('Dashboard stats:', e.message); }
+        try { updateRecentActivity(); } catch(e) { console.warn('Dashboard activity:', e.message); }
         setupQuickActions();
     }
 
     function updateStats() {
-        // Usuarios activos
         const activeUsers = Users.getActiveUsers();
-        UI.updateCounter('activeUsersCount', activeUsers.length);
+
+        // Usuarios activos
+        const countEl = document.getElementById('activeUsersCount');
+        if (countEl) UI.updateCounter('activeUsersCount', activeUsers.length);
 
         // Ingresos del mes
         const { start, end } = Utils.getMonthRange(Utils.getCurrentMonth());
         const monthlyPayments = Storage.getIncomeByDateRange(start, end);
-        const monthlyTotal = monthlyPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
-        document.getElementById('monthlyIncome').textContent = Utils.formatCurrency(monthlyTotal);
+        const monthlyTotal = monthlyPayments.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
+        const incomeEl = document.getElementById('monthlyIncome');
+        if (incomeEl) incomeEl.textContent = Utils.formatCurrency(monthlyTotal);
 
-        // Asistencia de hoy
-        const todayDate = Utils.getCurrentDate();
-        const todayAttendance = Storage.getAttendanceByDate(todayDate).filter(a => a.status === 'presente');
+        // Asistencia hoy
+        const todayAttendance = Storage.getAttendanceByDate(Utils.getCurrentDate())
+            .filter(a => a.status === 'presente');
         UI.updateCounter('todayAttendance', todayAttendance.length);
-        
-        const attendanceRate = activeUsers.length > 0 
-            ? ((todayAttendance.length / activeUsers.length) * 100).toFixed(1)
-            : 0;
-        document.getElementById('todayAttendanceRate').textContent = `${attendanceRate}% de ocupación`;
 
-        // Pagos pendientes (usuarios sin pago este mes)
-        const usersPaidThisMonth = new Set(monthlyPayments.map(p => p.userId));
-        const pendingPayments = activeUsers.filter(u => 
-            !usersPaidThisMonth.has(u.id) && u.affiliationType !== 'Entrenador(a)'
-        );
-        UI.updateCounter('pendingPayments', pendingPayments.length);
+        const rate = activeUsers.length > 0
+            ? ((todayAttendance.length / activeUsers.length) * 100).toFixed(1) : 0;
+        const rateEl = document.getElementById('todayAttendanceRate');
+        if (rateEl) rateEl.textContent = `${rate}% de ocupación`;
 
-        // Actualizar gráficos
-        if (window.Charts) {
-            Charts.updateAllCharts();
+        // Pagos pendientes
+        const paid = new Set(monthlyPayments.map(p => p.userId));
+        const pending = activeUsers.filter(u => !paid.has(u.id) && u.affiliationType !== 'Entrenador(a)');
+        UI.updateCounter('pendingPayments', pending.length);
+        const pendingAmtEl = document.getElementById('pendingPaymentsAmount');
+        if (pendingAmtEl) pendingAmtEl.textContent = `${pending.length} sin pagar este mes`;
+
+        // Gráficos
+        if (window.Charts && typeof Chart !== 'undefined') {
+            try { Charts.updateAllCharts(); } catch(e) { console.warn('Charts:', e.message); }
         }
     }
 
@@ -53,67 +55,53 @@ const Dashboard = (() => {
 
         const activities = [
             ...recentPayments.map(p => ({
-                type: 'payment',
                 icon: 'dollar-sign',
-                text: `Pago de ${Storage.getUserById(p.userId)?.name || 'Usuario'} - ${Utils.formatCurrency(p.amount)}`,
+                text: `Pago de ${Storage.getUserById(p.userId)?.name || 'Usuario'} — ${Utils.formatCurrency(p.amount)}`,
                 time: Utils.formatDateTime(p.createdAt),
-                date: p.createdAt
+                date: p.createdAt || ''
             })),
             ...recentAttendance.map(a => ({
-                type: 'attendance',
                 icon: 'clipboard-check',
                 text: `${Storage.getUserById(a.userId)?.name || 'Usuario'} marcó asistencia`,
                 time: Utils.formatDateTime(a.createdAt),
-                date: a.createdAt
+                date: a.createdAt || ''
             }))
         ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 8);
 
         if (activities.length === 0) {
-            container.innerHTML = '<p class="text-muted text-center">No hay actividad reciente</p>';
+            container.innerHTML = '<p class="text-muted text-center py-3">No hay actividad reciente</p>';
             return;
         }
 
-        container.innerHTML = activities.map(activity => `
-            <div class="activity-item d-flex align-items-center">
-                <div class="activity-icon">
-                    <i class="fas fa-${activity.icon}"></i>
+        container.innerHTML = activities.map(a => `
+            <div class="activity-item d-flex align-items-center mb-2">
+                <div class="activity-icon me-3">
+                    <i class="fas fa-${a.icon}"></i>
                 </div>
                 <div class="activity-content">
-                    <div>${activity.text}</div>
-                    <small class="activity-time">${activity.time}</small>
+                    <div style="font-size:.9rem">${a.text}</div>
+                    <small class="activity-time">${a.time}</small>
                 </div>
-            </div>
-        `).join('');
+            </div>`).join('');
     }
 
     function setupQuickActions() {
         document.getElementById('quickAddUser')?.addEventListener('click', () => {
             UI.switchTab('users');
-            Users.openUserModal();
+            setTimeout(() => Users.openUserModal(), 400);
         });
-
         document.getElementById('quickAddPayment')?.addEventListener('click', () => {
             UI.switchTab('income');
-            document.querySelector('[data-bs-target="#incomeModal"]')?.click();
+            setTimeout(() => { Income.populateSelect(); UI.showModal('incomeModal'); }, 400);
         });
-
-        document.getElementById('quickAttendance')?.addEventListener('click', () => {
-            UI.switchTab('attendance');
-        });
-
-        document.getElementById('quickReport')?.addEventListener('click', () => {
-            UI.switchTab('reports');
-        });
+        document.getElementById('quickAttendance')?.addEventListener('click', () => UI.switchTab('attendance'));
+        document.getElementById('quickReport')?.addEventListener('click', () => UI.switchTab('reports'));
     }
 
-    return {
-        initialize,
-        updateStats,
-        updateRecentActivity
-    };
+    return { initialize, updateStats, updateRecentActivity };
 })();
 
-// Módulo de Configuración
+// ─── Configuración ───────────────────────────────────────────────────────────
 const Settings = (() => {
     function initialize() {
         setupEventListeners();
@@ -129,136 +117,94 @@ const Settings = (() => {
     }
 
     function loadSettings() {
-        const settings = Storage.getSettings();
-        document.getElementById('themeSelect').value = settings.theme || 'dark';
-        document.getElementById('itemsPerPage').value = settings.itemsPerPage || 25;
-        document.getElementById('notificationsToggle').checked = settings.notifications !== false;
-        document.getElementById('autoBackupToggle').checked = settings.autoBackup || false;
+        const s = Storage.getSettings();
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+        const chk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
+        set('themeSelect', s.theme || 'dark');
+        set('itemsPerPage', s.itemsPerPage || 25);
+        chk('notificationsToggle', s.notifications !== false);
+        chk('autoBackupToggle', s.autoBackup || false);
     }
 
     function saveSettings() {
+        const get = (id) => document.getElementById(id);
         const settings = {
-            theme: document.getElementById('themeSelect').value,
-            itemsPerPage: parseInt(document.getElementById('itemsPerPage').value),
-            notifications: document.getElementById('notificationsToggle').checked,
-            autoBackup: document.getElementById('autoBackupToggle').checked
+            theme:          get('themeSelect')?.value || 'dark',
+            itemsPerPage:   parseInt(get('itemsPerPage')?.value || '25'),
+            notifications:  get('notificationsToggle')?.checked !== false,
+            autoBackup:     get('autoBackupToggle')?.checked || false
         };
-
         Storage.updateSettings(settings);
-        UI.showSuccessToast('Configuración guardada exitosamente');
+        UI.showSuccessToast('Configuración guardada');
         UI.setTheme(settings.theme);
     }
 
     function clearAllData() {
         UI.showConfirmModal(
             'Eliminar Todos los Datos',
-            '⚠️ ADVERTENCIA: Esta acción eliminará PERMANENTEMENTE todos los usuarios, asistencias y pagos. Esta operación NO se puede deshacer. ¿Estás completamente seguro?',
+            '⚠️ ADVERTENCIA: Se eliminarán PERMANENTEMENTE todos los usuarios, asistencias y pagos. ¿Continuar?',
             () => {
-                UI.showLoading('Eliminando todos los datos...');
-                setTimeout(() => {
-                    Storage.clear();
-                    Storage.initialize();
-                    UI.hideLoading();
-                    UI.showSuccessToast('Todos los datos han sido eliminados');
-                    setTimeout(() => location.reload(), 1500);
-                }, 1000);
+                Storage.clear();
+                Storage.initialize();
+                UI.showSuccessToast('Datos eliminados');
+                setTimeout(() => location.reload(), 1200);
             },
             true
         );
     }
 
-    return {
-        initialize
-    };
+    return { initialize, loadSettings };
 })();
 
-// Inicialización de la Aplicación
-(function initializeApp() {
+// ─── Bootstrap de la aplicación ──────────────────────────────────────────────
+(function boot() {
     document.addEventListener('DOMContentLoaded', async () => {
         try {
-            // Inicializar módulos de base PRIMERO (antes de usar UI)
+            // 1. Módulos de datos (sin DOM)
             Storage.initialize();
+
+            // 2. UI (necesita DOM)
             UI.initialize();
+            UI.showLoading('Iniciando Antología Box23…');
 
-            // Mostrar loading después de que UI esté listo
-            UI.showLoading('Iniciando aplicación...');
+            await Utils.sleep(200);
 
-            // Esperar un momento para que el DOM se estabilice
-            await Utils.sleep(300);
-
-            // Inicializar módulos principales
+            // 3. Módulos funcionales
             Users.initialize();
             Attendance.initialize();
             Income.initialize();
             Reports.initialize();
-            Charts.initialize();
+            Charts.initialize();    // protegido internamente contra Chart.js ausente
             Backup.initialize();
             Dashboard.initialize();
             Settings.initialize();
-
-            // Verificar respaldo automático
             Backup.checkAutoBackup();
 
-            // Aplicar animaciones
-            setTimeout(() => {
-                UI.animateElements();
-            }, 100);
-
-            // Ocultar loading
-            setTimeout(() => {
-                UI.hideLoading();
-            }, 800);
-
-            // Mostrar mensaje de bienvenida
-            setTimeout(() => {
-                const isFirstTime = !Storage.getLastBackupDate() && Storage.getUsers().length === 0;
-                if (isFirstTime) {
-                    UI.showInfoToast('¡Bienvenido a Antología Box23! Comienza agregando usuarios.', 5000);
-                }
-            }, 1500);
-
-            // Log de inicialización exitosa
-            console.log('%c✓ Antología Box23 - Sistema Inicializado', 
-                'color: #27F9D4; font-size: 16px; font-weight: bold;');
-            console.log('Versión: 2.0');
-            console.log('Usuarios:', Storage.getUsers().length);
-            console.log('Registros de asistencia:', Storage.getAttendance().length);
-            console.log('Pagos registrados:', Storage.getIncome().length);
-
-        } catch (error) {
-            console.error('Error crítico al inicializar la aplicación:', error);
             UI.hideLoading();
-            UI.showErrorToast('Error al inicializar la aplicación. Por favor, recarga la página.');
+
+            // Bienvenida primera vez
+            if (Storage.getUsers().length === 0) {
+                setTimeout(() => UI.showInfoToast('¡Bienvenido! Comienza agregando usuarios.'), 1000);
+            }
+
+            console.log('%c✓ Antología Box23 v2.0 – Listo', 'color:#27F9D4;font-weight:bold;font-size:14px');
+
+        } catch (err) {
+            console.error('Error de inicio:', err);
+            UI.hideLoading();
+            UI.showErrorToast(`Error de inicio: ${err.message}`);
         }
     });
 
-    // Guardar cambios antes de cerrar
-    window.addEventListener('beforeunload', (e) => {
-        const usage = Storage.getStorageUsage();
-        console.log('Guardando cambios...', usage);
-    });
-
-    // Manejo de errores globales
+    // Errores globales no capturados
     window.addEventListener('error', (e) => {
-        console.error('Error no capturado:', e.error);
-        UI.showErrorToast('Ocurrió un error inesperado. Revisa la consola para más detalles.');
+        console.error('Error global:', e.error);
     });
-
-    // Manejo de promesas rechazadas
     window.addEventListener('unhandledrejection', (e) => {
         console.error('Promesa rechazada:', e.reason);
-        UI.showErrorToast('Error en operación asíncrona.');
     });
 })();
 
-// Exponer módulos globalmente
-window.App = {
-    Dashboard,
-    Settings,
-    version: '2.0',
-    build: '2024-02-08'
-};
-
-// Exportar para uso en otros módulos
+window.App      = { version: '2.0' };
 window.Dashboard = Dashboard;
-window.Settings = Settings;
+window.Settings  = Settings;
