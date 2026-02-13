@@ -5,18 +5,31 @@ const Income = (() => {
     function initialize() {
         setupEventListeners();
         setupRealtimeValidation();
-        populateUserSelect();
         document.getElementById('incomeDate').value = Utils.getCurrentDate();
         renderIncome();
     }
 
+    function openModal() {
+        // Siempre recarga la lista de usuarios antes de mostrar el modal
+        populateUserSelect();
+        document.getElementById('incomeDate').value = Utils.getCurrentDate();
+        UI.showModal('incomeModal');
+    }
+
     function setupEventListeners() {
         document.getElementById('saveIncomeBtn')?.addEventListener('click', saveIncome);
-        document.getElementById('quickAddPayment')?.addEventListener('click', () => {
+
+        // Botón rápido del dashboard
+        document.getElementById('quickAddPayment')?.addEventListener('click', openModal);
+
+        // Recargar usuarios SIEMPRE que el modal se va a mostrar (cualquier origen)
+        document.getElementById('incomeModal')?.addEventListener('show.bs.modal', () => {
             populateUserSelect();
-            UI.showModal('incomeModal');
+            document.getElementById('incomeDate').value = Utils.getCurrentDate();
         });
+
         document.getElementById('applyPaymentFilters')?.addEventListener('click', renderIncome);
+
         document.getElementById('incomeModal')?.addEventListener('hidden.bs.modal', () => {
             UI.resetModalForm('incomeModal', 'incomeForm');
         });
@@ -142,6 +155,7 @@ const Income = (() => {
 
     return {
         initialize,
+        openModal,
         renderIncome,
         deletePayment,
         populateSelect: populateUserSelect
