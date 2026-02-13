@@ -305,28 +305,22 @@ const Validation = (() => {
     // Validaciones personalizadas para datos específicos
     function validateUserData(userData) {
         const errors = [];
-        
-        // Validar email único
         const users = Storage.getUsers();
-        const emailExists = users.some(u => 
-            u.email === userData.userEmail && u.id !== userData.userId
+        const currentId = userData.userId || '';   // vacío = usuario nuevo
+
+        // Validar email único
+        const emailExists = users.some(u =>
+            u.email === userData.userEmail && u.id !== currentId
         );
-        if (emailExists) {
-            errors.push('El email ya está registrado');
-        }
-        
+        if (emailExists) errors.push('El email ya está registrado');
+
         // Validar teléfono único
-        const phoneExists = users.some(u => 
-            u.phone === userData.userPhone && u.id !== userData.userId
+        const phoneExists = users.some(u =>
+            u.phone === userData.userPhone && u.id !== currentId
         );
-        if (phoneExists) {
-            errors.push('El teléfono ya está registrado');
-        }
-        
-        return {
-            isValid: errors.length === 0,
-            errors
-        };
+        if (phoneExists) errors.push('El teléfono ya está registrado');
+
+        return { isValid: errors.length === 0, errors };
     }
 
     function validatePaymentData(paymentData) {

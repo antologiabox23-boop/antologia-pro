@@ -176,15 +176,15 @@ const Settings = (() => {
 (function initializeApp() {
     document.addEventListener('DOMContentLoaded', async () => {
         try {
-            // Mostrar loading inicial
+            // Inicializar módulos de base PRIMERO (antes de usar UI)
+            Storage.initialize();
+            UI.initialize();
+
+            // Mostrar loading después de que UI esté listo
             UI.showLoading('Iniciando aplicación...');
 
             // Esperar un momento para que el DOM se estabilice
             await Utils.sleep(300);
-
-            // Inicializar módulos de base
-            Storage.initialize();
-            UI.initialize();
 
             // Inicializar módulos principales
             Users.initialize();

@@ -51,7 +51,8 @@ const Storage = (() => {
         } catch (error) {
             console.error(`Error al guardar ${key}:`, error);
             if (error.name === 'QuotaExceededError') {
-                UI.showToast('Almacenamiento lleno. Por favor, exporta un respaldo y limpia datos antiguos.', 'error');
+                console.warn('Almacenamiento lleno. Por favor, exporta un respaldo y limpia datos antiguos.');
+                if (window.UI) UI.showToast('Almacenamiento lleno. Exporta un respaldo y limpia datos antiguos.', 'error');
             }
             return false;
         }

@@ -7,8 +7,8 @@ const Users = (() => {
     let itemsPerPage = 25;
     let filteredUsers = [];
     let searchTerm = '';
-    let statusFilter = '';
-    let affiliationFilter = '';
+    let currentStatusFilter = '';
+    let currentAffiliationFilter = '';
 
     function initialize() {
         itemsPerPage = Storage.getSetting('itemsPerPage') || 25;
@@ -18,19 +18,9 @@ const Users = (() => {
     }
 
     function setupEventListeners() {
-        // Botón agregar usuario
-        const addUserBtn = document.getElementById('addUserBtn');
-        if (addUserBtn) {
-            addUserBtn.addEventListener('click', () => openUserModal());
-        }
+        document.getElementById('addUserBtn')?.addEventListener('click', () => openUserModal());
+        document.getElementById('saveUserBtn')?.addEventListener('click', saveUser);
 
-        // Botón guardar usuario
-        const saveUserBtn = document.getElementById('saveUserBtn');
-        if (saveUserBtn) {
-            saveUserBtn.addEventListener('click', saveUser);
-        }
-
-        // Búsqueda
         const userSearch = document.getElementById('userSearch');
         if (userSearch) {
             userSearch.addEventListener('input', Utils.debounce((e) => {
@@ -40,55 +30,45 @@ const Users = (() => {
             }, 300));
         }
 
-        // Filtros
-        const statusFilter = document.getElementById('statusFilter');
-        if (statusFilter) {
-            statusFilter.addEventListener('change', (e) => {
-                this.statusFilter = e.target.value;
-                currentPage = 1;
-                renderUsers();
-            });
-        }
+        document.getElementById('statusFilter')?.addEventListener('change', (e) => {
+            currentStatusFilter = e.target.value;
+            currentPage = 1;
+            renderUsers();
+        });
 
-        const affiliationFilter = document.getElementById('affiliationFilter');
-        if (affiliationFilter) {
-            affiliationFilter.addEventListener('change', (e) => {
-                this.affiliationFilter = e.target.value;
-                currentPage = 1;
-                renderUsers();
-            });
-        }
+        document.getElementById('affiliationFilter')?.addEventListener('change', (e) => {
+            currentAffiliationFilter = e.target.value;
+            currentPage = 1;
+            renderUsers();
+        });
 
-        // Limpiar filtros
-        const clearFilters = document.getElementById('clearFilters');
-        if (clearFilters) {
-            clearFilters.addEventListener('click', () => {
-                searchTerm = '';
-                this.statusFilter = '';
-                this.affiliationFilter = '';
-                
-                document.getElementById('userSearch').value = '';
-                document.getElementById('statusFilter').value = '';
-                document.getElementById('affiliationFilter').value = '';
-                
-                currentPage = 1;
-                renderUsers();
-            });
-        }
+        document.getElementById('clearFilters')?.addEventListener('click', () => {
+            searchTerm = '';
+            currentStatusFilter = '';
+            currentAffiliationFilter = '';
+            const us = document.getElementById('userSearch');
+            const sf = document.getElementById('statusFilter');
+            const af = document.getElementById('affiliationFilter');
+            if (us) us.value = '';
+            if (sf) sf.value = '';
+            if (af) af.value = '';
+            currentPage = 1;
+            renderUsers();
+        });
 
-        // Acción rápida
-        const quickAddUser = document.getElementById('quickAddUser');
-        if (quickAddUser) {
-            quickAddUser.addEventListener('click', () => openUserModal());
-        }
+        document.getElementById('quickAddUser')?.addEventListener('click', () => {
+            UI.switchTab('users');
+            setTimeout(() => openUserModal(), 300);
+        });
 
-        // Reset form cuando se cierra el modal
-        const userModal = document.getElementById('userModal');
-        if (userModal) {
-            userModal.addEventListener('hidden.bs.modal', () => {
-                UI.resetModalForm('userModal', 'userForm');
-            });
-        }
+        document.getElementById('userModal')?.addEventListener('hidden.bs.modal', () => {
+            const form = document.getElementById('userForm');
+            if (form) {
+                form.reset();
+                Validation.clearFormValidation(form);
+                document.getElementById('userId').value = '';
+            }
+        });
     }
 
     function setupRealtimeValidation() {
@@ -96,23 +76,17 @@ const Users = (() => {
     }
 
     function openUserModal(userId = null) {
-        const modal = document.getElementById('userModal');
-        const modalTitle = document.getElementById('userModalLabel');
         const form = document.getElementById('userForm');
+        const modalTitle = document.getElementById('userModalLabel');
+        if (!form || !modalTitle) return;
 
-        if (!modal || !modalTitle || !form) return;
-
-        // Limpiar form
         form.reset();
         Validation.clearFormValidation(form);
+        document.getElementById('userId').value = '';
 
         if (userId) {
-            // Modo edición
             const user = Storage.getUserById(userId);
-            if (!user) {
-                UI.showErrorToast('Usuario no encontrado');
-                return;
-            }
+            if (!user) { UI.showErrorToast('Usuario no encontrado'); return; }
 
             modalTitle.innerHTML = '<i class="fas fa-user-edit me-2"></i>Editar Usuario';
             document.getElementById('userId').value = user.id;
@@ -124,7 +98,6 @@ const Users = (() => {
             document.getElementById('userStatus').value = user.status;
             document.getElementById('userNotes').value = user.notes || '';
         } else {
-            // Modo creación
             modalTitle.innerHTML = '<i class="fas fa-user-plus me-2"></i>Agregar Usuario';
             document.getElementById('userStatus').value = 'active';
         }
@@ -133,29 +106,28 @@ const Users = (() => {
     }
 
     function saveUser() {
-        // Validar formulario
         const validation = Validation.validateForm('userForm', Validation.schemas.user);
-        
         if (!validation.isValid) {
             UI.showErrorToast('Por favor, corrige los errores en el formulario');
             return;
         }
 
-        const userId = document.getElementById('userId').value;
+        const userId = document.getElementById('userId').value.trim();
         const userData = {
-            name: Validation.sanitizeInput(document.getElementById('userName').value),
-            email: document.getElementById('userEmail').value.toLowerCase(),
+            name: Validation.sanitizeInput(document.getElementById('userName').value.trim()),
+            email: document.getElementById('userEmail').value.trim().toLowerCase(),
             phone: document.getElementById('userPhone').value.replace(/\D/g, ''),
             affiliationType: document.getElementById('userAffiliation').value,
             classTime: document.getElementById('userClassTime').value,
             status: document.getElementById('userStatus').value,
-            notes: Validation.sanitizeInput(document.getElementById('userNotes').value)
+            notes: Validation.sanitizeInput(document.getElementById('userNotes').value.trim())
         };
 
-        // Validación adicional
+        // Validación de unicidad: pasar email y phone con las claves correctas
         const customValidation = Validation.validateUserData({
-            ...userData,
-            userId
+            userEmail: userData.email,
+            userPhone: userData.phone,
+            userId: userId  // vacío si es nuevo
         });
 
         if (!customValidation.isValid) {
@@ -168,28 +140,21 @@ const Users = (() => {
         setTimeout(() => {
             try {
                 if (userId) {
-                    // Actualizar
                     Storage.updateUser(userId, userData);
                     UI.showSuccessToast('Usuario actualizado exitosamente');
                 } else {
-                    // Crear nuevo
                     Storage.addUser(userData);
                     UI.showSuccessToast('Usuario agregado exitosamente');
                 }
-
                 UI.hideModal('userModal');
                 renderUsers();
-                
-                // Actualizar dashboard si estamos en esa pestaña
-                if (window.Dashboard) {
-                    Dashboard.updateStats();
-                }
+                if (window.Dashboard) Dashboard.updateStats();
             } catch (error) {
                 UI.showErrorToast('Error al guardar usuario: ' + error.message);
             } finally {
                 UI.setButtonLoading('saveUserBtn', false);
             }
-        }, 500);
+        }, 400);
     }
 
     function deleteUser(userId) {
@@ -198,21 +163,12 @@ const Users = (() => {
 
         UI.showConfirmModal(
             'Eliminar Usuario',
-            `¿Estás seguro de eliminar a ${user.name}? Esta acción no se puede deshacer. También se eliminarán todos los registros de asistencia y pagos asociados.`,
+            `¿Estás seguro de eliminar a "${user.name}"? Se eliminarán también todos sus registros de asistencia y pagos.`,
             () => {
-                UI.showLoading('Eliminando usuario...');
-                
-                setTimeout(() => {
-                    Storage.deleteUser(userId);
-                    UI.showSuccessToast('Usuario eliminado exitosamente');
-                    renderUsers();
-                    
-                    if (window.Dashboard) {
-                        Dashboard.updateStats();
-                    }
-                    
-                    UI.hideLoading();
-                }, 500);
+                Storage.deleteUser(userId);
+                UI.showSuccessToast('Usuario eliminado exitosamente');
+                renderUsers();
+                if (window.Dashboard) Dashboard.updateStats();
             },
             true
         );
@@ -220,39 +176,24 @@ const Users = (() => {
 
     function renderUsers() {
         const users = Storage.getUsers();
-        
-        // Aplicar filtros
+
         filteredUsers = users.filter(user => {
             let matches = true;
-
-            // Filtro de búsqueda
             if (searchTerm) {
-                const searchableText = `${user.name} ${user.email} ${user.phone}`.toLowerCase();
-                matches = matches && searchableText.includes(searchTerm);
+                const text = `${user.name} ${user.email} ${user.phone}`.toLowerCase();
+                matches = matches && text.includes(searchTerm);
             }
-
-            // Filtro de estado
-            if (statusFilter) {
-                matches = matches && user.status === statusFilter;
-            }
-
-            // Filtro de afiliación
-            if (affiliationFilter) {
-                matches = matches && user.affiliationType === affiliationFilter;
-            }
-
+            if (currentStatusFilter) matches = matches && user.status === currentStatusFilter;
+            if (currentAffiliationFilter) matches = matches && user.affiliationType === currentAffiliationFilter;
             return matches;
         });
 
-        // Ordenar por nombre
         filteredUsers.sort((a, b) => a.name.localeCompare(b.name));
 
-        // Paginación
         const start = (currentPage - 1) * itemsPerPage;
-        const end = start + itemsPerPage;
-        const paginatedUsers = filteredUsers.slice(start, end);
+        const paginated = filteredUsers.slice(start, start + itemsPerPage);
 
-        renderUsersList(paginatedUsers);
+        renderUsersList(paginated);
         renderUsersPagination();
     }
 
@@ -261,71 +202,60 @@ const Users = (() => {
         if (!tbody) return;
 
         if (users.length === 0) {
-            UI.showEmptyState('usersList', 
-                searchTerm || statusFilter || affiliationFilter 
-                    ? 'No se encontraron usuarios con los filtros aplicados'
-                    : 'No hay usuarios registrados. Agrega el primero.',
-                'fa-users'
-            );
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3 d-block"></i>
+                        <p class="text-muted">${
+                            searchTerm || currentStatusFilter || currentAffiliationFilter
+                                ? 'No se encontraron usuarios con los filtros aplicados'
+                                : 'No hay usuarios registrados. ¡Agrega el primero!'
+                        }</p>
+                    </td>
+                </tr>`;
             return;
         }
 
         tbody.innerHTML = users.map((user, index) => {
             const globalIndex = (currentPage - 1) * itemsPerPage + index + 1;
-            const statusBadge = UI.getStatusBadge(user.status);
-            
+            const statusBadge = user.status === 'active'
+                ? '<span class="badge bg-success">Activo</span>'
+                : '<span class="badge bg-danger">Inactivo</span>';
             return `
                 <tr>
                     <td>${globalIndex}</td>
                     <td><strong>${Utils.escapeHtml(user.name)}</strong></td>
                     <td>${Utils.escapeHtml(user.email)}</td>
                     <td>${Utils.formatPhone(user.phone)}</td>
-                    <td><span class="badge bg-primary">${user.affiliationType}</span></td>
+                    <td><span class="badge bg-primary">${Utils.escapeHtml(user.affiliationType)}</span></td>
                     <td>${user.classTime || '-'}</td>
                     <td>${statusBadge}</td>
                     <td>
-                        <button class="btn btn-sm btn-info me-1" onclick="Users.editUser('${user.id}')" 
-                                title="Editar">
+                        <button class="btn btn-sm btn-info me-1" onclick="Users.editUser('${user.id}')" title="Editar">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="Users.deleteUser('${user.id}')" 
-                                title="Eliminar">
+                        <button class="btn btn-sm btn-danger" onclick="Users.deleteUser('${user.id}')" title="Eliminar">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
-                </tr>
-            `;
+                </tr>`;
         }).join('');
     }
 
     function renderUsersPagination() {
-        UI.renderPagination(
-            'usersPagination',
-            filteredUsers.length,
-            currentPage,
-            itemsPerPage,
-            (page) => {
-                currentPage = page;
-                renderUsers();
-                UI.scrollToTop();
-            }
-        );
+        UI.renderPagination('usersPagination', filteredUsers.length, currentPage, itemsPerPage, (page) => {
+            currentPage = page;
+            renderUsers();
+            UI.scrollToTop();
+        });
     }
 
-    function getAllUsers() {
-        return Storage.getUsers();
-    }
-
-    function getActiveUsers() {
-        return Storage.getUsers().filter(u => u.status === 'active');
-    }
-
+    function getAllUsers()       { return Storage.getUsers(); }
+    function getActiveUsers()   { return Storage.getUsers().filter(u => u.status === 'active'); }
     function getUsersForSelect() {
-        const users = getActiveUsers();
-        return users.sort((a, b) => a.name.localeCompare(b.name));
+        return getActiveUsers().sort((a, b) => a.name.localeCompare(b.name));
     }
 
-    // API Pública
     return {
         initialize,
         openUserModal,
