@@ -294,11 +294,13 @@
                             </div>
                             <div class="col-md-3">
                                 <select class="form-select" id="affiliationFilter">
-                                    <option value="">Todas las membresías</option>
-                                    <option value="Mensual">Mensual</option>
-                                    <option value="Trimestral">Trimestral</option>
-                                    <option value="Semestral">Semestral</option>
-                                    <option value="Anual">Anual</option>
+                                    <option value="">Todas las afiliaciones</option>
+                                    <option value="Mensualidad">Mensualidad</option>
+                                    <option value="Paquete 10 clases">Paquete 10 clases</option>
+                                    <option value="Personalizado Diana">Personalizado Diana</option>
+                                    <option value="Clase suelta">Clase suelta</option>
+                                    <option value="GAP">GAP</option>
+                                    <option value="FLEX">FLEX</option>
                                     <option value="Entrenador(a)">Entrenador(a)</option>
                                 </select>
                             </div>
@@ -423,13 +425,13 @@
                             </div>
                             <div class="col-md-3">
                                 <select class="form-select" id="paymentTypeFilter">
-                                    <option value="">Todos los tipos</option>
-                                    <option value="Membresía">Membresía</option>
-                                    <option value="Clase Suelta">Clase Suelta</option>
-                                    <option value="Plan Nutricional">Plan Nutricional</option>
-                                    <option value="Suplementos">Suplementos</option>
-                                    <option value="Otros">Otros</option>
-                                </select>
+                                        <option value="">Todos los tipos</option>
+                                        <option value="Mensualidad">Mensualidad</option>
+                                        <option value="Paquete 10 clases">Paquete 10 clases</option>
+                                        <option value="Personalizado Diana">Personalizado Diana</option>
+                                        <option value="Clase suelta">Clase suelta</option>
+                                        <option value="Movimientos caja">Movimientos caja</option>
+                                    </select>
                             </div>
                             <div class="col-md-3">
                                 <button class="btn btn-primary w-100" id="applyPaymentFilters">
@@ -799,11 +801,12 @@
                                 <label for="userClassTime" class="form-label">Clase (Horario) *</label>
                                 <select class="form-select" id="userClassTime" required>
                                     <option value="">Seleccionar...</option>
-                                    <option value="5:30 AM">5:30 AM</option>
-                                    <option value="6:30 AM">6:30 AM</option>
-                                    <option value="7:30 AM">7:30 AM</option>
-                                    <option value="8:30 AM">8:30 AM</option>
-                                    <option value="9:30 AM">9:30 AM</option>
+                                    <option value="5:00 AM">5:00 AM</option>
+                                    <option value="6:00 AM">6:00 AM</option>
+                                    <option value="7:00 AM">7:00 AM</option>
+                                    <option value="8:00 AM">8:00 AM</option>
+                                    <option value="9:00 AM">9:00 AM</option>
+                                    <option value="4:00 PM">4:00 PM</option>
                                     <option value="5:30 PM">5:30 PM</option>
                                     <option value="6:30 PM">6:30 PM</option>
                                     <option value="7:30 PM">7:30 PM</option>
@@ -814,10 +817,12 @@
                                 <label for="userAffiliation" class="form-label">Tipo de Afiliación *</label>
                                 <select class="form-select" id="userAffiliation" required>
                                     <option value="">Seleccionar...</option>
-                                    <option value="Mensual">Mensual</option>
-                                    <option value="Trimestral">Trimestral</option>
-                                    <option value="Semestral">Semestral</option>
-                                    <option value="Anual">Anual</option>
+                                    <option value="Mensualidad">Mensualidad</option>
+                                    <option value="Paquete 10 clases">Paquete 10 clases</option>
+                                    <option value="Personalizado Diana">Personalizado Diana</option>
+                                    <option value="Clase suelta">Clase suelta</option>
+                                    <option value="GAP">GAP</option>
+                                    <option value="FLEX">FLEX</option>
                                     <option value="Entrenador(a)">Entrenador(a)</option>
                                 </select>
                                 <div class="invalid-feedback">Selecciona un tipo de afiliación.</div>
@@ -871,11 +876,11 @@
                             <label for="incomeType" class="form-label">Tipo de Pago *</label>
                             <select class="form-select" id="incomeType" required>
                                 <option value="">Seleccionar...</option>
-                                <option value="Membresía">Membresía</option>
-                                <option value="Clase Suelta">Clase Suelta</option>
-                                <option value="Plan Nutricional">Plan Nutricional</option>
-                                <option value="Suplementos">Suplementos</option>
-                                <option value="Otros">Otros</option>
+                                <option value="Mensualidad">Mensualidad</option>
+                                <option value="Paquete 10 clases">Paquete 10 clases</option>
+                                <option value="Personalizado Diana">Personalizado Diana</option>
+                                <option value="Clase suelta">Clase suelta</option>
+                                <option value="Movimientos caja">Movimientos caja</option>
                             </select>
                             <div class="invalid-feedback">Por favor selecciona un tipo de pago.</div>
                         </div>
@@ -893,8 +898,9 @@
                             <select class="form-select" id="incomeMethod" required>
                                 <option value="">Seleccionar...</option>
                                 <option value="Efectivo">Efectivo</option>
-                                <option value="Transferencia">Transferencia</option>
-                                <option value="Tarjeta">Tarjeta</option>
+                                <option value="Bancolombia">Bancolombia</option>
+                                <option value="Daviplata">Daviplata</option>
+                                <option value="Nequi">Nequi</option>
                             </select>
                             <div class="invalid-feedback">Por favor selecciona un método de pago.</div>
                         </div>
