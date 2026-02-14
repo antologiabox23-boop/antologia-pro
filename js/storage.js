@@ -13,7 +13,7 @@ const Storage = (() => {
 
     // ─── CONFIGURACIÓN ───────────────────────────────────────────────────────
     // Pega aquí la URL de tu Apps Script después de desplegarlo:
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz9YubFTKIAFUXsQYoOh691HUytL7QwYZ9ZQL-WG0k2nab0w-_FzCCcX6Lm0SMC0TZA/exec';
+    const SCRIPT_URL = 'PEGA_AQUI_TU_URL_DE_APPS_SCRIPT';
     // ─────────────────────────────────────────────────────────────────────────
 
     const DEFAULT_SETTINGS = {
@@ -223,7 +223,10 @@ const Storage = (() => {
     }
 
     function getIncomeByDateRange(start, end) {
-        return (cache.income || []).filter(i => i.paymentDate >= start && i.paymentDate <= end);
+        return (cache.income || []).filter(i => {
+            const d = Utils.normalizeDate(i.paymentDate) || i.paymentDate || '';
+            return d >= start && d <= end;
+        });
     }
 
     // ─── GASTOS ─────────────────────────────────────────────────────────────

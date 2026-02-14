@@ -13,29 +13,77 @@ function generateUUID() {
 }
 
 // Formatear fecha para display
-function formatDate(dateString) {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '-';
-    
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return date.toLocaleDateString('es-ES', options);
+/**
+ * Normaliza cualquier string de fecha a YYYY-MM-DD.
+ * Maneja los formatos que Google Sheets puede devolver:
+ *   - "2026-02-01"              (ISO estándar — ideal)
+ *   - "01/02/2026"              (DD/MM/YYYY)
+ *   - "Sun Feb 01 2026 00:00:00 GMT+0000" (Date.toString())
+ *   - "2026-02-01T00:00:00.000Z"(ISO con hora)
+ */
+function normalizeDate(raw) {
+    if (!raw) return null;
+    const s = String(raw).trim();
+
+    // Ya es YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+    // ISO con hora: 2026-02-01T...
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.slice(0, 10);
+
+    // DD/MM/YYYY o DD-MM-YYYY
+    const dmy = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+    if (dmy) return `${dmy[3]}-${dmy[2].padStart(2,'0')}-${dmy[1].padStart(2,'0')}`;
+
+    // MM/DD/YYYY (poco probable desde Sheets en es-CO, pero por si acaso)
+    const mdy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (mdy) {
+        // Heurística: si el primer número > 12 es día, no mes
+        if (parseInt(mdy[1]) > 12)
+            return `${mdy[3]}-${mdy[2].padStart(2,'0')}-${mdy[1].padStart(2,'0')}`;
+        return `${mdy[3]}-${mdy[1].padStart(2,'0')}-${mdy[2].padStart(2,'0')}`;
+    }
+
+    // Date.toString() del motor V8: "Sun Feb 01 2026 00:00:00 GMT..."
+    const v8 = s.match(/\w+\s+(\w+)\s+(\d{1,2})\s+(\d{4})/);
+    if (v8) {
+        const months = {Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',
+                        Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'};
+        const m = months[v8[1]];
+        if (m) return `${v8[3]}-${m}-${v8[2].padStart(2,'0')}`;
+    }
+
+    return null; // no reconocido
 }
 
-// Formatear fecha y hora
+/**
+ * Formatea una fecha para mostrar al usuario (sin problema de zona horaria).
+ * Siempre parsea como fecha local, nunca como UTC.
+ */
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    const iso = normalizeDate(dateString);
+    if (!iso) return '-';
+    const [y, m, d] = iso.split('-').map(Number);
+    const date = new Date(y, m - 1, d); // local — sin conversión UTC
+    return date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
 function formatDateTime(dateString) {
     if (!dateString) return '-';
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '-';
-    
-    const options = { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    };
-    return date.toLocaleDateString('es-ES', options);
+    const iso = normalizeDate(dateString);
+    if (!iso) return '-';
+    // Si tiene hora, usarla; si no, solo fecha
+    const hasTime = String(dateString).includes('T') || String(dateString).includes(' ');
+    if (hasTime) {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return formatDate(dateString);
+        return date.toLocaleDateString('es-ES', {
+            year: 'numeric', month: 'short', day: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+    }
+    return formatDate(dateString);
 }
 
 // Formatear moneda
@@ -43,9 +91,11 @@ function formatCurrency(amount) {
     if (amount === null || amount === undefined) return '$0.00';
     const num = parseFloat(amount);
     if (isNaN(num)) return '$0.00';
-    return new Intl.NumberFormat('es-MX', {
+    return new Intl.NumberFormat('es-CO', {
         style: 'currency',
-        currency: 'MXN'
+        currency: 'COP',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
     }).format(num);
 }
 
@@ -282,6 +332,7 @@ function getMonthRange(monthString) {
 // Exportar funciones
 window.Utils = {
     generateUUID,
+    normalizeDate,
     formatDate,
     formatDateTime,
     formatCurrency,
