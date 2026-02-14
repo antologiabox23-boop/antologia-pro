@@ -99,6 +99,56 @@ function formatCurrency(amount) {
     }).format(num);
 }
 
+/**
+ * Convierte cualquier valor de monto a número float.
+ * Maneja formatos que Sheets puede devolver:
+ *   "185000"        → 185000
+ *   "185.000"       → 185000  (punto como separador de miles en es-CO)
+ *   "185,000"       → 185000  (coma como separador de miles)
+ *   "$ 185.000"     → 185000
+ *   185000          → 185000  (ya es número)
+ */
+function parseAmount(value) {
+    if (value === null || value === undefined || value === '') return 0;
+    if (typeof value === 'number') return isNaN(value) ? 0 : value;
+    let s = String(value).trim();
+    // Quitar símbolo de moneda y espacios
+    s = s.replace(/[$\s]/g, '');
+    // Detectar formato: si tiene coma Y punto, el último separador es decimal
+    const hasComma = s.includes(',');
+    const hasDot   = s.includes('.');
+    if (hasComma && hasDot) {
+        // Ej: "1.234,56" (es-CO) → quitar puntos, cambiar coma por punto
+        if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+            s = s.replace(/\./g, '').replace(',', '.');
+        } else {
+            // Ej: "1,234.56" (en-US)
+            s = s.replace(/,/g, '');
+        }
+    } else if (hasComma) {
+        // Solo coma: puede ser decimal "185,50" o miles "185,000"
+        const parts = s.split(',');
+        if (parts.length === 2 && parts[1].length <= 2) {
+            // Decimal: "185,50" → 185.50
+            s = s.replace(',', '.');
+        } else {
+            // Miles: "185,000" → "185000"
+            s = s.replace(/,/g, '');
+        }
+    } else if (hasDot) {
+        // Solo punto: puede ser decimal "185.50" o miles "185.000"
+        const parts = s.split('.');
+        if (parts.length === 2 && parts[1].length <= 2) {
+            // Decimal: "185.50" → 185.50 (ya está bien)
+        } else {
+            // Miles en es-CO: "185.000" → "185000"
+            s = s.replace(/\./g, '');
+        }
+    }
+    const result = parseFloat(s);
+    return isNaN(result) ? 0 : result;
+}
+
 // Obtener fecha actual en formato YYYY-MM-DD
 function getCurrentDate() {
     const now = new Date();
@@ -335,6 +385,7 @@ window.Utils = {
     normalizeDate,
     formatDate,
     formatDateTime,
+    parseAmount,
     formatCurrency,
     getCurrentDate,
     getCurrentDateTime,

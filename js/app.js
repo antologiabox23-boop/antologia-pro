@@ -19,7 +19,7 @@ const Dashboard = (() => {
             // Ingresos del mes
             const { start, end } = Utils.getMonthRange(Utils.getCurrentMonth());
             const monthlyPayments = Storage.getIncomeByDateRange(start, end);
-            const monthlyTotal = monthlyPayments.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
+            const monthlyTotal = monthlyPayments.reduce((s, p) => s + Utils.parseAmount(p.amount), 0);
             const incomeEl = document.getElementById('monthlyIncome');
             if (incomeEl) incomeEl.textContent = Utils.formatCurrency(monthlyTotal);
 

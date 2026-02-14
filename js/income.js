@@ -32,7 +32,7 @@ const Income = (() => {
             document.getElementById('incomeId').value      = p.id;
             document.getElementById('incomeUser').value    = p.userId      || '';
             document.getElementById('incomeType').value    = p.paymentType || '';
-            document.getElementById('incomeAmount').value  = p.amount      || '';
+            document.getElementById('incomeAmount').value  = Utils.parseAmount(p.amount) || '';
             document.getElementById('incomeMethod').value  = p.paymentMethod || '';
             document.getElementById('incomeDate').value    = Utils.normalizeDate(p.paymentDate) || '';
             document.getElementById('incomeStartDate').value = Utils.normalizeDate(p.startDate) || '';
@@ -275,7 +275,7 @@ const Income = (() => {
                 <td>${Utils.formatDate(p.paymentDate)}</td>
                 <td>${user ? Utils.escapeHtml(user.name) : '<span class="text-muted">Eliminado</span>'}</td>
                 <td><span class="badge bg-info">${p.paymentType}</span></td>
-                <td><strong>${Utils.formatCurrency(p.amount)}</strong></td>
+                <td><strong>${Utils.formatCurrency(Utils.parseAmount(p.amount))}</strong></td>
                 <td>${p.paymentMethod}</td>
                 <td><small>${vigencia}</small></td>
                 <td>
@@ -291,7 +291,7 @@ const Income = (() => {
     }
 
     function updateIncomeSummary(payments) {
-        const total = payments.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
+        const total = payments.reduce((s, p) => s + Utils.parseAmount(p.amount), 0);
         const el1 = document.getElementById('periodTotal');
         const el2 = document.getElementById('periodCount');
         if (el1) el1.textContent = Utils.formatCurrency(total);

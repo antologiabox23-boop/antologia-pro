@@ -40,9 +40,9 @@ const Finance = (() => {
         const result   = {};
         accounts.forEach(acc => {
             const ingresos = income.filter(p => p.paymentMethod === acc)
-                .reduce((s, p) => s + parseFloat(p.amount || 0), 0);
+                .reduce((s, p) => s + Utils.parseAmount(p.amount), 0);
             const gastos = expenses.filter(e => e.account === acc)
-                .reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+                .reduce((s, e) => s + Utils.parseAmount(e.amount), 0);
             result[acc] = ingresos - gastos;
         });
         return result;
@@ -117,7 +117,7 @@ const Finance = (() => {
         if (accFilter)  expenses = expenses.filter(e => e.account  === accFilter);
         expenses.sort((a, b) => b.date.localeCompare(a.date));
 
-        const total   = expenses.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+        const total   = expenses.reduce((s, e) => s + Utils.parseAmount(e.amount), 0);
         const sumEl   = document.getElementById('expensesTotal');
         if (sumEl) sumEl.textContent = Utils.formatCurrency(total);
 
@@ -132,7 +132,7 @@ const Finance = (() => {
                 <td>${Utils.escapeHtml(e.description)}</td>
                 <td><span class="badge bg-secondary">${e.category}</span></td>
                 <td>${e.account}</td>
-                <td><strong>${Utils.formatCurrency(e.amount)}</strong></td>
+                <td><strong>${Utils.formatCurrency(Utils.parseAmount(e.amount))}</strong></td>
                 <td>
                     <button class="btn btn-sm btn-warning me-1" onclick="Finance.editExpense('${e.id}')" title="Editar">
                         <i class="fas fa-edit"></i>
@@ -151,7 +151,7 @@ const Finance = (() => {
         document.getElementById('editExpenseId').value       = expense.id;
         document.getElementById('editExpenseDate').value     = Utils.normalizeDate(expense.date) || expense.date || '';
         document.getElementById('editExpenseDesc').value     = expense.description || '';
-        document.getElementById('editExpenseAmount').value   = expense.amount || '';
+        document.getElementById('editExpenseAmount').value   = Utils.parseAmount(expense.amount) || '';
         document.getElementById('editExpenseCategory').value = expense.category || '';
         document.getElementById('editExpenseAccount').value  = expense.account  || '';
 
@@ -203,8 +203,8 @@ const Finance = (() => {
         const income   = Storage.getIncomeByDateRange(from, to);
         const expenses = Storage.getExpenses().filter(e => e.date >= from && e.date <= to);
 
-        const totalIncome   = income.reduce((s, p)   => s + parseFloat(p.amount || 0), 0);
-        const totalExpenses = expenses.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+        const totalIncome   = income.reduce((s, p)   => s + Utils.parseAmount(p.amount), 0);
+        const totalExpenses = expenses.reduce((s, e) => s + Utils.parseAmount(e.amount), 0);
         const netProfit     = totalIncome - totalExpenses;
         const margin        = totalIncome > 0 ? ((netProfit / totalIncome) * 100).toFixed(1) : 0;
 
@@ -216,7 +216,7 @@ const Finance = (() => {
 
         // Desglose gastos por categoría
         const byCategory = {};
-        expenses.forEach(e => { byCategory[e.category] = (byCategory[e.category] || 0) + parseFloat(e.amount || 0); });
+        expenses.forEach(e => { byCategory[e.category] = (byCategory[e.category] || 0) + Utils.parseAmount(e.amount); });
         const catEl = document.getElementById('finRepCategories');
         if (catEl) {
             catEl.innerHTML = Object.entries(byCategory).length === 0
