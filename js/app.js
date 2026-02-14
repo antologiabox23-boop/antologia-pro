@@ -222,11 +222,9 @@ function showSetupBanner() {
             // Poblar selects que dependen de usuarios cargados
             Attendance.populateReportUsers();
             Staff.populateTrainerSelect();
-            WhatsApp.renderWAUsers();
 
-            // Actualizar WhatsApp tab al activarse
+            // Verificar cumpleaños al abrir el tab de WhatsApp
             document.getElementById('whatsapp-tab')?.addEventListener('shown.bs.tab', () => {
-                WhatsApp.renderWAUsers();
                 WhatsApp.checkBirthdays();
             });
             document.getElementById('staff-tab')?.addEventListener('shown.bs.tab', () => {

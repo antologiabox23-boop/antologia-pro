@@ -3,16 +3,29 @@
  * Mensajes automáticos: bienvenida, pago, recordatorios, cumpleaños
  */
 const WhatsApp = (() => {
-    const GYM_NAME = 'Antología Box23';
-    const WA_GROUP_LINK = ''; // Pega aquí el enlace de tu grupo de WhatsApp
+    const GYM_NAME   = 'Antología Box23';
+    const WA_GROUP   = 'https://chat.whatsapp.com/DSJzYAb6h58FQDA8yEAzwN';
+    const FORM_LINK  = 'https://forms.gle/ZHUj1Q7YiDhE5P498';
 
     function initialize() {
         setupEventListeners();
-        checkBirthdays();
+        checkBirthdays('proximos');
     }
 
     function setupEventListeners() {
-        document.getElementById('waBirthdayCheck')?.addEventListener('click', checkBirthdays);
+        document.getElementById('waBirthdayProximos')?.addEventListener('click', () => checkBirthdays('proximos'));
+        document.getElementById('waBirthdayMes')?.addEventListener('click',      () => checkBirthdays('mes'));
+        document.getElementById('enviarNuevoIngresoBtn')?.addEventListener('click', enviarNuevoIngreso);
+
+        // Preview en tiempo real
+        document.getElementById('nuevoIngresoNombre')?.addEventListener('input', actualizarPreview);
+        document.getElementById('incluirGrupo')?.addEventListener('change', actualizarPreview);
+
+        // Actualizar preview al abrir el modal
+        document.getElementById('nuevoIngresoModal')?.addEventListener('shown.bs.modal', () => {
+            document.getElementById('nuevoIngresoNombre')?.focus();
+            actualizarPreview();
+        });
     }
 
     function buildUrl(phone, message) {
@@ -24,15 +37,61 @@ const WhatsApp = (() => {
         window.open(buildUrl(phone, message), '_blank');
     }
 
-    // ── 1. Bienvenida + invitación grupo ────────────────────────────────
+    // ── 1. Nuevo Ingreso — modal con preview en tiempo real ─────────────
 
-    function bienvenida(userId) {
-        const user = Storage.getUserById(userId);
-        if (!user) return;
-        const nombre = user.name.split(' ')[0];
-        const groupText = WA_GROUP_LINK ? `\n\nÚnete a nuestro grupo de WhatsApp: ${WA_GROUP_LINK}` : '';
-        const msg = `¡Hola ${nombre}! 🎉\nBienvenido(a) a *${GYM_NAME}*. Nos alegra tenerte con nosotros.\n\nTu afiliación: *${user.affiliationType}*\nHorario: *${user.classTime || 'por confirmar'}*${groupText}\n\n💪 ¡Mucho éxito en tu proceso!`;
-        openWA(user.phone, msg);
+    function openNuevoIngreso() {
+        // Limpiar campos
+        document.getElementById('nuevoIngresoNombre').value    = '';
+        document.getElementById('nuevoIngresoTelefono').value  = '';
+        document.getElementById('incluirGrupo').checked        = true;
+        actualizarPreview();
+        UI.showModal('nuevoIngresoModal');
+    }
+
+    function buildMensajeIngreso(nombre, incluirGrupo) {
+        const n = (nombre || '[Nombre]').trim();
+        const grupoLine = incluirGrupo
+            ? `\n\n📲 Únete a nuestro grupo de WhatsApp (opcional):\n${WA_GROUP}`
+            : '';
+        return `Hola ${n}, bienvenido/a a ${GYM_NAME}. Para completar tu registro, necesitamos los siguientes datos:
+
+1. Nombre completo:
+2. Número de documento:
+3. Fecha de nacimiento:
+4. Tipo de sangre (RH):
+5. EPS:
+6. Alguna patología o condición médica que debamos conocer:
+7. Teléfono de contacto de emergencia:
+8. Nombre del contacto de emergencia:
+
+¡Gracias por colaborar!${grupoLine}
+
+📋 O completa nuestro formulario (para que habilite el mensaje contesta el mensaje o guarda el contacto) en línea:
+${FORM_LINK}`;
+    }
+
+    function actualizarPreview() {
+        const nombre      = document.getElementById('nuevoIngresoNombre')?.value || '';
+        const incluirGrupo = document.getElementById('incluirGrupo')?.checked ?? true;
+        const preview     = document.getElementById('previewMensaje');
+        if (preview) preview.textContent = buildMensajeIngreso(nombre, incluirGrupo);
+    }
+
+    function enviarNuevoIngreso() {
+        const nombre   = document.getElementById('nuevoIngresoNombre')?.value?.trim();
+        const telefono = document.getElementById('nuevoIngresoTelefono')?.value?.trim();
+        const incluirGrupo = document.getElementById('incluirGrupo')?.checked ?? true;
+
+        if (!nombre) {
+            UI.showErrorToast('Ingresa el nombre de pila'); return;
+        }
+        if (!telefono || telefono.replace(/\D/g,'').length < 7) {
+            UI.showErrorToast('Ingresa un número de celular válido'); return;
+        }
+
+        const msg = buildMensajeIngreso(nombre, incluirGrupo);
+        openWA(telefono, msg);
+        UI.hideModal('nuevoIngresoModal');
     }
 
     // ── 2. Confirmación de pago ─────────────────────────────────────────
@@ -80,38 +139,117 @@ const WhatsApp = (() => {
 
     // ── 5. Verificador de cumpleaños ────────────────────────────────────
 
-    function checkBirthdays() {
+    function checkBirthdays(modo = 'proximos') {
         const today     = Utils.getCurrentDate();
-        const todayMMDD = today.slice(5); // MM-DD
+        const todayDate = new Date(today + 'T00:00:00');
         const users     = Users.getActiveUsers();
 
-        const birthdays = users.filter(u => {
-            if (!u.birthdate) return false;
-            return u.birthdate.slice(5) === todayMMDD;
-        });
+        // Marcar botón activo
+        document.getElementById('waBirthdayProximos')?.classList.toggle('active', modo === 'proximos');
+        document.getElementById('waBirthdayMes')?.classList.toggle('active',      modo === 'mes');
+
+        const label = document.getElementById('birthdayRangeLabel');
+
+        let birthdays;
+
+        if (modo === 'mes') {
+            // Todos los cumpleaños del mes en curso
+            const currentMonth = String(todayDate.getMonth() + 1).padStart(2, '0');
+            if (label) label.textContent = 'Mes de ' + todayDate.toLocaleDateString('es-ES', { month: 'long' });
+
+            birthdays = users
+                .filter(u => {
+                    if (!u.birthdate) return false;
+                    const bd = Utils.normalizeDate(u.birthdate);
+                    return bd && bd.slice(5, 7) === currentMonth;
+                })
+                .map(u => {
+                    const bd  = Utils.normalizeDate(u.birthdate);
+                    const day = parseInt(bd.slice(8, 10));
+                    return { user: u, day };
+                })
+                .sort((a, b) => a.day - b.day);
+
+        } else {
+            // Próximos 5 días (incluye hoy)
+            if (label) label.textContent = 'Próximos 5 días';
+
+            // Generar las 5 fechas MM-DD a comparar
+            const nextDays = [];
+            for (let i = 0; i < 5; i++) {
+                const d = new Date(todayDate);
+                d.setDate(d.getDate() + i);
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                nextDays.push({ mmdd: mm + '-' + dd, date: d });
+            }
+
+            birthdays = users
+                .filter(u => {
+                    if (!u.birthdate) return false;
+                    const bd = Utils.normalizeDate(u.birthdate);
+                    return bd && nextDays.some(nd => nd.mmdd === bd.slice(5));
+                })
+                .map(u => {
+                    const bd   = Utils.normalizeDate(u.birthdate);
+                    const mmdd = bd.slice(5);
+                    const nd   = nextDays.find(x => x.mmdd === mmdd);
+                    const diff = Math.round((nd.date - todayDate) / 86400000);
+                    return { user: u, diff, mmdd };
+                })
+                .sort((a, b) => a.diff - b.diff);
+        }
 
         const container = document.getElementById('birthdayList');
         if (!container) return;
 
+        const textoVacio = modo === 'mes'
+            ? 'Sin cumpleaños este mes'
+            : 'Sin cumpleaños en los próximos 5 días';
+
         if (birthdays.length === 0) {
-            container.innerHTML = '<p class="text-muted text-center py-3"><i class="fas fa-birthday-cake me-2"></i>Sin cumpleaños hoy</p>';
+            container.innerHTML = `<p class="text-muted text-center py-3"><i class="fas fa-birthday-cake me-2"></i>${textoVacio}</p>`;
+            const badge = document.getElementById('birthdayBadge');
+            if (badge) badge.style.display = 'none';
             return;
         }
 
-        container.innerHTML = birthdays.map(u => {
+        container.innerHTML = birthdays.map(item => {
+            const u = item.user || item;
             const nombre = u.name.split(' ')[0];
-            const msg    = `¡Hola ${nombre}! 🎂🎉\nTodo el equipo de *${GYM_NAME}* te desea un feliz cumpleaños. 🎊\n\nEsperamos que este nuevo año de vida esté lleno de salud, energía y muchos logros en tus entrenamientos. 💪\n\n¡Que lo disfrutes mucho!`;
+            const msg = `¡Hola ${nombre}! 🎂🎉\nTodo el equipo de *${GYM_NAME}* te desea un feliz cumpleaños. 🎊\n\nEsperamos que este nuevo año de vida esté lleno de salud, energía y muchos logros en tus entrenamientos. 💪\n\n¡Que lo disfrutes mucho!`;
+            const msgEsc = msg.replace(/'/g, "\'");
+
+            // Etiqueta de cuándo
+            let cuandoTag = '';
+            if (modo === 'proximos') {
+                if (item.diff === 0)
+                    cuandoTag = '<span class="badge bg-warning text-dark ms-2">¡Hoy! 🎂</span>';
+                else if (item.diff === 1)
+                    cuandoTag = '<span class="badge bg-info ms-2">Mañana</span>';
+                else
+                    cuandoTag = `<span class="badge bg-secondary ms-2">En ${item.diff} días</span>`;
+            } else {
+                const bd = Utils.normalizeDate(u.birthdate);
+                cuandoTag = `<span class="badge bg-secondary ms-2">Día ${parseInt(bd.slice(8, 10))}</span>`;
+            }
+
             return `<div class="d-flex align-items-center justify-content-between p-2 border rounded mb-2">
-                <span><i class="fas fa-birthday-cake text-warning me-2"></i><strong>${Utils.escapeHtml(u.name)}</strong></span>
-                <button class="btn btn-sm btn-success" onclick="WhatsApp.openWA('${u.phone}','${msg.replace(/'/g,"\\'")}')">
+                <span>
+                    <i class="fas fa-birthday-cake text-warning me-2"></i>
+                    <strong>${Utils.escapeHtml(u.name)}</strong>
+                    ${cuandoTag}
+                </span>
+                <button class="btn btn-sm btn-success" onclick="WhatsApp.openWA('${u.phone}','${msgEsc}')" title="Enviar saludo">
                     <i class="fab fa-whatsapp me-1"></i>Saludar
                 </button>
             </div>`;
         }).join('');
 
-        // Badge en el nav
+        // Badge en el nav — solo muestra los de hoy
+        const hoy = birthdays.filter(b => b.diff === 0).length;
         const badge = document.getElementById('birthdayBadge');
-        if (badge) { badge.textContent = birthdays.length; badge.style.display = birthdays.length > 0 ? 'inline' : 'none'; }
+        if (badge) { badge.textContent = hoy; badge.style.display = hoy > 0 ? 'inline' : 'none'; }
     }
 
     // ── Renderizar tabla de usuarios con botones WA ─────────────────────
@@ -147,8 +285,8 @@ const WhatsApp = (() => {
     }
 
     return {
-        initialize, bienvenida, confirmacionPago, recordatorioPago,
-        recordatorioInasistencia, checkBirthdays, renderWAUsers, openWA
+        initialize, openNuevoIngreso, confirmacionPago, recordatorioPago,
+        recordatorioInasistencia, checkBirthdays, openWA
     };
 })();
 window.WhatsApp = WhatsApp;
