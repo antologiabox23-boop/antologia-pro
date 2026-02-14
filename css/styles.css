@@ -371,7 +371,7 @@ h1, h2, h3, h4, h5, h6 {
 /* Form Controls */
 .form-control,
 .form-select {
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: var(--color-dark);
     border: 2px solid rgba(255, 255, 255, 0.1);
     color: var(--color-light);
     padding: 0.75rem 1rem;
@@ -381,14 +381,79 @@ h1, h2, h3, h4, h5, h6 {
 
 .form-control:focus,
 .form-select:focus {
-    background-color: rgba(255, 255, 255, 0.12);
+    background-color: var(--color-dark);
     border-color: var(--color-primary);
     box-shadow: 0 0 0 0.25rem rgba(39, 249, 212, 0.15);
     color: var(--color-light);
 }
 
+/* ── Dropdown nativo del browser: opciones visibles en tema oscuro ── */
+.form-select option {
+    background-color: var(--color-dark);
+    color: var(--color-light);
+}
+
+.form-select option:checked,
+.form-select option:hover,
+.form-select option:focus {
+    background-color: var(--color-primary);
+    color: var(--color-background);
+}
+
+/* Tema claro: restaurar colores normales */
+[data-theme="light"] .form-control,
+[data-theme="light"] .form-select {
+    background-color: #ffffff;
+    color: #1a2332;
+    border-color: #d1d5db;
+}
+
+[data-theme="light"] .form-select option {
+    background-color: #ffffff;
+    color: #1a2332;
+}
+
+[data-theme="light"] .form-control:focus,
+[data-theme="light"] .form-select:focus {
+    background-color: #ffffff;
+    border-color: var(--color-primary);
+    color: #1a2332;
+}
+
+[data-theme="light"] .form-control::placeholder {
+    color: #9ca3af;
+}
+
 .form-control::placeholder {
     color: rgba(255, 255, 255, 0.4);
+}
+
+/* Inputs de fecha y número: forzar colores en Chrome/Edge */
+input[type="date"],
+input[type="number"],
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+textarea {
+    color-scheme: dark;
+}
+
+[data-theme="light"] input[type="date"],
+[data-theme="light"] input[type="number"],
+[data-theme="light"] input[type="text"],
+[data-theme="light"] input[type="email"],
+[data-theme="light"] input[type="tel"],
+[data-theme="light"] textarea {
+    color-scheme: light;
+}
+
+/* Bootstrap form-select arrow icon — visible en tema oscuro */
+.form-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2327F9D4' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+}
+
+[data-theme="light"] .form-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23273043' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
 }
 
 .form-label {
