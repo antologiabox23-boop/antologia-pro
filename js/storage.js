@@ -13,7 +13,7 @@ const Storage = (() => {
 
     // ─── CONFIGURACIÓN ───────────────────────────────────────────────────────
     // Pega aquí la URL de tu Apps Script después de desplegarlo:
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz9YubFTKIAFUXsQYoOh691HUytL7QwYZ9ZQL-WG0k2nab0w-_FzCCcX6Lm0SMC0TZA/exec';
+    const SCRIPT_URL = 'https://docs.google.com/spreadsheets/d/1Q3uao_brBssNkaASs3OBFvtW2J3Of9BflTBHFRqqnR4/edit?gid=1297494301#gid=1297494301';
     // ─────────────────────────────────────────────────────────────────────────
 
     const DEFAULT_SETTINGS = {
@@ -240,6 +240,15 @@ const Storage = (() => {
         return newExpense;
     }
 
+    async function updateExpense(id, updates) {
+        const idx = cache.expenses.findIndex(e => e.id === id);
+        if (idx === -1) return null;
+        const updated = { ...cache.expenses[idx], ...updates };
+        await apiCall('updateRow', { sheet: 'Gastos', id, data: updated });
+        cache.expenses[idx] = updated;
+        return updated;
+    }
+
     async function deleteExpense(id) {
         await apiCall('deleteRow', { sheet: 'Gastos', id });
         cache.expenses = cache.expenses.filter(e => e.id !== id);
@@ -365,7 +374,7 @@ const Storage = (() => {
         // Backup
         exportData, importData, getLastBackupDate,
         // Gastos
-        getExpenses, addExpense, deleteExpense,
+        getExpenses, addExpense, updateExpense, deleteExpense,
         // Clases personal
         getClasses, addClass, deleteClass,
         // Utilidades

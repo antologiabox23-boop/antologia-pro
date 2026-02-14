@@ -16,16 +16,40 @@ const Income = (() => {
         renderIncome();
     }
 
-    function openModal() {
+    function openModal(paymentId = null) {
         populateUserSelect();
-        const today = Utils.getCurrentDate();
-        document.getElementById('incomeDate').value = today;
-        // Limpiar vigencia hasta que se elija tipo
-        document.getElementById('incomeStartDate').value = today;
-        document.getElementById('incomeEndDate').value = '';
+        const form = document.getElementById('incomeForm');
+        if (form) { form.reset(); Validation.clearFormValidation(form); }
+        document.getElementById('incomeId').value = '';
         document.getElementById('vigenciaInfo').style.display = 'none';
+
+        const labelEl = document.getElementById('incomeModalLabel');
+
+        if (paymentId) {
+            const p = Storage.getIncome().find(x => x.id === paymentId);
+            if (!p) return;
+            if (labelEl) labelEl.innerHTML = '<i class="fas fa-edit me-2"></i>Editar Pago';
+            document.getElementById('incomeId').value      = p.id;
+            document.getElementById('incomeUser').value    = p.userId      || '';
+            document.getElementById('incomeType').value    = p.paymentType || '';
+            document.getElementById('incomeAmount').value  = p.amount      || '';
+            document.getElementById('incomeMethod').value  = p.paymentMethod || '';
+            document.getElementById('incomeDate').value    = Utils.normalizeDate(p.paymentDate) || '';
+            document.getElementById('incomeStartDate').value = Utils.normalizeDate(p.startDate) || '';
+            document.getElementById('incomeEndDate').value   = Utils.normalizeDate(p.endDate)   || '';
+            document.getElementById('incomeNotes').value   = p.notes       || '';
+            showVigenciaInfo();
+        } else {
+            if (labelEl) labelEl.innerHTML = '<i class="fas fa-dollar-sign me-2"></i>Registrar Pago';
+            const today = Utils.getCurrentDate();
+            document.getElementById('incomeDate').value      = today;
+            document.getElementById('incomeStartDate').value = today;
+            document.getElementById('incomeEndDate').value   = '';
+        }
         UI.showModal('incomeModal');
     }
+
+    function editPayment(id) { openModal(id); }
 
     function setupEventListeners() {
         document.getElementById('saveIncomeBtn')?.addEventListener('click', saveIncome);
@@ -180,14 +204,24 @@ const Income = (() => {
             return;
         }
 
+        const paymentId = document.getElementById('incomeId')?.value?.trim();
         UI.setButtonLoading('saveIncomeBtn', true);
         try {
-            const saved = await Storage.addIncome(incomeData);
-            UI.hideModal('incomeModal');
-            renderIncome();
-            if (window.Dashboard) Dashboard.updateStats();
-            // Ofrecer envío de confirmación por WhatsApp
-            ofrecerWhatsApp(saved || incomeData);
+            if (paymentId) {
+                // Edición
+                await Storage.updateIncome(paymentId, incomeData);
+                UI.showSuccessToast('Pago actualizado');
+                UI.hideModal('incomeModal');
+                renderIncome();
+                if (window.Dashboard) Dashboard.updateStats();
+            } else {
+                // Nuevo
+                const saved = await Storage.addIncome(incomeData);
+                UI.hideModal('incomeModal');
+                renderIncome();
+                if (window.Dashboard) Dashboard.updateStats();
+                ofrecerWhatsApp(saved || incomeData);
+            }
         } catch (err) {
             UI.showErrorToast('Error al guardar: ' + err.message);
         } finally {
@@ -245,6 +279,9 @@ const Income = (() => {
                 <td>${p.paymentMethod}</td>
                 <td><small>${vigencia}</small></td>
                 <td>
+                    <button class="btn btn-sm btn-warning me-1" onclick="Income.editPayment('${p.id}')" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
                     <button class="btn btn-sm btn-danger" onclick="Income.deletePayment('${p.id}')" title="Eliminar">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -325,6 +362,7 @@ const Income = (() => {
     return {
         initialize,
         openModal,
+        editPayment,
         renderIncome,
         deletePayment,
         populateSelect: populateUserSelect

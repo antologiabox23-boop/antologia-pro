@@ -26,6 +26,7 @@ const Finance = (() => {
 
     function setupEventListeners() {
         document.getElementById('saveExpenseBtn')?.addEventListener('click', saveExpense);
+        document.getElementById('saveEditExpenseBtn')?.addEventListener('click', saveEditExpense);
         document.getElementById('applyExpHistFilter')?.addEventListener('click', renderExpenses);
         document.getElementById('applyFinReport')?.addEventListener('click', renderFinancialReport);
     }
@@ -133,11 +134,55 @@ const Finance = (() => {
                 <td>${e.account}</td>
                 <td><strong>${Utils.formatCurrency(e.amount)}</strong></td>
                 <td>
-                    <button class="btn btn-sm btn-danger" onclick="Finance.deleteExpense('${e.id}')">
+                    <button class="btn btn-sm btn-warning me-1" onclick="Finance.editExpense('${e.id}')" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="Finance.deleteExpense('${e.id}')" title="Eliminar">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
             </tr>`).join('');
+    }
+
+    function editExpense(id) {
+        const expense = Storage.getExpenses().find(e => e.id === id);
+        if (!expense) return;
+
+        document.getElementById('editExpenseId').value       = expense.id;
+        document.getElementById('editExpenseDate').value     = Utils.normalizeDate(expense.date) || expense.date || '';
+        document.getElementById('editExpenseDesc').value     = expense.description || '';
+        document.getElementById('editExpenseAmount').value   = expense.amount || '';
+        document.getElementById('editExpenseCategory').value = expense.category || '';
+        document.getElementById('editExpenseAccount').value  = expense.account  || '';
+
+        UI.showModal('editExpenseModal');
+    }
+
+    async function saveEditExpense() {
+        const id       = document.getElementById('editExpenseId')?.value?.trim();
+        const date     = document.getElementById('editExpenseDate')?.value;
+        const desc     = document.getElementById('editExpenseDesc')?.value?.trim();
+        const amount   = parseFloat(document.getElementById('editExpenseAmount')?.value);
+        const category = document.getElementById('editExpenseCategory')?.value;
+        const account  = document.getElementById('editExpenseAccount')?.value;
+
+        if (!id || !date || !desc || isNaN(amount) || amount <= 0 || !category || !account) {
+            UI.showErrorToast('Completa todos los campos'); return;
+        }
+
+        UI.setButtonLoading('saveEditExpenseBtn', true);
+        try {
+            await Storage.updateExpense(id, { date, description: desc, amount, category, account });
+            UI.showSuccessToast('Gasto actualizado');
+            UI.hideModal('editExpenseModal');
+            renderSummary();
+            renderExpenses();
+            renderFinancialReport();
+        } catch (err) {
+            UI.showErrorToast('Error: ' + err.message);
+        } finally {
+            UI.setButtonLoading('saveEditExpenseBtn', false);
+        }
     }
 
     function deleteExpense(id) {
@@ -184,6 +229,6 @@ const Finance = (() => {
         }
     }
 
-    return { initialize, renderSummary, renderExpenses, renderFinancialReport, deleteExpense };
+    return { initialize, renderSummary, renderExpenses, renderFinancialReport, editExpense, deleteExpense };
 })();
 window.Finance = Finance;
