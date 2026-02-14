@@ -1318,7 +1318,67 @@
     <script src="js/reports.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/backup.js"></script>
-    <script src="js/finance.js"></script>
+    <!-- Modal Editar Gasto -->
+    <div class="modal fade" id="editExpenseModal" tabindex="-1" aria-labelledby="editExpenseModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editExpenseModalLabel">
+                        <i class="fas fa-edit me-2"></i>Editar Gasto
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editExpenseForm">
+                        <input type="hidden" id="editExpenseId">
+                        <div class="mb-3">
+                            <label class="form-label">Fecha *</label>
+                            <input type="date" class="form-control" id="editExpenseDate" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descripción *</label>
+                            <input type="text" class="form-control" id="editExpenseDesc" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Monto *</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="editExpenseAmount" min="0" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Categoría *</label>
+                            <select class="form-select" id="editExpenseCategory" required>
+                                <option value="">Seleccionar...</option>
+                                <option>Nomina</option><option>Arriendo</option>
+                                <option>Servicios públicos</option><option>Mantenimiento</option>
+                                <option>Insumos</option><option>Marketing</option>
+                                <option>Impuestos</option><option>Otros</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Cuenta *</label>
+                            <select class="form-select" id="editExpenseAccount" required>
+                                <option value="">Seleccionar...</option>
+                                <option>Efectivo</option><option>Bancolombia</option>
+                                <option>Daviplata</option><option>Nequi</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" id="saveEditExpenseBtn">
+                        <i class="fas fa-save me-2"></i>Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <script src="js/finance.js"></script>
     <script src="js/staff.js"></script>
     <script src="js/whatsapp.js"></script>
     <script src="js/app.js"></script>
