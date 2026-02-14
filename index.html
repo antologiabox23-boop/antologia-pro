@@ -105,16 +105,33 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
+                <button class="nav-link" id="finance-tab" data-bs-toggle="tab"
+                        data-bs-target="#finance" type="button" role="tab">
+                    <i class="fas fa-wallet me-2"></i>Finanzas
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="staff-tab" data-bs-toggle="tab"
+                        data-bs-target="#staff" type="button" role="tab">
+                    <i class="fas fa-chalkboard-teacher me-2"></i>Personal
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link position-relative" id="whatsapp-tab" data-bs-toggle="tab"
+                        data-bs-target="#whatsapp" type="button" role="tab">
+                    <i class="fab fa-whatsapp me-2"></i>WhatsApp
+                    <span id="birthdayBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none;font-size:.6rem">0</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="reports-tab" data-bs-toggle="tab" 
-                        data-bs-target="#reports" type="button" role="tab" 
-                        aria-controls="reports" aria-selected="false">
+                        data-bs-target="#reports" type="button" role="tab">
                     <i class="fas fa-file-alt me-2"></i>Reportes
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="settings-tab" data-bs-toggle="tab" 
-                        data-bs-target="#settings" type="button" role="tab" 
-                        aria-controls="settings" aria-selected="false">
+                        data-bs-target="#settings" type="button" role="tab">
                     <i class="fas fa-cog me-2"></i>Configuración
                 </button>
             </li>
@@ -345,66 +362,100 @@
             </div>
 
             <!-- Attendance Tab -->
+                        <!-- Asistencia Tab -->
             <div class="tab-pane fade" id="attendance" role="tabpanel" aria-labelledby="attendance-tab">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Control de Asistencia</h5>
-                        <div>
-                            <input type="date" class="form-control d-inline-block" id="attendanceDate" 
-                                   style="width: auto;">
+
+                <!-- Tabla de asistencia del día -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Asistencia del Día</h5>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span id="attendanceDaySummary"></span>
+                            <input type="date" class="form-control form-control-sm" id="attendanceDate" style="width:160px">
+                            <input type="text" class="form-control form-control-sm" id="attendanceSearch" placeholder="Buscar usuario..." style="width:180px">
+                            <button class="btn btn-sm btn-success" id="markAllPresent">
+                                <i class="fas fa-check-double me-1"></i>Marcar todos presentes
+                            </button>
                         </div>
                     </div>
-                    <div class="card-body">
-                        <!-- Search -->
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                    <input type="text" class="form-control" id="attendanceSearch" 
-                                           placeholder="Buscar usuario...">
-                                </div>
-                            </div>
-                            <div class="col-md-6 text-end">
-                                <button class="btn btn-success" id="markAllPresent">
-                                    <i class="fas fa-check-double me-2"></i>Marcar Todos Presente
-                                </button>
-                                <button class="btn btn-secondary" id="exportAttendance">
-                                    <i class="fas fa-file-export me-2"></i>Exportar
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Attendance Table -->
+                    <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-hover">
+                            <table class="table table-hover mb-0">
                                 <thead>
                                     <tr>
                                         <th>#</th>
                                         <th>Usuario</th>
-                                        <th>Horario</th>
                                         <th>Estado</th>
-                                        <th>Hora de Registro</th>
+                                        <th>Vigencia del Pago</th>
                                         <th>Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody id="attendanceList">
-                                    <!-- Se llenará dinámicamente -->
+                                    <tr><td colspan="5" class="text-center py-4 text-muted">Cargando...</td></tr>
                                 </tbody>
                             </table>
                         </div>
-
-                        <!-- Pagination -->
-                        <nav aria-label="Paginación de asistencia">
-                            <ul class="pagination justify-content-center" id="attendancePagination">
-                                <!-- Se generará dinámicamente -->
-                            </ul>
-                        </nav>
                     </div>
                 </div>
+
+                <!-- Alertas de inasistencia -->
+                <div class="card mb-4 border-warning">
+                    <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 text-warning"><i class="fas fa-exclamation-triangle me-2"></i>Alertas de Inasistencia <span class="badge bg-warning text-dark" id="alertsCount">0</span></h5>
+                        <small class="text-muted">Usuarios activos sin asistir más de 6 días</small>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0">
+                                <thead><tr><th>#</th><th>Usuario</th><th>Estado</th><th>Última asistencia</th><th>WhatsApp</th></tr></thead>
+                                <tbody id="alertsList"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Informe de asistencia por período -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Informe de Asistencia</h5>
+                        <span class="badge bg-primary" id="reportSummary">0 asistencias</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-3">
+                                <label class="form-label small">Fecha inicial</label>
+                                <input type="date" class="form-control form-control-sm" id="reportDateFrom">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small">Fecha final</label>
+                                <input type="date" class="form-control form-control-sm" id="reportDateTo">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Usuario</label>
+                                <select class="form-select form-select-sm" id="reportUser">
+                                    <option value="">Todos los usuarios</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button class="btn btn-primary btn-sm w-100" id="applyAttendanceReport">
+                                    <i class="fas fa-search me-1"></i>Consultar
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0">
+                                <thead><tr><th>#</th><th>Fecha</th><th>Usuario</th><th>Hora</th></tr></thead>
+                                <tbody id="reportList">
+                                    <tr><td colspan="4" class="text-center py-3 text-muted">Selecciona un rango de fechas</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
-            <!-- Income Tab -->
-            <div class="tab-pane fade" id="income" role="tabpanel" aria-labelledby="income-tab">
+<div class="tab-pane fade" id="income" role="tabpanel" aria-labelledby="income-tab">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>Gestión de Pagos</h5>
@@ -486,6 +537,287 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Finanzas Tab -->
+            <div class="tab-pane fade" id="finance" role="tabpanel">
+                <!-- Saldos por cuenta -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-wallet me-2"></i>Saldos por Cuenta</h5>
+                        <div>Total: <strong id="totalBalance">$ 0</strong></div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3" id="accountBalances">
+                            <div class="text-center text-muted py-3">Cargando saldos...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Registrar gasto -->
+                <div class="card mb-4">
+                    <div class="card-header"><h5 class="mb-0"><i class="fas fa-minus-circle me-2 text-danger"></i>Registrar Gasto</h5></div>
+                    <div class="card-body">
+                        <form id="expenseForm">
+                            <div class="row g-3">
+                                <div class="col-md-2">
+                                    <label class="form-label small">Fecha *</label>
+                                    <input type="date" class="form-control form-control-sm" id="expenseDate" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Descripción *</label>
+                                    <input type="text" class="form-control form-control-sm" id="expenseDesc" placeholder="Descripción del gasto" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small">Monto *</label>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="expenseAmount" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small">Categoría *</label>
+                                    <select class="form-select form-select-sm" id="expenseCategory" required>
+                                        <option value="">Seleccionar...</option>
+                                        <option>Nomina</option><option>Arriendo</option>
+                                        <option>Servicios públicos</option><option>Mantenimiento</option>
+                                        <option>Insumos</option><option>Marketing</option>
+                                        <option>Impuestos</option><option>Otros</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small">Cuenta *</label>
+                                    <select class="form-select form-select-sm" id="expenseAccount" required>
+                                        <option value="">Seleccionar...</option>
+                                        <option>Efectivo</option><option>Bancolombia</option>
+                                        <option>Daviplata</option><option>Nequi</option>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <button type="button" class="btn btn-danger btn-sm" id="saveExpenseBtn">
+                                        <i class="fas fa-save me-1"></i>Guardar Gasto
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Historial de gastos -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Historial de Gastos</h5>
+                        <span>Total: <strong id="expensesTotal">$ 0</strong></span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-2"><label class="form-label small">Desde</label><input type="date" class="form-control form-control-sm" id="expHistFrom"></div>
+                            <div class="col-md-2"><label class="form-label small">Hasta</label><input type="date" class="form-control form-control-sm" id="expHistTo"></div>
+                            <div class="col-md-3">
+                                <label class="form-label small">Categoría</label>
+                                <select class="form-select form-select-sm" id="expHistCategory">
+                                    <option value="">Todas</option>
+                                    <option>Nomina</option><option>Arriendo</option>
+                                    <option>Servicios públicos</option><option>Mantenimiento</option>
+                                    <option>Insumos</option><option>Marketing</option>
+                                    <option>Impuestos</option><option>Otros</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small">Cuenta</label>
+                                <select class="form-select form-select-sm" id="expHistAccount">
+                                    <option value="">Todas</option>
+                                    <option>Efectivo</option><option>Bancolombia</option>
+                                    <option>Daviplata</option><option>Nequi</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button class="btn btn-primary btn-sm w-100" id="applyExpHistFilter">
+                                    <i class="fas fa-search me-1"></i>Filtrar
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead><tr><th>#</th><th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Cuenta</th><th>Monto</th><th></th></tr></thead>
+                                <tbody id="expensesList"><tr><td colspan="7" class="text-center text-muted py-3">Sin gastos</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reporte financiero -->
+                <div class="card">
+                    <div class="card-header"><h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Reporte Financiero</h5></div>
+                    <div class="card-body">
+                        <div class="row g-2 mb-4 align-items-end">
+                            <div class="col-md-3"><label class="form-label small">Desde</label><input type="date" class="form-control form-control-sm" id="finRepFrom"></div>
+                            <div class="col-md-3"><label class="form-label small">Hasta</label><input type="date" class="form-control form-control-sm" id="finRepTo"></div>
+                            <div class="col-md-2"><button class="btn btn-primary btn-sm w-100" id="applyFinReport"><i class="fas fa-sync me-1"></i>Calcular</button></div>
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-6 col-md-3">
+                                <div class="card text-center bg-success bg-opacity-10">
+                                    <div class="card-body py-3">
+                                        <div class="text-muted small">Ingresos</div>
+                                        <div class="fs-5 fw-bold text-success" id="finRepIncome">$ 0</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="card text-center bg-danger bg-opacity-10">
+                                    <div class="card-body py-3">
+                                        <div class="text-muted small">Gastos</div>
+                                        <div class="fs-5 fw-bold text-danger" id="finRepExpenses">$ 0</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="card text-center bg-primary bg-opacity-10">
+                                    <div class="card-body py-3">
+                                        <div class="text-muted small">Utilidad Neta</div>
+                                        <div class="fs-5 fw-bold" id="finRepProfit">$ 0</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="card text-center bg-info bg-opacity-10">
+                                    <div class="card-body py-3">
+                                        <div class="text-muted small">Margen de Utilidad</div>
+                                        <div class="fs-5 fw-bold" id="finRepMargin">0%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <h6 class="text-muted mb-2">Gastos por categoría</h6>
+                        <div id="finRepCategories"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Personal Tab -->
+            <div class="tab-pane fade" id="staff" role="tabpanel">
+                <!-- Registrar clase -->
+                <div class="card mb-4">
+                    <div class="card-header"><h5 class="mb-0"><i class="fas fa-chalkboard-teacher me-2"></i>Registrar Clase Dictada</h5></div>
+                    <div class="card-body">
+                        <form id="classForm">
+                            <div class="row g-3">
+                                <div class="col-md-2">
+                                    <label class="form-label small">Fecha *</label>
+                                    <input type="date" class="form-control form-control-sm" id="classDate" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small">Hora *</label>
+                                    <select class="form-select form-select-sm" id="classHour" required>
+                                        <option value="">Seleccionar...</option>
+                                        <option>5:00 AM</option><option>6:00 AM</option>
+                                        <option>7:00 AM</option><option>8:00 AM</option>
+                                        <option>9:00 AM</option><option>4:00 PM</option>
+                                        <option>5:30 PM</option><option>6:30 PM</option>
+                                        <option>7:30 PM</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Entrenador *</label>
+                                    <select class="form-select form-select-sm" id="classTrainer" required>
+                                        <option value="">Seleccionar...</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small">Tipo de Clase *</label>
+                                    <select class="form-select form-select-sm" id="classType" required>
+                                        <option value="">Seleccionar...</option>
+                                        <option>Crossfit</option><option>GAP</option>
+                                        <option>FLEX</option><option>Personalizado</option>
+                                        <option>Mantenimiento</option><option>Otro</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small">Duración *</label>
+                                    <select class="form-select form-select-sm" id="classDuration" required>
+                                        <option value="">Seleccionar...</option>
+                                        <option value="1">1 hora</option>
+                                        <option value="1.5">1.5 horas</option>
+                                        <option value="2">2 horas</option>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <button type="button" class="btn btn-primary btn-sm" id="saveClassBtn">
+                                        <i class="fas fa-save me-1"></i>Registrar Clase · <span class="small">$8.500/hora</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Historial de clases -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Historial de Clases</h5>
+                        <div class="d-flex gap-3">
+                            <span class="text-muted small">Horas: <strong id="staffTotalHours">0 h</strong></span>
+                            <span class="text-muted small">Total a pagar: <strong id="staffTotalPay">$ 0</strong></span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-3"><label class="form-label small">Desde</label><input type="date" class="form-control form-control-sm" id="staffHistFrom"></div>
+                            <div class="col-md-3"><label class="form-label small">Hasta</label><input type="date" class="form-control form-control-sm" id="staffHistTo"></div>
+                            <div class="col-md-3">
+                                <label class="form-label small">Entrenador</label>
+                                <select class="form-select form-select-sm" id="staffHistTrainer"><option value="">Todos</option></select>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button class="btn btn-primary btn-sm w-100" id="applyStaffFilter">
+                                    <i class="fas fa-search me-1"></i>Filtrar
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead><tr><th>#</th><th>Fecha</th><th>Hora</th><th>Entrenador</th><th>Tipo</th><th>Duración</th><th>Pago</th><th></th></tr></thead>
+                                <tbody id="classesList"><tr><td colspan="8" class="text-center text-muted py-3">Sin clases registradas</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WhatsApp Tab -->
+            <div class="tab-pane fade" id="whatsapp" role="tabpanel">
+                <!-- Cumpleaños del día -->
+                <div class="card mb-4 border-warning">
+                    <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-birthday-cake me-2 text-warning"></i>Cumpleaños de Hoy</h5>
+                        <button class="btn btn-sm btn-outline-warning" id="waBirthdayCheck">
+                            <i class="fas fa-sync me-1"></i>Verificar
+                        </button>
+                    </div>
+                    <div class="card-body" id="birthdayList">
+                        <p class="text-muted text-center py-2">Haz clic en "Verificar" para revisar cumpleaños</p>
+                    </div>
+                </div>
+
+                <!-- Mensajes por usuario -->
+                <div class="card">
+                    <div class="card-header"><h5 class="mb-0"><i class="fab fa-whatsapp me-2 text-success"></i>Mensajes por Usuario</h5></div>
+                    <div class="card-body">
+                        <div class="mb-3 p-3 bg-light rounded small">
+                            <strong>Botones disponibles por usuario:</strong>
+                            <span class="badge bg-success ms-2"><i class="fas fa-hand-wave me-1"></i>Bienvenida + invitación grupo</span>
+                            <span class="badge bg-info ms-2"><i class="fas fa-bell me-1"></i>Recordatorio pago</span>
+                            <span class="badge bg-warning text-dark ms-2"><i class="fas fa-user-clock me-1"></i>Recordatorio inasistencia</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead><tr><th>#</th><th>Nombre</th><th>Teléfono</th><th>Último pago</th><th>Mensajes</th></tr></thead>
+                                <tbody id="waUsersList"><tr><td colspan="5" class="text-center text-muted py-3">Cargando...</td></tr></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -986,6 +1318,9 @@
     <script src="js/reports.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/backup.js"></script>
+    <script src="js/finance.js"></script>
+    <script src="js/staff.js"></script>
+    <script src="js/whatsapp.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
