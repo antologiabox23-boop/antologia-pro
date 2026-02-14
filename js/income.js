@@ -196,17 +196,17 @@ const Income = (() => {
 
     function renderIncome() {
         const income     = Storage.getIncome();
-        const dateFrom   = document.getElementById('paymentDateFrom')?.value;
-        const dateTo     = document.getElementById('paymentDateTo')?.value;
-        const typeFilter = document.getElementById('paymentTypeFilter')?.value;
+        const dateFrom   = document.getElementById('paymentDateFrom')?.value  || '';
+        const dateTo     = document.getElementById('paymentDateTo')?.value    || '';
+        const typeFilter = document.getElementById('paymentTypeFilter')?.value || '';
 
         let filtered = income.filter(p => {
-            let ok = true;
-            if (dateFrom && p.paymentDate < dateFrom) ok = false;
-            if (dateTo   && p.paymentDate > dateTo)   ok = false;
-            if (typeFilter && p.paymentType !== typeFilter) ok = false;
-            return ok;
-        }).sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate));
+            const pd = (p.paymentDate || '');
+            if (dateFrom && pd < dateFrom) return false;
+            if (dateTo   && pd > dateTo)   return false;
+            if (typeFilter && p.paymentType !== typeFilter) return false;
+            return true;
+        }).sort((a, b) => (b.paymentDate || '').localeCompare(a.paymentDate || ''));
 
         const start     = (currentPage - 1) * itemsPerPage;
         const paginated = filtered.slice(start, start + itemsPerPage);

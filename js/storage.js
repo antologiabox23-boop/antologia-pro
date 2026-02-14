@@ -13,7 +13,7 @@ const Storage = (() => {
 
     // ─── CONFIGURACIÓN ───────────────────────────────────────────────────────
     // Pega aquí la URL de tu Apps Script después de desplegarlo:
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz9YubFTKIAFUXsQYoOh691HUytL7QwYZ9ZQL-WG0k2nab0w-_FzCCcX6Lm0SMC0TZA/exec';
+    const SCRIPT_URL = 'PEGA_AQUI_TU_URL_DE_APPS_SCRIPT';
     // ─────────────────────────────────────────────────────────────────────────
 
     const DEFAULT_SETTINGS = {
@@ -25,6 +25,8 @@ const Storage = (() => {
         users:      null,
         attendance: null,
         income:     null,
+        expenses:   null,
+        classes:    null,
         settings:   null,
         dirty:      { users: false, attendance: false, income: false }
     };
@@ -39,15 +41,31 @@ const Storage = (() => {
         if (!SCRIPT_URL || SCRIPT_URL === 'PEGA_AQUI_TU_URL_DE_APPS_SCRIPT') {
             throw new Error('⚙️ Configura SCRIPT_URL en storage.js primero.');
         }
-        const url = `${SCRIPT_URL}?action=${action}`;
+
+        // Usamos GET con el payload en base64 para evitar CORS preflight.
+        // Apps Script siempre permite GET desde cualquier origen.
+        const data   = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(payload)))));
+        const url    = `${SCRIPT_URL}?action=${action}&payload=${data}`;
+
         const res = await fetch(url, {
-            method:  'POST',
-            mode:    'cors',
-            headers: { 'Content-Type': 'text/plain' },   // text/plain evita preflight CORS
-            body:    JSON.stringify(payload)
+            method:   'GET',
+            redirect: 'follow'   // Apps Script redirige la respuesta — seguimos la redirección
         });
+
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
+
+        // Apps Script a veces devuelve text/html envolviendo el JSON
+        const text = await res.text();
+        let json;
+        try {
+            // Extraer el primer objeto JSON válido del texto
+            const match = text.match(/\{[\s\S]*\}/);
+            if (!match) throw new Error('Sin respuesta JSON');
+            json = JSON.parse(match[0]);
+        } catch (e) {
+            throw new Error('Respuesta inválida del servidor: ' + text.substring(0, 100));
+        }
+
         if (json.error) throw new Error(json.error);
         return json.data;
     }
@@ -65,21 +83,26 @@ const Storage = (() => {
 
     async function loadAllData() {
         try {
-            const [users, attendance, income] = await Promise.all([
+            const [users, attendance, income, expenses, classes] = await Promise.all([
                 apiCall('getUsers'),
                 apiCall('getAttendance'),
-                apiCall('getIncome')
+                apiCall('getIncome'),
+                apiCall('getExpenses'),
+                apiCall('getClasses')
             ]);
             cache.users      = users      || [];
             cache.attendance = attendance || [];
             cache.income     = income     || [];
+            cache.expenses   = expenses   || [];
+            cache.classes    = classes    || [];
         } catch (err) {
             console.error('Error cargando datos desde Sheets:', err.message);
-            // Fallback a arrays vacíos para que la UI no rompa
             cache.users      = cache.users      || [];
             cache.attendance = cache.attendance || [];
             cache.income     = cache.income     || [];
-            throw err;   // re-lanzar para que app.js muestre aviso al usuario
+            cache.expenses   = cache.expenses   || [];
+            cache.classes    = cache.classes    || [];
+            throw err;
         }
     }
 
@@ -203,6 +226,40 @@ const Storage = (() => {
         return (cache.income || []).filter(i => i.paymentDate >= start && i.paymentDate <= end);
     }
 
+    // ─── GASTOS ─────────────────────────────────────────────────────────────
+
+    function getExpenses() { return cache.expenses || []; }
+
+    async function addExpense(expense) {
+        const newExpense = { id: Utils.generateUUID(), ...expense, createdAt: Utils.getCurrentDateTime() };
+        await apiCall('addRow', { sheet: 'Gastos', row: newExpense });
+        cache.expenses.push(newExpense);
+        return newExpense;
+    }
+
+    async function deleteExpense(id) {
+        await apiCall('deleteRow', { sheet: 'Gastos', id });
+        cache.expenses = cache.expenses.filter(e => e.id !== id);
+        return true;
+    }
+
+    // ─── CLASES (personal) ───────────────────────────────────────────────────
+
+    function getClasses() { return cache.classes || []; }
+
+    async function addClass(classData) {
+        const newClass = { id: Utils.generateUUID(), ...classData, createdAt: Utils.getCurrentDateTime() };
+        await apiCall('addRow', { sheet: 'Clases', row: newClass });
+        cache.classes.push(newClass);
+        return newClass;
+    }
+
+    async function deleteClass(id) {
+        await apiCall('deleteRow', { sheet: 'Clases', id });
+        cache.classes = cache.classes.filter(c => c.id !== id);
+        return true;
+    }
+
     // ─── CONFIGURACIÓN (localStorage — son preferencias del navegador) ───────
 
     function getSettings() {
@@ -304,6 +361,10 @@ const Storage = (() => {
         getSettings, updateSettings, getSetting,
         // Backup
         exportData, importData, getLastBackupDate,
+        // Gastos
+        getExpenses, addExpense, deleteExpense,
+        // Clases personal
+        getClasses, addClass, deleteClass,
         // Utilidades
         clear, getStorageUsage, getCache
     };
