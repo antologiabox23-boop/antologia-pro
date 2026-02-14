@@ -13,7 +13,7 @@ const Storage = (() => {
 
     // ─── CONFIGURACIÓN ───────────────────────────────────────────────────────
     // Pega aquí la URL de tu Apps Script después de desplegarlo:
-    const SCRIPT_URL = 'https://docs.google.com/spreadsheets/d/1Q3uao_brBssNkaASs3OBFvtW2J3Of9BflTBHFRqqnR4/edit?gid=1297494301#gid=1297494301';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz9YubFTKIAFUXsQYoOh691HUytL7QwYZ9ZQL-WG0k2nab0w-_FzCCcX6Lm0SMC0TZA/exec';
     // ─────────────────────────────────────────────────────────────────────────
 
     const DEFAULT_SETTINGS = {
