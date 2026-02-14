@@ -154,7 +154,7 @@ const Validation = (() => {
         if (!data.userId) errors.push('Selecciona un usuario');
         else if (!Storage.getUserById(data.userId)) errors.push('Usuario no encontrado');
         if (isNaN(data.amount) || data.amount <= 0) errors.push('El monto debe ser mayor a 0');
-        if (data.amount > 100000) errors.push('El monto parece inusualmente alto');
+        if (data.amount > 50000000) errors.push('El monto supera $50.000.000. Verifica el valor ingresado.');
         return { isValid: errors.length === 0, errors };
     }
 

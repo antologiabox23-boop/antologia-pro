@@ -182,11 +182,12 @@ const Income = (() => {
 
         UI.setButtonLoading('saveIncomeBtn', true);
         try {
-            await Storage.addIncome(incomeData);
-            UI.showSuccessToast('Pago registrado exitosamente');
+            const saved = await Storage.addIncome(incomeData);
             UI.hideModal('incomeModal');
             renderIncome();
             if (window.Dashboard) Dashboard.updateStats();
+            // Ofrecer envío de confirmación por WhatsApp
+            ofrecerWhatsApp(saved || incomeData);
         } catch (err) {
             UI.showErrorToast('Error al guardar: ' + err.message);
         } finally {
@@ -271,6 +272,54 @@ const Income = (() => {
                 UI.showErrorToast('Error al eliminar: ' + err.message);
             }
         }, true);
+    }
+
+    // ── WhatsApp confirmación de pago ────────────────────────────────────
+
+    function ofrecerWhatsApp(payment) {
+        const user = Storage.getUserById(payment.userId);
+        if (!user || !user.phone) {
+            UI.showSuccessToast('Pago registrado exitosamente');
+            return;
+        }
+
+        const nombre   = user.name;
+        const monto    = Utils.formatCurrency(payment.amount);
+        const tipo     = payment.paymentType || 'membresía';
+        const fechaFin = payment.endDate ? Utils.formatDate(payment.endDate) : null;
+
+        const vigenciaLine = fechaFin
+            ? `\n\nTu membresía (${tipo}) es válida hasta el ${fechaFin}. ¡Gracias por tu preferencia!`
+            : `\n\n¡Gracias por tu preferencia en Antología Box23!`;
+
+        const msg = `Hola ${nombre}, tu pago en Antología Box23 por un valor de ${monto} ha sido registrado.${vigenciaLine}`;
+        const phone = (user.phone || '').replace(/\D/g, '');
+        const url   = `https://wa.me/57${phone}?text=${encodeURIComponent(msg)}`;
+
+        // Mostrar toast con botón para abrir WhatsApp
+        const toastId = 'waPaymentToast_' + Date.now();
+        const toastHtml = `
+            <div id="${toastId}" class="toast align-items-center border-0 bg-success text-white show position-fixed"
+                 style="bottom:1.5rem;right:1.5rem;z-index:9999;min-width:320px" role="alert">
+                <div class="d-flex align-items-center p-3">
+                    <i class="fas fa-check-circle fa-lg me-3"></i>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold">Pago registrado</div>
+                        <div class="small">¿Enviar confirmación a ${nombre.split(' ')[0]} por WhatsApp?</div>
+                    </div>
+                    <div class="ms-3 d-flex flex-column gap-1">
+                        <button class="btn btn-sm btn-light fw-bold" onclick="window.open('${url}','_blank');document.getElementById('${toastId}').remove()">
+                            <i class="fab fa-whatsapp me-1 text-success"></i>Enviar
+                        </button>
+                        <button class="btn btn-sm btn-outline-light" onclick="document.getElementById('${toastId}').remove()">
+                            Omitir
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+        document.body.insertAdjacentHTML('beforeend', toastHtml);
+        // Auto-cerrar después de 12 segundos
+        setTimeout(() => document.getElementById(toastId)?.remove(), 12000);
     }
 
     return {
