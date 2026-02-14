@@ -790,36 +790,56 @@
 
             <!-- WhatsApp Tab -->
             <div class="tab-pane fade" id="whatsapp" role="tabpanel">
-                <!-- Cumpleaños del día -->
-                <div class="card mb-4 border-warning">
-                    <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-birthday-cake me-2 text-warning"></i>Cumpleaños de Hoy</h5>
-                        <button class="btn btn-sm btn-outline-warning" id="waBirthdayCheck">
-                            <i class="fas fa-sync me-1"></i>Verificar
-                        </button>
-                    </div>
-                    <div class="card-body" id="birthdayList">
-                        <p class="text-muted text-center py-2">Haz clic en "Verificar" para revisar cumpleaños</p>
-                    </div>
-                </div>
+                <div class="row g-4">
 
-                <!-- Mensajes por usuario -->
-                <div class="card">
-                    <div class="card-header"><h5 class="mb-0"><i class="fab fa-whatsapp me-2 text-success"></i>Mensajes por Usuario</h5></div>
-                    <div class="card-body">
-                        <div class="mb-3 p-3 bg-light rounded small">
-                            <strong>Botones disponibles por usuario:</strong>
-                            <span class="badge bg-success ms-2"><i class="fas fa-hand-wave me-1"></i>Bienvenida + invitación grupo</span>
-                            <span class="badge bg-info ms-2"><i class="fas fa-bell me-1"></i>Recordatorio pago</span>
-                            <span class="badge bg-warning text-dark ms-2"><i class="fas fa-user-clock me-1"></i>Recordatorio inasistencia</span>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover mb-0">
-                                <thead><tr><th>#</th><th>Nombre</th><th>Teléfono</th><th>Último pago</th><th>Mensajes</th></tr></thead>
-                                <tbody id="waUsersList"><tr><td colspan="5" class="text-center text-muted py-3">Cargando...</td></tr></tbody>
-                            </table>
+                    <!-- Nuevo ingreso -->
+                    <div class="col-12">
+                        <div class="card border-success">
+                            <div class="card-header bg-success bg-opacity-10 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-0"><i class="fab fa-whatsapp me-2 text-success"></i>Mensaje de Nuevo Ingreso</h5>
+                                    <small class="text-muted">Envía el formulario de registro a alguien que llega por primera vez</small>
+                                </div>
+                                <button class="btn btn-success" onclick="WhatsApp.openNuevoIngreso()">
+                                    <i class="fas fa-user-plus me-2"></i>Nuevo Ingreso
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div class="p-3 rounded" style="background:rgba(255,255,255,0.04);font-size:.85rem;line-height:1.7">
+                                    <div class="text-muted mb-2 small fw-bold">Vista previa del mensaje:</div>
+                                    <p class="mb-1">Hola <em>[Nombre]</em>, bienvenido/a a Antología Box23. Para completar tu registro, necesitamos los siguientes datos:</p>
+                                    <p class="mb-0 ms-2">1. Nombre completo<br>2. Número de documento<br>3. Fecha de nacimiento<br>4. Tipo de sangre (RH)<br>5. EPS<br>6. Alguna patología o condición médica que debamos conocer<br>7. Teléfono de contacto de emergencia<br>8. Nombre del contacto de emergencia</p>
+                                    <p class="mt-2 mb-1">¡Gracias por colaborar!</p>
+                                    <p class="mb-0">📲 Únete al grupo: <span class="text-success">https://chat.whatsapp.com/DSJzYAb6h58FQDA8yEAzwN</span> <em>(opcional)</em></p>
+                                    <p class="mb-0">📋 Formulario: <span class="text-info">https://forms.gle/ZHUj1Q7YiDhE5P498</span></p>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Cumpleaños del día -->
+                    <div class="col-12">
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-0"><i class="fas fa-birthday-cake me-2 text-warning"></i>Cumpleaños</h5>
+                                    <small class="text-muted" id="birthdayRangeLabel">Próximos 5 días</small>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-warning active" id="waBirthdayProximos">
+                                        <i class="fas fa-calendar-day me-1"></i>Próximos 5 días
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning" id="waBirthdayMes">
+                                        <i class="fas fa-calendar-alt me-1"></i>Este mes
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body" id="birthdayList">
+                                <p class="text-muted text-center py-2">Haz clic en "Verificar" para revisar cumpleaños</p>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -1318,7 +1338,59 @@
     <script src="js/reports.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/backup.js"></script>
-    <!-- Modal Editar Gasto -->
+    <!-- Modal Nuevo Ingreso WhatsApp -->
+    <div class="modal fade" id="nuevoIngresoModal" tabindex="-1" aria-labelledby="nuevoIngresoModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="nuevoIngresoModalLabel">
+                        <i class="fab fa-whatsapp me-2 text-success"></i>Enviar Formulario de Registro
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre de pila <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="nuevoIngresoNombre"
+                               placeholder="Ej: Pepito" autocomplete="off">
+                        <div class="form-text">Solo el primer nombre, para personalizar el saludo.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Número de celular <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">+57</span>
+                            <input type="tel" class="form-control" id="nuevoIngresoTelefono"
+                                   placeholder="3001234567" maxlength="10">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">¿Incluir en el mensaje?</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="incluirGrupo" checked>
+                            <label class="form-check-label" for="incluirGrupo">
+                                Enlace al grupo de WhatsApp
+                            </label>
+                        </div>
+                    </div>
+                    <!-- Vista previa del mensaje -->
+                    <div class="mt-3 p-3 rounded border" id="previewMensaje"
+                         style="font-size:.82rem;line-height:1.75;white-space:pre-wrap;word-break:break-word;
+                                background:rgba(255,255,255,.04);color:inherit;max-height:280px;overflow-y:auto">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success" id="enviarNuevoIngresoBtn">
+                        <i class="fab fa-whatsapp me-2"></i>Abrir WhatsApp
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <!-- Modal Editar Gasto -->
     <div class="modal fade" id="editExpenseModal" tabindex="-1" aria-labelledby="editExpenseModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
