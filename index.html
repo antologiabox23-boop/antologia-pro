@@ -1219,11 +1219,35 @@
                     <form id="incomeForm">
                         <input type="hidden" id="incomeId">
                         <div class="mb-3">
-                            <label for="incomeUser" class="form-label">Usuario *</label>
-                            <select class="form-select" id="incomeUser" required>
-                                <option value="">Seleccionar usuario...</option>
-                            </select>
-                            <div class="invalid-feedback">Por favor selecciona un usuario.</div>
+                            <label class="form-label">Usuario *</label>
+                            <input type="hidden" id="incomeUser" required>
+                            <div class="position-relative">
+                                <input type="text" class="form-control" id="incomeUserSearch"
+                                       placeholder="Buscar nombre..." autocomplete="off" autocorrect="off">
+                                <div id="incomeUserDropdown"
+                                     style="display:none;position:absolute;top:100%;left:0;right:0;z-index:1055;
+                                            max-height:200px;overflow-y:auto;border-radius:0 0 8px 8px;
+                                            background:var(--bs-body-bg, #1c2333);
+                                            border:1px solid rgba(255,255,255,.15);border-top:none;
+                                            box-shadow:0 8px 20px rgba(0,0,0,.4)">
+                                </div>
+                            </div>
+                            <div id="incomeUserSelected" class="mt-1" style="display:none">
+                                <span class="badge bg-primary py-1 px-2" style="font-size:.8rem">
+                                    <i class="fas fa-user me-1"></i>
+                                    <span id="incomeUserSelectedName"></span>
+                                    <button type="button" onclick="Income.clearUserSearch()"
+                                            style="background:none;border:none;color:inherit;padding:0 0 0 6px;cursor:pointer;font-size:.75rem">
+                                        ✕
+                                    </button>
+                                </span>
+                                <div id="incomeUserLastPay" class="text-muted small mt-1" style="display:none">
+                                    <i class="fas fa-history me-1"></i><span></span>
+                                </div>
+                            </div>
+                            <div class="invalid-feedback" id="incomeUserError" style="display:none">
+                                Por favor selecciona un usuario.
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label for="incomeType" class="form-label">Tipo de Pago *</label>
