@@ -225,8 +225,8 @@ const Staff = (() => {
 
         UI.showConfirmModal(
             'Confirmar Pago',
-            `Registrar ${Utils.formatCurrency(finalAmt)} a ${Utils.escapeHtml(nombre)} 
-             Per\u00edodo: ${Utils.formatDate(dateFrom)} al ${Utils.formatDate(dateTo)}<br>
+            `Registrar pago de: ${Utils.formatCurrency(finalAmt)} a ${Utils.escapeHtml(nombre)} 
+             Per\u00edodo: ${Utils.formatDate(dateFrom)} al ${Utils.formatDate(dateTo)} debitado de 
              Cuenta: ${account}`,
             async () => {
                 UI.setButtonLoading('registerPayBtn', true);
