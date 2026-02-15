@@ -116,7 +116,7 @@ ${FORM_LINK}`;
         const vigencia = payment.startDate && payment.endDate
             ? `\n\uD83D\uDCC5 Vigencia: ${Utils.formatDate(payment.startDate)} al ${Utils.formatDate(payment.endDate)}`
             : '';
-        const msg = `\u00A1Hola ${nombre}! \uD83D\uDC4B\n tu pago en Antologia Box23 \u2705\n\n\uD83D\uDCB0 por un valor: *_${Utils.formatCurrency(payment.amount)}_*\n\uD83D\uDCCC Tipo: *${payment.paymentType}*\n\uD83D\uDCB3 M\u00E9todo: *${payment.paymentMethod}*_${vigencia}_*\n\n\u00A1Gracias por confiar en *${GYM_NAME}*! \uD83C\uDFCB\uFE0F`;
+        const msg = `\u00A1Hola ${nombre}! \uD83D\uDC4B\n tu pago en Antologia Box23 \u2705\n\n\uD83D\uDCB0 por un valor de *_*${Utils.formatCurrency(payment.amount)}*\n\uD83D\uDCCC _* Tipo: *${payment.paymentType}*\n\uD83D\uDCB3 M\u00E9todo: *${payment.paymentMethod}*_${vigencia}_*_*\n\n\u00A1_* Gracias por confiar en *${GYM_NAME}*! \uD83C\uDFCB\uFE0F`;
         openWA(user.phone, msg);
     }
 
