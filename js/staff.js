@@ -189,6 +189,12 @@ const Staff = (() => {
 
         resultDiv?.classList.remove('d-none');
         resultDiv?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        // Habilitar botón de registro
+        const regBtn  = document.getElementById('registerPayBtn');
+        const regHint = document.getElementById('registerPayHint');
+        if (regBtn)  regBtn.disabled = false;
+        if (regHint) regHint.textContent = '';
     }
 
     // ── 4. REGISTRAR PAGO COMO GASTO ─────────────────────────────────────────
@@ -241,7 +247,12 @@ const Staff = (() => {
                         const el = document.getElementById(id);
                         if (el) el.value = id === 'payDate' ? Utils.getCurrentDate() : '';
                     });
-                    document.getElementById('payTrainer').value = '';
+                    document.getElementById('payTrainer').value  = '';
+                    document.getElementById('payAccount').value  = '';
+                    const regBtn  = document.getElementById('registerPayBtn');
+                    const regHint = document.getElementById('registerPayHint');
+                    if (regBtn)  regBtn.disabled = true;
+                    if (regHint) regHint.textContent = 'Primero calcula el pago';
 
                     // Refrescar módulo Finanzas si está activo
                     if (window.Finance) {

@@ -221,14 +221,17 @@ function showSetupBanner() {
 
             // Poblar selects que dependen de usuarios cargados
             Attendance.populateReportUsers();
-            Staff.populateTrainerSelect();
+            Staff.populateTrainerSelects();
+
+            // Inicializar rangos de fecha al mes actual en todas las consultas
+            initMonthRanges();
 
             // Verificar cumpleaños al abrir el tab de WhatsApp
             document.getElementById('whatsapp-tab')?.addEventListener('shown.bs.tab', () => {
                 WhatsApp.checkBirthdays();
             });
             document.getElementById('staff-tab')?.addEventListener('shown.bs.tab', () => {
-                Staff.populateTrainerSelect();
+                Staff.populateTrainerSelects();
             });
 
             UI.hideLoading();
@@ -253,6 +256,35 @@ function showSetupBanner() {
     window.addEventListener('unhandledrejection', (e) => {
         console.error('Promesa rechazada:', e.reason);
     });
+
+    /**
+     * Inicializa todos los campos de fecha "Desde/Hasta" con el mes actual.
+     * Los campos siguen siendo editables normalmente.
+     */
+    function initMonthRanges() {
+        const today   = new Date();
+        const year    = today.getFullYear();
+        const month   = String(today.getMonth() + 1).padStart(2, '0');
+        const firstDay = `${year}-${month}-01`;
+        const lastDay  = new Date(year, today.getMonth() + 1, 0)
+                            .toISOString().slice(0, 10);
+
+        // Par [idDesde, idHasta] de cada sección de consulta
+        const pairs = [
+            ['reportDateFrom',  'reportDateTo' ],   // Asistencia – informe
+            ['expHistFrom',     'expHistTo'    ],   // Finanzas – gastos
+            ['finRepFrom',      'finRepTo'     ],   // Finanzas – reporte
+            ['staffHistFrom',   'staffHistTo'  ],   // Personal – historial clases
+            ['payFrom',         'payTo'        ],   // Personal – liquidar pago
+        ];
+
+        pairs.forEach(([fromId, toId]) => {
+            const fromEl = document.getElementById(fromId);
+            const toEl   = document.getElementById(toId);
+            if (fromEl && !fromEl.value) fromEl.value = firstDay;
+            if (toEl   && !toEl.value)   toEl.value   = lastDay;
+        });
+    }
 })();
 
 window.App      = { version: '2.0' };
