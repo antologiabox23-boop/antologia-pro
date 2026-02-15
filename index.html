@@ -894,30 +894,34 @@
                                 </div>
                             </div>
 
-                            <!-- Cuenta + fecha + botón registrar -->
-                            <div class="row g-2 align-items-end mt-3">
-                                <div class="col-md-4">
-                                    <label class="form-label small">Cuenta de pago *</label>
-                                    <select class="form-select form-select-sm" id="payAccount">
-                                        <option value="">Seleccionar...</option>
-                                        <option>Efectivo</option>
-                                        <option>Nequi</option>
-                                        <option>Bancolombia</option>
-                                        <option>Daviplata</option>
-                                        <option>Otro</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label small">Fecha del pago *</label>
-                                    <input type="date" class="form-control form-control-sm" id="payDate">
-                                </div>
-                                <div class="col-md-4 d-flex align-items-end">
-                                    <button class="btn btn-success btn-sm w-100" id="registerPayBtn">
-                                        <i class="fas fa-check-circle me-1"></i>Registrar como Gasto
-                                    </button>
-                                </div>
-                            </div>
                         </div><!-- /payResult -->
+
+                        <!-- Cuenta + fecha + botón — siempre visibles -->
+                        <div class="row g-2 align-items-end mt-3 pt-3 border-top">
+                            <div class="col-6 col-md-3">
+                                <label class="form-label small">Cuenta de pago *</label>
+                                <select class="form-select form-select-sm" id="payAccount">
+                                    <option value="">Seleccionar...</option>
+                                    <option>Efectivo</option>
+                                    <option>Nequi</option>
+                                    <option>Bancolombia</option>
+                                    <option>Daviplata</option>
+                                    <option>Otro</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label small">Fecha del pago *</label>
+                                <input type="date" class="form-control form-control-sm" id="payDate">
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button class="btn btn-success btn-sm w-100" id="registerPayBtn" disabled>
+                                    <i class="fas fa-check-circle me-1"></i>Registrar como Gasto
+                                </button>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <small class="text-muted" id="registerPayHint">Primero calcula el pago</small>
+                            </div>
+                        </div>
 
                     </div>
                 </div><!-- /liquidar -->
