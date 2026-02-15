@@ -225,7 +225,7 @@ const Staff = (() => {
 
         UI.showConfirmModal(
             'Confirmar Pago',
-            `Registrar <strong>${Utils.formatCurrency(finalAmt)}</strong> a <strong>${Utils.escapeHtml(nombre)}</strong><br>
+            `Registrar ${Utils.formatCurrency(finalAmt)} a ${Utils.escapeHtml(nombre)} 
              Per\u00edodo: ${Utils.formatDate(dateFrom)} al ${Utils.formatDate(dateTo)}<br>
              Cuenta: ${account}`,
             async () => {
