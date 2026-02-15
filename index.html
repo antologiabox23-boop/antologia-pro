@@ -701,17 +701,20 @@
 
             <!-- Personal Tab -->
             <div class="tab-pane fade" id="staff" role="tabpanel">
-                <!-- Registrar clase -->
+
+                <!-- ══ REGISTRAR CLASE ══════════════════════════════════════ -->
                 <div class="card mb-4">
-                    <div class="card-header"><h5 class="mb-0"><i class="fas fa-chalkboard-teacher me-2"></i>Registrar Clase Dictada</h5></div>
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chalkboard-teacher me-2"></i>Registrar Clase Dictada</h5>
+                    </div>
                     <div class="card-body">
                         <form id="classForm">
-                            <div class="row g-3">
-                                <div class="col-md-2">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-6 col-md-2">
                                     <label class="form-label small">Fecha *</label>
                                     <input type="date" class="form-control form-control-sm" id="classDate" required>
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-6 col-md-2">
                                     <label class="form-label small">Hora *</label>
                                     <select class="form-select form-select-sm" id="classHour" required>
                                         <option value="">Seleccionar...</option>
@@ -728,7 +731,7 @@
                                         <option value="">Seleccionar...</option>
                                     </select>
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-6 col-md-2">
                                     <label class="form-label small">Tipo de Clase *</label>
                                     <select class="form-select form-select-sm" id="classType" required>
                                         <option value="">Seleccionar...</option>
@@ -737,7 +740,7 @@
                                         <option>Mantenimiento</option><option>Otro</option>
                                     </select>
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-6 col-md-2">
                                     <label class="form-label small">Duración *</label>
                                     <select class="form-select form-select-sm" id="classDuration" required>
                                         <option value="">Seleccionar...</option>
@@ -748,7 +751,7 @@
                                 </div>
                                 <div class="col-12">
                                     <button type="button" class="btn btn-primary btn-sm" id="saveClassBtn">
-                                        <i class="fas fa-save me-1"></i>Registrar Clase · <span class="small">$8.500/hora</span>
+                                        <i class="fas fa-save me-1"></i>Registrar Clase
                                     </button>
                                 </div>
                             </div>
@@ -756,37 +759,168 @@
                     </div>
                 </div>
 
-                <!-- Historial de clases -->
-                <div class="card">
+                <!-- ══ HISTORIAL DE CLASES ══════════════════════════════════ -->
+                <div class="card mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Historial de Clases</h5>
-                        <div class="d-flex gap-3">
-                            <span class="text-muted small">Horas: <strong id="staffTotalHours">0 h</strong></span>
-                            <span class="text-muted small">Total a pagar: <strong id="staffTotalPay">$ 0</strong></span>
-                        </div>
+                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Historial de Clases</h5>
+                        <span class="text-muted small">Total horas: <strong id="staffTotalHours">0 h</strong></span>
                     </div>
                     <div class="card-body">
                         <div class="row g-2 mb-3">
-                            <div class="col-md-3"><label class="form-label small">Desde</label><input type="date" class="form-control form-control-sm" id="staffHistFrom"></div>
-                            <div class="col-md-3"><label class="form-label small">Hasta</label><input type="date" class="form-control form-control-sm" id="staffHistTo"></div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label small">Desde</label>
+                                <input type="date" class="form-control form-control-sm" id="staffHistFrom">
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label small">Hasta</label>
+                                <input type="date" class="form-control form-control-sm" id="staffHistTo">
+                            </div>
                             <div class="col-md-3">
                                 <label class="form-label small">Entrenador</label>
-                                <select class="form-select form-select-sm" id="staffHistTrainer"><option value="">Todos</option></select>
+                                <select class="form-select form-select-sm" id="staffHistTrainer">
+                                    <option value="">Todos</option>
+                                </select>
                             </div>
                             <div class="col-md-3 d-flex align-items-end">
-                                <button class="btn btn-primary btn-sm w-100" id="applyStaffFilter">
+                                <button class="btn btn-outline-primary btn-sm w-100" id="applyStaffFilter">
                                     <i class="fas fa-search me-1"></i>Filtrar
                                 </button>
                             </div>
                         </div>
                         <div class="table-responsive">
                             <table class="table table-sm table-hover mb-0">
-                                <thead><tr><th>#</th><th>Fecha</th><th>Hora</th><th>Entrenador</th><th>Tipo</th><th>Duración</th><th>Pago</th><th></th></tr></thead>
-                                <tbody id="classesList"><tr><td colspan="8" class="text-center text-muted py-3">Sin clases registradas</td></tr></tbody>
+                                <thead>
+                                    <tr><th>#</th><th>Fecha</th><th>Hora</th><th>Entrenador</th><th>Tipo</th><th>Duración</th><th></th></tr>
+                                </thead>
+                                <tbody id="classesList">
+                                    <tr><td colspan="7" class="text-center text-muted py-3">Sin clases registradas</td></tr>
+                                </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
+
+                <!-- ══ LIQUIDAR PAGO A ENTRENADOR ════════════════════════════ -->
+                <div class="card border-warning">
+                    <div class="card-header bg-warning bg-opacity-10 d-flex align-items-start gap-2 flex-column">
+                        <h5 class="mb-0"><i class="fas fa-file-invoice-dollar me-2 text-warning"></i>Liquidar Pago a Entrenador</h5>
+                        <small class="text-muted">Filtra por período y entrenador → revisa las horas → ajusta el monto → exporta a Gastos</small>
+                    </div>
+                    <div class="card-body">
+
+                        <!-- Filtros -->
+                        <div class="row g-2 mb-2">
+                            <div class="col-6 col-md-3">
+                                <label class="form-label small">Desde *</label>
+                                <input type="date" class="form-control form-control-sm" id="payFrom">
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label small">Hasta *</label>
+                                <input type="date" class="form-control form-control-sm" id="payTo">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Entrenador *</label>
+                                <select class="form-select form-select-sm" id="payTrainer">
+                                    <option value="">Seleccionar...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button class="btn btn-warning btn-sm w-100" id="calcPayBtn">
+                                    <i class="fas fa-calculator me-1"></i>Calcular
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Resultado (oculto hasta calcular) -->
+                        <div id="payResult" class="d-none">
+                            <hr class="my-3">
+
+                            <!-- Encabezado: entrenador + período -->
+                            <div class="d-flex gap-3 mb-3 flex-wrap">
+                                <span class="badge bg-secondary fs-6 px-3 py-2">
+                                    <i class="fas fa-user me-1"></i><span id="payTrainerName">-</span>
+                                </span>
+                                <span class="badge bg-dark fs-6 px-3 py-2">
+                                    <i class="fas fa-calendar me-1"></i><span id="payPeriodLabel">-</span>
+                                </span>
+                            </div>
+
+                            <div class="row g-3">
+                                <!-- Tabla detalle horas -->
+                                <div class="col-md-7">
+                                    <h6 class="text-muted mb-2"><i class="fas fa-clock me-1"></i>Horas por tipo de clase</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Tipo de Clase</th>
+                                                    <th class="text-center">Clases</th>
+                                                    <th class="text-center">Horas</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="payDetailTable"></tbody>
+                                            <tfoot class="fw-bold table-secondary">
+                                                <tr>
+                                                    <td>TOTAL</td>
+                                                    <td class="text-center" id="payTotalClasses">0</td>
+                                                    <td class="text-center" id="payTotalHours">0 h</td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Panel monto -->
+                                <div class="col-md-5">
+                                    <div class="card h-100" style="border-color:var(--bs-warning,#ffc107)">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between mb-1">
+                                                <span class="text-muted small">Tarifa base</span>
+                                                <strong id="payRateDisplay" class="small">$8.500/h</strong>
+                                            </div>
+                                            <div class="d-flex justify-content-between mb-3">
+                                                <span class="text-muted small">Valor estimado</span>
+                                                <strong id="payEstimated" class="text-warning fs-6">$0</strong>
+                                            </div>
+                                            <label class="form-label small fw-semibold">Valor final a pagar *</label>
+                                            <div class="input-group input-group-sm mb-1">
+                                                <span class="input-group-text">$</span>
+                                                <input type="number" class="form-control fw-bold" id="payFinalAmount"
+                                                       min="0" step="1000" placeholder="0">
+                                            </div>
+                                            <small class="text-muted">Puedes editar el monto antes de registrar</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Cuenta + fecha + botón registrar -->
+                            <div class="row g-2 align-items-end mt-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small">Cuenta de pago *</label>
+                                    <select class="form-select form-select-sm" id="payAccount">
+                                        <option value="">Seleccionar...</option>
+                                        <option>Efectivo</option>
+                                        <option>Nequi</option>
+                                        <option>Bancolombia</option>
+                                        <option>Daviplata</option>
+                                        <option>Otro</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Fecha del pago *</label>
+                                    <input type="date" class="form-control form-control-sm" id="payDate">
+                                </div>
+                                <div class="col-md-4 d-flex align-items-end">
+                                    <button class="btn btn-success btn-sm w-100" id="registerPayBtn">
+                                        <i class="fas fa-check-circle me-1"></i>Registrar como Gasto
+                                    </button>
+                                </div>
+                            </div>
+                        </div><!-- /payResult -->
+
+                    </div>
+                </div><!-- /liquidar -->
             </div>
 
             <!-- WhatsApp Tab -->
