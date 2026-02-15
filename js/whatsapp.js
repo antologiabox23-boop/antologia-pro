@@ -72,12 +72,12 @@ const WhatsApp = (() => {
 4. Tipo de sangre (RH):
 5. EPS:
 6. Alguna patolog\u00EDa o condici\u00F3n m\u00E9dica que debamos conocer:
-7. Tel\u00E9fono de contacto de emergencia:
-8. Nombre del contacto de emergencia:
+7. Nombre del contacto de emergencia:
+8. Tel\u00E9fono de contacto de emergencia:
 
 \u00A1Gracias por colaborar!${grupoLine}
 
-\uD83D\uDCCB O completa nuestro formulario (para que habilite el mensaje contesta el mensaje o guarda el contacto) en l\u00EDnea:
+\uD83D\uDCCB O completa nuestro formulario en l\u00EDnea (para que habilite el link contesta el mensaje o guarda el contacto):
 ${FORM_LINK}`;
     }
 
