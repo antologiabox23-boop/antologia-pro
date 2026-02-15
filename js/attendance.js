@@ -191,10 +191,14 @@ const Attendance = (() => {
                 <td><strong>${Utils.escapeHtml(a.user.name)}</strong></td>
                 <td>${info}</td>
                 <td>${lastStr}</td>
-                <td>
+                <td class="d-flex gap-1">
                     <button class="btn btn-sm btn-outline-success" 
                         onclick="Attendance.whatsappInasistencia('${a.user.id}')" title="Enviar mensaje WhatsApp">
                         <i class="fab fa-whatsapp"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-warning" 
+                        onclick="Attendance.inactivarUsuario('${a.user.id}')" title="Inactivar usuario">
+                        <i class="fas fa-user-slash"></i>
                     </button>
                 </td>
             </tr>`;
@@ -243,6 +247,30 @@ const Attendance = (() => {
         }).join('');
     }
 
+    // ── Inactivar usuario desde alertas ─────────────────────────────────
+
+    function inactivarUsuario(userId) {
+        const user = Storage.getUserById(userId);
+        if (!user) return;
+        const nombre = user.name;
+        UI.showConfirmModal(
+            'Inactivar usuario',
+            `¿Marcar a "${nombre}" como inactivo? Podrás reactivarlo desde Usuarios.`,
+            async () => {
+                try {
+                    await Storage.updateUser(userId, { status: 'inactive' });
+                    UI.showSuccessToast(`${nombre} marcado como inactivo`);
+                    renderAlerts();
+                    if (window.Dashboard) Dashboard.updateStats();
+                } catch (err) {
+                    console.error(err);
+                    UI.showErrorToast('Error al inactivar usuario');
+                }
+            },
+            true
+        );
+    }
+
     // ── WhatsApp inasistencia ────────────────────────────────────────────
 
     function whatsappInasistencia(userId) {
@@ -268,6 +296,7 @@ const Attendance = (() => {
             if (window.Dashboard) Dashboard.updateStats();
         },
         renderAttendance,
+        inactivarUsuario,
         renderAlerts,
         whatsappInasistencia,
         populateReportUsers: () => {

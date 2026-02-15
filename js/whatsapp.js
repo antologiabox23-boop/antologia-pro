@@ -37,6 +37,15 @@ const WhatsApp = (() => {
         window.open(buildUrl(phone, message), '_blank');
     }
 
+    function sendBirthday(userId) {
+        const user = Storage.getUserById(userId);
+        if (!user) return;
+        const nombre = user.name.split(' ')[0];
+        const msg =
+`¡Feliz cumpleaños ${nombre}! 🎉🎂 Desde Antología Box23 te deseamos un día maravilloso lleno de alegría, salud y muchas bendiciones. Que este nuevo año de vida esté cargado de éxitos y momentos inolvidables. ¡Esperamos verte pronto en el box para celebrar contigo! 💪 Con cariño, El equipo de Antología Box23`;
+        openWA(user.phone, msg);
+    }
+
     // ── 1. Nuevo Ingreso — modal con preview en tiempo real ─────────────
 
     function openNuevoIngreso() {
@@ -217,10 +226,7 @@ ${FORM_LINK}`;
         container.innerHTML = birthdays.map(item => {
             const u = item.user || item;
             const nombre = u.name.split(' ')[0];
-            const msg = `¡Hola ${nombre}! 🎂🎉\nTodo el equipo de *${GYM_NAME}* te desea un feliz cumpleaños. 🎊\n\nEsperamos que este nuevo año de vida esté lleno de salud, energía y muchos logros en tus entrenamientos. 💪\n\n¡Que lo disfrutes mucho!`;
-            const msgEsc = msg.replace(/'/g, "\'");
-
-            // Etiqueta de cuándo
+                        // Etiqueta de cuándo
             let cuandoTag = '';
             if (modo === 'proximos') {
                 if (item.diff === 0)
@@ -240,7 +246,7 @@ ${FORM_LINK}`;
                     <strong>${Utils.escapeHtml(u.name)}</strong>
                     ${cuandoTag}
                 </span>
-                <button class="btn btn-sm btn-success" onclick="WhatsApp.openWA('${u.phone}','${msgEsc}')" title="Enviar saludo">
+                <button class="btn btn-sm btn-success" onclick="WhatsApp.sendBirthday('${u.id}')" title="Enviar saludo de cumpleaños">
                     <i class="fab fa-whatsapp me-1"></i>Saludar
                 </button>
             </div>`;
@@ -286,7 +292,7 @@ ${FORM_LINK}`;
 
     return {
         initialize, openNuevoIngreso, confirmacionPago, recordatorioPago,
-        recordatorioInasistencia, checkBirthdays, openWA
+        recordatorioInasistencia, checkBirthdays, openWA, sendBirthday
     };
 })();
 window.WhatsApp = WhatsApp;
