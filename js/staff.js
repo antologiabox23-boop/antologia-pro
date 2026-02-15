@@ -235,7 +235,7 @@ const Staff = (() => {
                         date:        payDate,
                         description: `Pago ${Utils.escapeHtml(nombre)} \u00b7 ${Utils.formatDate(dateFrom)} al ${Utils.formatDate(dateTo)}`,
                         amount:      finalAmt,
-                        category:    'Pago Personal',
+                        category:    'Nomina',
                         account
                     });
 
