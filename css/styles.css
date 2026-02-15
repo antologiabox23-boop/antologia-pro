@@ -928,3 +928,32 @@ textarea {
         color: black;
     }
 }
+
+/* ── Buscador de usuario en modal de pagos ───────────────────────────── */
+#incomeUserDropdown .user-dd-item {
+    background: var(--color-dark);
+    color: var(--color-light);
+    transition: background .1s;
+}
+#incomeUserDropdown .user-dd-item.active,
+#incomeUserDropdown .user-dd-item:hover {
+    background: rgba(39, 249, 212, 0.12);
+    color: var(--color-primary);
+}
+#incomeUserDropdown {
+    border: 1px solid rgba(255, 255, 255, .15) !important;
+    background: var(--color-dark) !important;
+}
+[data-theme="light"] #incomeUserDropdown {
+    background: #ffffff !important;
+    border-color: #d1d5db !important;
+}
+[data-theme="light"] #incomeUserDropdown .user-dd-item {
+    background: #ffffff;
+    color: #1a2332;
+}
+[data-theme="light"] #incomeUserDropdown .user-dd-item.active,
+[data-theme="light"] #incomeUserDropdown .user-dd-item:hover {
+    background: rgba(39, 249, 212, 0.15);
+    color: var(--color-primary-dark);
+}
