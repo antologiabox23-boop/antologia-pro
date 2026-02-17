@@ -186,6 +186,13 @@ function showSetupBanner() {
 (function boot() {
     document.addEventListener('DOMContentLoaded', async () => {
         try {
+            // 0. Autenticación PRIMERO
+            if (!Auth.initialize()) {
+                // Si no está autenticado, Auth.initialize() muestra el login
+                // y no continuamos con la inicialización de la app
+                return;
+            }
+
             // 1. UI primero (necesita DOM, no necesita datos)
             UI.initialize();
             UI.showLoading('Conectando con Google Sheets…');
