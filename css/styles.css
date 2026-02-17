@@ -957,3 +957,113 @@ textarea {
     background: rgba(39, 249, 212, 0.15);
     color: var(--color-primary-dark);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PANTALLA DE LOGIN
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.login-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.login-box {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.login-box h3 {
+    color: #e6edf3;
+    margin-bottom: 0.5rem;
+}
+
+.login-box .form-label {
+    color: #adbac7;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.login-box .form-control {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #e6edf3;
+    transition: all 0.2s ease;
+}
+
+.login-box .form-control:focus {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: #27F9D4;
+    box-shadow: 0 0 0 0.25rem rgba(39, 249, 212, 0.15);
+    color: #e6edf3;
+}
+
+.login-box .form-control::placeholder {
+    color: #636c76;
+}
+
+.login-box .btn-primary {
+    background: linear-gradient(135deg, #27F9D4 0%, #1ed9ba 100%);
+    border: none;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+}
+
+.login-box .btn-primary:hover {
+    background: linear-gradient(135deg, #1ed9ba 0%, #17c4a6 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(39, 249, 212, 0.3);
+}
+
+.login-box .btn-primary:active {
+    transform: translateY(0);
+}
+
+.login-box code {
+    background: rgba(39, 249, 212, 0.1);
+    color: #27F9D4;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.85em;
+}
+
+/* Shake animation para error */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+    20%, 40%, 60%, 80% { transform: translateX(8px); }
+}
+
+.login-box.shake {
+    animation: shake 0.5s;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .login-box {
+        margin: 1rem;
+        padding: 2rem 1.5rem;
+    }
+}
+
+/* App container transition */
+#appContainer {
+    transition: opacity 0.3s ease;
+}
