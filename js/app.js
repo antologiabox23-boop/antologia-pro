@@ -183,77 +183,91 @@ function showSetupBanner() {
 }
 
 // ─── Bootstrap de la aplicación ──────────────────────────────────────────────
+
+// Función de inicialización de la app (llamada después del login)
+async function initializeApp() {
+    console.log('App: Iniciando aplicación...');
+    try {
+        // 1. UI primero (necesita DOM, no necesita datos)
+        UI.initialize();
+        UI.showLoading('Conectando con Google Sheets…');
+
+        // 2. Cargar datos desde Google Sheets (async)
+        console.log('App: Cargando datos desde Google Sheets...');
+        try {
+            await Storage.initialize();
+            console.log('App: Storage inicializado correctamente');
+        } catch (err) {
+            console.error('App: Error en Storage.initialize():', err);
+            if (err.message.includes('SCRIPT_URL') || err.message.includes('Configura')) {
+                UI.showErrorToast('⚙️ Configura tu SCRIPT_URL en storage.js. Ver CONFIGURACION_GOOGLE_SHEETS.md', 8000);
+                showSetupBanner();
+            } else {
+                UI.showWarningToast('No se pudo conectar con Google Sheets. Revisa tu conexión.', 6000);
+            }
+        }
+
+        UI.showLoading('Iniciando módulos…');
+        await Utils.sleep(150);
+
+        // 3. Módulos funcionales
+        console.log('App: Inicializando módulos...');
+        Users.initialize();
+        Attendance.initialize();
+        Income.initialize();
+        Finance.initialize();
+        Staff.initialize();
+        WhatsApp.initialize();
+        Reports.initialize();
+        Charts.initialize();
+        Backup.initialize();
+        Dashboard.initialize();
+        Settings.initialize();
+        Backup.checkAutoBackup();
+
+        // Poblar selects que dependen de usuarios cargados
+        console.log('App: Poblando selects...');
+        Attendance.populateReportUsers();
+        Staff.populateTrainerSelects();
+
+        // Inicializar rangos de fecha al mes actual en todas las consultas
+        initMonthRanges();
+
+        // Verificar cumpleaños al abrir el tab de WhatsApp
+        document.getElementById('whatsapp-tab')?.addEventListener('shown.bs.tab', () => {
+            WhatsApp.checkBirthdays();
+        });
+        document.getElementById('staff-tab')?.addEventListener('shown.bs.tab', () => {
+            Staff.populateTrainerSelects();
+        });
+
+        UI.hideLoading();
+
+        if (Storage.getUsers().length === 0) {
+            setTimeout(() => UI.showInfoToast('¡Bienvenido! Comienza agregando usuarios.'), 1000);
+        }
+
+        console.log('%c✓ Antología Box23 v3.0 – Google Sheets', 'color:#27F9D4;font-weight:bold;font-size:14px');
+
+    } catch (err) {
+        console.error('Error de inicio:', err);
+        UI.hideLoading();
+        UI.showErrorToast(`Error de inicio: ${err.message}`);
+    }
+}
+
 (function boot() {
     document.addEventListener('DOMContentLoaded', async () => {
-        try {
-            // 0. Autenticación PRIMERO
-            if (!Auth.initialize()) {
-                // Si no está autenticado, Auth.initialize() muestra el login
-                // y no continuamos con la inicialización de la app
-                return;
-            }
-
-            // 1. UI primero (necesita DOM, no necesita datos)
-            UI.initialize();
-            UI.showLoading('Conectando con Google Sheets…');
-
-            // 2. Cargar datos desde Google Sheets (async)
-            try {
-                await Storage.initialize();
-            } catch (err) {
-                if (err.message.includes('SCRIPT_URL') || err.message.includes('Configura')) {
-                    UI.showErrorToast('⚙️ Configura tu SCRIPT_URL en storage.js. Ver CONFIGURACION_GOOGLE_SHEETS.md', 8000);
-                    showSetupBanner();
-                } else {
-                    UI.showWarningToast('No se pudo conectar con Google Sheets. Revisa tu conexión.', 6000);
-                }
-            }
-
-            UI.showLoading('Iniciando módulos…');
-            await Utils.sleep(150);
-
-            // 3. Módulos funcionales
-            Users.initialize();
-            Attendance.initialize();
-            Income.initialize();
-            Finance.initialize();
-            Staff.initialize();
-            WhatsApp.initialize();
-            Reports.initialize();
-            Charts.initialize();
-            Backup.initialize();
-            Dashboard.initialize();
-            Settings.initialize();
-            Backup.checkAutoBackup();
-
-            // Poblar selects que dependen de usuarios cargados
-            Attendance.populateReportUsers();
-            Staff.populateTrainerSelects();
-
-            // Inicializar rangos de fecha al mes actual en todas las consultas
-            initMonthRanges();
-
-            // Verificar cumpleaños al abrir el tab de WhatsApp
-            document.getElementById('whatsapp-tab')?.addEventListener('shown.bs.tab', () => {
-                WhatsApp.checkBirthdays();
-            });
-            document.getElementById('staff-tab')?.addEventListener('shown.bs.tab', () => {
-                Staff.populateTrainerSelects();
-            });
-
-            UI.hideLoading();
-
-            if (Storage.getUsers().length === 0) {
-                setTimeout(() => UI.showInfoToast('¡Bienvenido! Comienza agregando usuarios.'), 1000);
-            }
-
-            console.log('%c✓ Antología Box23 v3.0 – Google Sheets', 'color:#27F9D4;font-weight:bold;font-size:14px');
-
-        } catch (err) {
-            console.error('Error de inicio:', err);
-            UI.hideLoading();
-            UI.showErrorToast(`Error de inicio: ${err.message}`);
+        // 0. Autenticación PRIMERO
+        if (!Auth.initialize()) {
+            // Si no está autenticado, Auth.initialize() muestra el login
+            // y no continuamos con la inicialización de la app.
+            // La app se inicializará cuando Auth llame a App.initializeApp()
+            return;
         }
+
+        // Si ya está autenticado, inicializar normalmente
+        await initializeApp();
     });
 
     // Errores globales no capturados
@@ -294,6 +308,6 @@ function showSetupBanner() {
     }
 })();
 
-window.App      = { version: '2.0' };
+window.App      = { version: '2.0', initializeApp };
 window.Dashboard = Dashboard;
 window.Settings  = Settings;

@@ -101,9 +101,17 @@ const Auth = (() => {
         if (password === savedPassword) {
             saveSession();
             hideLogin();
-            setTimeout(() => {
+            setTimeout(async () => {
                 showApp();
                 setupPasswordChange();
+                // Inicializar la app después de mostrar el contenedor
+                console.log('Auth: Login exitoso, inicializando app...');
+                if (window.App && window.App.initializeApp) {
+                    await window.App.initializeApp();
+                    console.log('Auth: App inicializada correctamente');
+                } else {
+                    console.error('Auth: App.initializeApp no disponible');
+                }
             }, 300);
             if (errorEl) errorEl.textContent = '';
         } else {
