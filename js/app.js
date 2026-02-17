@@ -252,6 +252,7 @@ async function initializeApp() {
         Backup.initialize();
         Dashboard.initialize();
         Settings.initialize();
+        Analytics.initialize();
         Backup.checkAutoBackup();
 
         // Poblar selects que dependen de usuarios cargados
