@@ -8,6 +8,8 @@ const Auth = (() => {
     const SESSION_DURATION = 12 * 60 * 60 * 1000; // 12 horas en ms
     
     const DEFAULT_PASSWORD = 'box23admin';
+    
+    let isInitializing = false; // Flag para prevenir doble inicialización
 
     function initialize() {
         if (isAuthenticated()) {
@@ -32,14 +34,9 @@ const Auth = (() => {
             attemptLogin();
         });
 
-        input?.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                attemptLogin();
-            }
-        });
+        // El botón ya es type="submit" así que dispara el form submit
+        // No necesitamos listener adicional en el botón
 
-        btn?.addEventListener('click', () => attemptLogin());
         input?.focus();
     }
 
@@ -102,9 +99,15 @@ const Auth = (() => {
             saveSession();
             hideLogin();
             setTimeout(async () => {
+                if (isInitializing) {
+                    console.log('Auth: Inicialización ya en progreso, ignorando...');
+                    return;
+                }
+                isInitializing = true;
+                
                 showApp();
                 setupPasswordChange();
-                // Inicializar la app después de mostrar el contenedor
+                
                 console.log('Auth: Login exitoso, inicializando app...');
                 if (window.App && window.App.initializeApp) {
                     await window.App.initializeApp();
@@ -112,6 +115,8 @@ const Auth = (() => {
                 } else {
                     console.error('Auth: App.initializeApp no disponible');
                 }
+                
+                isInitializing = false;
             }, 300);
             if (errorEl) errorEl.textContent = '';
         } else {
