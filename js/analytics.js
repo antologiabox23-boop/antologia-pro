@@ -90,19 +90,14 @@ const Analytics = (() => {
             'Nombre': u.name,
             'Documento': u.document || '',
             'Teléfono': u.phone || '',
-            'Email': u.email || '',
             'Tipo': u.affiliationType || '',
             'Estado': u.status === 'active' ? 'Activo' : 'Inactivo',
             'Fecha Nacimiento': u.birthdate || '',
             'Edad': u.birthdate ? calculateAge(u.birthdate) : '',
-            'Género': u.gender || '',
-            'Dirección': u.address || '',
             'EPS': u.eps || '',
             'Patologías': u.pathology || '',
             'Contacto Emergencia': u.emergencyContact || '',
             'Tel. Emergencia': u.emergencyPhone || '',
-            'Hora Preferida': u.classTime || '',
-            'Creado': u.createdAt || '',
         }));
 
         const ws = XLSX.utils.json_to_sheet(data);
@@ -113,19 +108,14 @@ const Analytics = (() => {
             { wch: 30 }, // Nombre
             { wch: 15 }, // Documento
             { wch: 15 }, // Teléfono
-            { wch: 25 }, // Email
             { wch: 15 }, // Tipo
             { wch: 10 }, // Estado
             { wch: 12 }, // Fecha Nac
             { wch: 6 },  // Edad
-            { wch: 10 }, // Género
-            { wch: 30 }, // Dirección
             { wch: 20 }, // EPS
             { wch: 30 }, // Patologías
             { wch: 25 }, // Contacto Emerg
             { wch: 15 }, // Tel Emerg
-            { wch: 12 }, // Hora Pref
-            { wch: 18 }, // Creado
         ];
 
         XLSX.utils.book_append_sheet(wb, ws, 'Usuarios');
@@ -133,6 +123,7 @@ const Analytics = (() => {
 
     function addAttendanceSheet(wb) {
         const attendance = Storage.getAttendance()
+            .filter(a => a.status === 'presente') // Solo presentes
             .sort((a, b) => b.date.localeCompare(a.date));
 
         const data = attendance.map(a => {
@@ -141,9 +132,6 @@ const Analytics = (() => {
                 'Fecha': a.date,
                 'Usuario': user ? user.name : 'Desconocido',
                 'ID Usuario': a.userId,
-                'Estado': a.status === 'presente' ? 'Presente' : 'Ausente',
-                'Hora': a.time || '',
-                'Registrado': a.createdAt || '',
             };
         });
 
@@ -152,9 +140,6 @@ const Analytics = (() => {
             { wch: 12 }, // Fecha
             { wch: 30 }, // Usuario
             { wch: 25 }, // ID Usuario
-            { wch: 10 }, // Estado
-            { wch: 8 },  // Hora
-            { wch: 18 }, // Registrado
         ];
 
         XLSX.utils.book_append_sheet(wb, ws, 'Asistencia');
@@ -176,7 +161,7 @@ const Analytics = (() => {
                 'Inicio Vigencia': p.startDate || '',
                 'Fin Vigencia': p.endDate || '',
                 'Días Vigencia': p.startDate && p.endDate ? daysBetween(p.startDate, p.endDate) : '',
-                'Registrado': p.createdAt || '',
+                'Observaciones': p.notes || '',
             };
         });
 
@@ -191,7 +176,7 @@ const Analytics = (() => {
             { wch: 12 }, // Inicio Vig
             { wch: 12 }, // Fin Vig
             { wch: 10 }, // Días Vig
-            { wch: 18 }, // Registrado
+            { wch: 40 }, // Observaciones
         ];
 
         XLSX.utils.book_append_sheet(wb, ws, 'Pagos');
