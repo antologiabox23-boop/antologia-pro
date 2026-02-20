@@ -20,24 +20,22 @@ Genera un archivo Excel completo con **6 hojas** conteniendo todos los datos de 
 ## 📄 Hojas del Archivo Excel
 
 ### 1️⃣ **Usuarios**
-Todos los usuarios registrados con información completa:
-- Datos personales (nombre, documento, teléfono, email)
+Todos los usuarios registrados con información esencial:
+- Datos personales (nombre, documento, teléfono)
 - Información médica (EPS, patologías, contacto de emergencia)
-- Datos de afiliación (tipo, estado, hora preferida)
-- Fecha de creación
+- Datos de afiliación (tipo, estado)
 - **Cálculo automático de edad** a partir de fecha de nacimiento
 
-**Columnas:** ID, Nombre, Documento, Teléfono, Email, Tipo, Estado, Fecha Nacimiento, Edad, Género, Dirección, EPS, Patologías, Contacto Emergencia, Tel. Emergencia, Hora Preferida, Creado
+**Columnas:** ID, Nombre, Documento, Teléfono, Tipo, Estado, Fecha Nacimiento, Edad, EPS, Patologías, Contacto Emergencia, Tel. Emergencia
 
 ### 2️⃣ **Asistencia**
-Registro histórico completo de asistencia:
+Registro histórico de **presentes únicamente**:
 - Fecha de cada asistencia
 - Usuario y su ID
-- Estado (Presente/Ausente)
-- Hora de marcado
-- Fecha de registro
 
-**Columnas:** Fecha, Usuario, ID Usuario, Estado, Hora, Registrado
+**Columnas:** Fecha, Usuario, ID Usuario
+
+**Nota:** Solo incluye registros marcados como "Presente", excluyendo ausencias para enfoque en asistencia real.
 
 ### 3️⃣ **Pagos**
 Historial completo de ingresos/pagos:
@@ -45,8 +43,9 @@ Historial completo de ingresos/pagos:
 - Usuario y tipo de pago
 - Montos y métodos de pago
 - **Cálculo automático de días de vigencia**
+- Observaciones/notas del pago
 
-**Columnas:** Fecha Pago, Usuario, ID Usuario, Tipo Pago, Monto, Método, Inicio Vigencia, Fin Vigencia, Días Vigencia, Registrado
+**Columnas:** Fecha Pago, Usuario, ID Usuario, Tipo Pago, Monto, Método, Inicio Vigencia, Fin Vigencia, Días Vigencia, Observaciones
 
 ### 4️⃣ **Gastos**
 Registro de todos los gastos:
