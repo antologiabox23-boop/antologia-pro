@@ -12,6 +12,10 @@ const Reports = (() => {
         document.getElementById('exportIncomeReportExcel')?.addEventListener('click', exportIncomeExcel);
         document.getElementById('exportCustomReportPDF')?.addEventListener('click', exportCustomPDF);
         document.getElementById('exportCustomReportExcel')?.addEventListener('click', exportCustomExcel);
+        
+        // Informe combinado
+        document.getElementById('generateCombinedReportBtn')?.addEventListener('click', generateCombinedReport);
+        document.getElementById('exportCombinedReportBtn')?.addEventListener('click', exportCombinedReport);
     }
 
     function generateAttendanceReport() {
@@ -122,6 +126,154 @@ const Reports = (() => {
 
     function exportCustomExcel() {
         UI.showInfoToast('Exportación personalizada en desarrollo');
+    }
+
+    // ═══ INFORME COMBINADO: USUARIOS + ASISTENCIAS + PAGOS ═══════════════
+    
+    function generateCombinedReport() {
+        const dateFrom = document.getElementById('combinedReportFrom')?.value;
+        const dateTo = document.getElementById('combinedReportTo')?.value;
+        const statusFilter = document.getElementById('combinedReportStatus')?.value || 'active';
+
+        if (!dateFrom || !dateTo) {
+            UI.showErrorToast('Selecciona el rango de fechas');
+            return;
+        }
+
+        if (dateFrom > dateTo) {
+            UI.showErrorToast('La fecha inicial debe ser menor a la final');
+            return;
+        }
+
+        // Filtrar usuarios según estado
+        let users = Storage.getUsers();
+        if (statusFilter === 'active') {
+            users = users.filter(u => u.status === 'active' && u.affiliationType !== 'Entrenador(a)');
+        } else if (statusFilter === 'inactive') {
+            users = users.filter(u => u.status === 'inactive' && u.affiliationType !== 'Entrenador(a)');
+        } else {
+            users = users.filter(u => u.affiliationType !== 'Entrenador(a)');
+        }
+
+        // Obtener asistencias y pagos del período
+        const attendance = Storage.getAttendance().filter(a => 
+            a.status === 'presente' && 
+            a.date >= dateFrom && 
+            a.date <= dateTo
+        );
+
+        const payments = Storage.getIncome().filter(p =>
+            p.paymentDate >= dateFrom &&
+            p.paymentDate <= dateTo
+        );
+
+        // Construir datos combinados
+        const reportData = users.map(user => {
+            const userAttendance = attendance.filter(a => a.userId === user.id).length;
+            const userPayments = payments.filter(p => p.userId === user.id);
+            const totalPaid = userPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+
+            return {
+                user,
+                attendance: userAttendance,
+                paymentsCount: userPayments.length,
+                totalPaid
+            };
+        });
+
+        // Ordenar por asistencias (descendente)
+        reportData.sort((a, b) => b.attendance - a.attendance);
+
+        // Totales
+        const totalAttendance = reportData.reduce((s, d) => s + d.attendance, 0);
+        const totalIncome = reportData.reduce((s, d) => s + d.totalPaid, 0);
+
+        // Actualizar badges
+        document.getElementById('combinedReportCount').textContent = reportData.length;
+        document.getElementById('combinedReportTotalAttendance').textContent = totalAttendance;
+        document.getElementById('combinedReportTotalIncome').textContent = Utils.formatCurrency(totalIncome);
+
+        // Renderizar tabla
+        const tbody = document.getElementById('combinedReportList');
+        tbody.innerHTML = reportData.map((d, i) => `
+            <tr>
+                <td>${i + 1}</td>
+                <td><strong>${Utils.escapeHtml(d.user.name)}</strong></td>
+                <td><span class="badge bg-${d.user.status === 'active' ? 'success' : 'secondary'}">${d.user.status === 'active' ? 'Activo' : 'Inactivo'}</span></td>
+                <td class="text-center"><span class="badge bg-info">${d.attendance}</span></td>
+                <td class="text-center"><span class="badge bg-primary">${d.paymentsCount}</span></td>
+                <td class="text-end"><strong>${Utils.formatCurrency(d.totalPaid)}</strong></td>
+            </tr>
+        `).join('');
+
+        // Mostrar/ocultar secciones
+        document.getElementById('combinedReportResult')?.classList.remove('d-none');
+        document.getElementById('combinedReportEmpty')?.classList.add('d-none');
+
+        // Guardar datos para exportación
+        window._combinedReportData = { reportData, dateFrom, dateTo };
+    }
+
+    async function exportCombinedReport() {
+        if (!window._combinedReportData) {
+            UI.showErrorToast('Primero genera el informe');
+            return;
+        }
+
+        const { reportData, dateFrom, dateTo } = window._combinedReportData;
+
+        try {
+            // Cargar SheetJS si no está disponible
+            if (typeof XLSX === 'undefined') {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';
+                await new Promise((resolve, reject) => {
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                });
+            }
+
+            // Preparar datos
+            const data = reportData.map((d, i) => ({
+                '#': i + 1,
+                'Usuario': d.user.name,
+                'Documento': d.user.document || '',
+                'Teléfono': d.user.phone || '',
+                'Estado': d.user.status === 'active' ? 'Activo' : 'Inactivo',
+                'Asistencias': d.attendance,
+                'Pagos Realizados': d.paymentsCount,
+                'Total Pagado': d.totalPaid,
+            }));
+
+            // Crear workbook
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(data);
+
+            // Anchos de columna
+            ws['!cols'] = [
+                { wch: 4 },  // #
+                { wch: 30 }, // Usuario
+                { wch: 15 }, // Documento
+                { wch: 15 }, // Teléfono
+                { wch: 10 }, // Estado
+                { wch: 12 }, // Asistencias
+                { wch: 15 }, // Pagos Realizados
+                { wch: 15 }, // Total Pagado
+            ];
+
+            XLSX.utils.book_append_sheet(wb, ws, 'Informe Combinado');
+
+            // Generar archivo
+            const filename = `Informe_Combinado_${dateFrom}_${dateTo}.xlsx`;
+            XLSX.writeFile(wb, filename);
+
+            UI.showSuccessToast('✓ Informe exportado: ' + filename);
+
+        } catch (err) {
+            console.error('Error al exportar:', err);
+            UI.showErrorToast('Error al generar archivo Excel');
+        }
     }
 
     return { initialize };
