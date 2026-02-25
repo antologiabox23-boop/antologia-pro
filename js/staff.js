@@ -66,13 +66,14 @@ const Staff = (() => {
             duration
         });
 
-        // Limpiar campos excepto entrenador y fecha
+        // Limpiar solo la hora (mantener fecha, entrenador, tipo y duración para siguiente registro)
         document.getElementById('classHour').value = '';
-        document.getElementById('classType').value = '';
-        document.getElementById('classDuration').value = '';
 
         renderQueue();
         UI.showSuccessToast('✓ Clase agregada a la lista');
+        
+        // Focus en el campo de hora para agilizar el siguiente registro
+        document.getElementById('classHour')?.focus();
     }
 
     function renderQueue() {
@@ -94,10 +95,10 @@ const Staff = (() => {
         tbody.innerHTML = classQueue.map((c, i) => `
             <tr>
                 <td style="font-size:.8rem">${Utils.formatDate(c.date)}</td>
-                <td style="font-size:.8rem">${c.hour}</td>
                 <td style="font-size:.8rem"><strong>${Utils.escapeHtml(c.trainerName)}</strong></td>
                 <td style="font-size:.8rem"><span class="badge bg-info">${c.classType}</span></td>
                 <td style="font-size:.8rem" class="text-center">${c.duration}h</td>
+                <td style="font-size:.8rem">${c.hour}</td>
                 <td class="text-center">
                     <button class="btn btn-sm btn-outline-danger" onclick="Staff.removeFromQueue(${i})" title="Eliminar">
                         <i class="fas fa-times"></i>
