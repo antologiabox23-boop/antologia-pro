@@ -59,7 +59,7 @@
 
             <div class="text-center mt-4">
                 <small class="text-muted">
-                    Contraseña predeterminada: <code>***23*****</code>
+                    Contraseña predeterminada: <code>box23admin</code>
                 </small>
             </div>
         </div>
@@ -749,14 +749,16 @@
             <!-- Personal Tab -->
             <div class="tab-pane fade" id="staff" role="tabpanel">
 
-                <!-- ══ REGISTRAR CLASE ══════════════════════════════════════ -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-chalkboard-teacher me-2"></i>Registrar Clase Dictada</h5>
+                <!-- ══ REGISTRAR CLASES MÚLTIPLES ═══════════════════════════ -->
+                <div class="card mb-4 border-success">
+                    <div class="card-header bg-success bg-opacity-10">
+                        <h5 class="mb-0"><i class="fas fa-chalkboard-teacher me-2 text-success"></i>Registrar Clases</h5>
+                        <small class="text-muted">Agrega múltiples clases antes de guardar</small>
                     </div>
                     <div class="card-body">
+                        <!-- Formulario de entrada -->
                         <form id="classForm">
-                            <div class="row g-3 align-items-end">
+                            <div class="row g-2 align-items-end">
                                 <div class="col-6 col-md-2">
                                     <label class="form-label small">Fecha *</label>
                                     <input type="date" class="form-control form-control-sm" id="classDate" required>
@@ -764,7 +766,7 @@
                                 <div class="col-6 col-md-2">
                                     <label class="form-label small">Hora *</label>
                                     <select class="form-select form-select-sm" id="classHour" required>
-                                        <option value="">Seleccionar...</option>
+                                        <option value="">Hora...</option>
                                         <option>5:00 AM</option><option>6:00 AM</option>
                                         <option>7:00 AM</option><option>8:00 AM</option>
                                         <option>9:00 AM</option><option>4:00 PM</option>
@@ -779,9 +781,9 @@
                                     </select>
                                 </div>
                                 <div class="col-6 col-md-2">
-                                    <label class="form-label small">Tipo de Clase *</label>
+                                    <label class="form-label small">Tipo *</label>
                                     <select class="form-select form-select-sm" id="classType" required>
-                                        <option value="">Seleccionar...</option>
+                                        <option value="">Tipo...</option>
                                         <option>Crossfit</option><option>GAP</option>
                                         <option>FLEX</option><option>Personalizado</option>
                                         <option>Mantenimiento</option><option>Otro</option>
@@ -790,19 +792,50 @@
                                 <div class="col-6 col-md-2">
                                     <label class="form-label small">Duración *</label>
                                     <select class="form-select form-select-sm" id="classDuration" required>
-                                        <option value="">Seleccionar...</option>
-                                        <option value="1">1 hora</option>
-                                        <option value="1.5">1.5 horas</option>
-                                        <option value="2">2 horas</option>
+                                        <option value="">Horas...</option>
+                                        <option value="1">1h</option>
+                                        <option value="1.5">1.5h</option>
+                                        <option value="2">2h</option>
                                     </select>
                                 </div>
-                                <div class="col-12">
-                                    <button type="button" class="btn btn-primary btn-sm" id="saveClassBtn">
-                                        <i class="fas fa-save me-1"></i>Registrar Clase
+                                <div class="col-12 col-md-1">
+                                    <button type="button" class="btn btn-sm btn-outline-primary w-100" id="addClassToQueueBtn" title="Agregar a la lista">
+                                        <i class="fas fa-plus"></i>
                                     </button>
                                 </div>
                             </div>
                         </form>
+
+                        <!-- Cola de clases pendientes -->
+                        <div id="classQueueSection" class="mt-3 d-none">
+                            <hr>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted fw-semibold">
+                                    <i class="fas fa-list me-1"></i>Clases a guardar (<span id="queueCount">0</span>)
+                                </small>
+                                <button class="btn btn-sm btn-outline-danger" id="clearQueueBtn" title="Limpiar todo">
+                                    <i class="fas fa-trash me-1"></i>Limpiar
+                                </button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered mb-2">
+                                    <thead class="table-light">
+                                        <tr style="font-size:.8rem">
+                                            <th>Fecha</th>
+                                            <th>Hora</th>
+                                            <th>Entrenador</th>
+                                            <th>Tipo</th>
+                                            <th>Horas</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="classQueueList"></tbody>
+                                </table>
+                            </div>
+                            <button type="button" class="btn btn-success btn-sm w-100" id="saveAllClassesBtn">
+                                <i class="fas fa-save me-1"></i>Guardar Todas (<span id="queueCount2">0</span> clases)
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -990,7 +1023,7 @@
                                     <i class="fas fa-user-plus me-2"></i>Nuevo Ingreso
                                 </button>
                             </div>
-                            <!--<div class="card-body">
+                            <div class="card-body">
                                 <div class="p-3 rounded" style="background:rgba(255,255,255,0.04);font-size:.85rem;line-height:1.7">
                                     <div class="text-muted mb-2 small fw-bold">Vista previa del mensaje:</div>
                                     <p class="mb-1">Hola <em>[Nombre]</em>, bienvenido/a a Antología Box23. Para completar tu registro, necesitamos los siguientes datos:</p>
@@ -998,7 +1031,7 @@
                                     <p class="mt-2 mb-1">¡Gracias por colaborar!</p>
                                     <p class="mb-0">📲 Únete al grupo: <span class="text-success">https://chat.whatsapp.com/DSJzYAb6h58FQDA8yEAzwN</span> <em>(opcional)</em></p>
                                     <p class="mb-0">📋 Formulario: <span class="text-info">https://forms.gle/ZHUj1Q7YiDhE5P498</span></p>
-                                </div>-->
+                                </div>
                             </div>
                         </div>
                     </div>
