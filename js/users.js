@@ -199,14 +199,14 @@ const Users = (() => {
                 : '<span class="badge bg-danger">Inactivo</span>';
             return `
             <tr>
-                <td>${idx}</td>
+                <td class="d-none d-md-table-cell">${idx}</td>
                 <td><strong>${Utils.escapeHtml(u.name)}</strong></td>
-                <td>${Utils.escapeHtml(u.document || '-')}</td>
-                <td>${Utils.formatPhone(u.phone)}</td>
-                <td>${Utils.escapeHtml(u.eps || '-')}</td>
-                <td><span class="badge bg-secondary">${Utils.escapeHtml(u.bloodType || '-')}</span></td>
-                <td>${Utils.escapeHtml(u.classTime || '-')}</td>
-                <td><span class="badge bg-primary">${Utils.escapeHtml(u.affiliationType || '-')}</span></td>
+                <td class="d-none d-lg-table-cell">${Utils.escapeHtml(u.document || '-')}</td>
+                <td class="d-none d-md-table-cell">${Utils.formatPhone(u.phone)}</td>
+                <td class="d-none d-lg-table-cell">${Utils.escapeHtml(u.eps || '-')}</td>
+                <td class="d-none d-lg-table-cell"><span class="badge bg-secondary">${Utils.escapeHtml(u.bloodType || '-')}</span></td>
+                <td class="d-none d-lg-table-cell">${Utils.escapeHtml(u.classTime || '-')}</td>
+                <td class="d-none d-md-table-cell"><span class="badge bg-primary">${Utils.escapeHtml(u.affiliationType || '-')}</span></td>
                 <td>${badge}</td>
                 <td>
                     <button class="btn btn-sm btn-info me-1" onclick="Users.editUser('${u.id}')" title="Editar">
