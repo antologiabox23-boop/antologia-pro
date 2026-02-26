@@ -1067,3 +1067,42 @@ textarea {
 #appContainer {
     transition: opacity 0.3s ease;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TABLA DE USUARIOS RESPONSIVE
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Botones de acción más compactos en móvil */
+@media (max-width: 767px) {
+    #usersList td {
+        padding: 0.5rem 0.3rem;
+        font-size: 0.9rem;
+    }
+    
+    #usersList .btn-sm {
+        padding: 0.25rem 0.4rem;
+        font-size: 0.8rem;
+    }
+    
+    #usersList .btn-sm .fas {
+        font-size: 0.85rem;
+    }
+    
+    /* Nombre más compacto */
+    #usersList td:nth-child(1) strong {
+        font-size: 0.95rem;
+    }
+    
+    /* Badge de estado más pequeño */
+    #usersList .badge {
+        font-size: 0.75rem;
+        padding: 0.25em 0.5em;
+    }
+}
+
+/* En tablets mostrar un poco más de info */
+@media (min-width: 768px) and (max-width: 991px) {
+    #usersList td {
+        font-size: 0.9rem;
+    }
+}
