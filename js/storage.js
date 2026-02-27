@@ -13,7 +13,7 @@ const Storage = (() => {
 
     // ─── CONFIGURACIÓN ───────────────────────────────────────────────────────
     // Pega aquí la URL de tu Apps Script después de desplegarlo:
-    const SCRIPT_URL = 'PEGA_AQUI_TU_URL_DE_APPS_SCRIPT';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz9YubFTKIAFUXsQYoOh691HUytL7QwYZ9ZQL-WG0k2nab0w-_FzCCcX6Lm0SMC0TZA/exec';
     // ─────────────────────────────────────────────────────────────────────────
 
     const DEFAULT_SETTINGS = {
@@ -157,25 +157,12 @@ const Storage = (() => {
     }
 
     async function addAttendance(record) {
-        // Verificar si ya existe un registro para este usuario en esta fecha
-        const existing = (cache.attendance || []).find(a => 
-            a.userId === record.userId && 
-            a.date === record.date
-        );
-        
-        if (existing) {
-            // Si ya existe, actualizar en lugar de duplicar
-            console.warn('⚠️ Ya existe registro de asistencia, actualizando...');
-            return await updateAttendance(existing.id, record);
-        }
-        
         const newRecord = {
             id:        Utils.generateUUID(),
             ...record,
             createdAt: Utils.getCurrentDateTime()
         };
         await apiCall('addRow', { sheet: 'Asistencia', row: newRecord });
-        if (!cache.attendance) cache.attendance = [];
         cache.attendance.push(newRecord);
         return newRecord;
     }
@@ -201,35 +188,6 @@ const Storage = (() => {
 
     function getAttendanceByUser(userId) {
         return (cache.attendance || []).filter(a => a.userId === userId);
-    }
-
-    // Función de utilidad para detectar duplicados (uso manual/debug)
-    function detectDuplicateAttendance() {
-        const duplicates = [];
-        const seen = new Map();
-        
-        if (!cache.attendance || cache.attendance.length === 0) {
-            return duplicates;
-        }
-        
-        cache.attendance.forEach(record => {
-            const key = `${record.userId}-${record.date}`;
-            if (seen.has(key)) {
-                duplicates.push({
-                    key,
-                    original: seen.get(key),
-                    duplicate: record
-                });
-            } else {
-                seen.set(key, record);
-            }
-        });
-        
-        if (duplicates.length > 0) {
-            console.warn('⚠️ Duplicados encontrados:', duplicates);
-        }
-        
-        return duplicates;
     }
 
     // ─── INGRESOS ────────────────────────────────────────────────────────────
@@ -408,7 +366,7 @@ const Storage = (() => {
         getUsers, addUser, updateUser, deleteUser, getUserById,
         // Asistencia
         getAttendance, addAttendance, updateAttendance, deleteAttendance,
-        getAttendanceByDate, getAttendanceByUser, detectDuplicateAttendance,
+        getAttendanceByDate, getAttendanceByUser,
         // Ingresos
         getIncome, addIncome, updateIncome, deleteIncome, getIncomeByDateRange,
         // Configuración
@@ -425,52 +383,3 @@ const Storage = (() => {
 })();
 
 window.Storage = Storage;
-
-// ═══════════════════════════════════════════════════════════════════════
-// UTILIDAD: Limpiar duplicados de asistencia (ejecutar desde consola)
-// ═══════════════════════════════════════════════════════════════════════
-window.cleanDuplicateAttendance = async function() {
-    const duplicates = Storage.detectDuplicateAttendance();
-    
-    if (duplicates.length === 0) {
-        console.log('✓ No se encontraron duplicados');
-        return;
-    }
-    
-    console.log(`⚠️ Se encontraron ${duplicates.length} duplicados`);
-    
-    const confirm = window.confirm(
-        `Se encontraron ${duplicates.length} registros duplicados.\n\n` +
-        `¿Deseas eliminar los duplicados y conservar solo el registro más reciente de cada uno?`
-    );
-    
-    if (!confirm) {
-        console.log('Operación cancelada');
-        return;
-    }
-    
-    let deleted = 0;
-    for (const dup of duplicates) {
-        try {
-            // Mantener el más reciente (el duplicate tiene timestamp más nuevo)
-            // o el que tenga id más largo (el original)
-            const toDelete = dup.duplicate.id;
-            await Storage.deleteAttendance(toDelete);
-            deleted++;
-            console.log(`✓ Eliminado duplicado: ${toDelete}`);
-        } catch (err) {
-            console.error(`Error eliminando duplicado:`, err);
-        }
-    }
-    
-    console.log(`✓ Proceso completado: ${deleted} duplicados eliminados`);
-    
-    if (window.UI) {
-        UI.showSuccessToast(`✓ ${deleted} registros duplicados eliminados`);
-    }
-    
-    // Refrescar la vista si está en asistencia
-    if (window.Attendance && Attendance.renderAttendance) {
-        Attendance.renderAttendance();
-    }
-};
