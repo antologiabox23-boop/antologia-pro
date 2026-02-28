@@ -165,7 +165,7 @@ const Storage = (() => {
         
         if (existing) {
             // Si ya existe, actualizar en lugar de duplicar
-            console.warn('⚠️ Ya existe registro de asistencia, actualizando...');
+            console.warn('[DUPLICADO] Ya existe registro de asistencia, actualizando...');
             return await updateAttendance(existing.id, record);
         }
         
@@ -226,7 +226,7 @@ const Storage = (() => {
         });
         
         if (duplicates.length > 0) {
-            console.warn('⚠️ Duplicados encontrados:', duplicates);
+            console.warn('[DUPLICADOS] Duplicados encontrados:', duplicates);
         }
         
         return duplicates;
@@ -433,11 +433,11 @@ window.cleanDuplicateAttendance = async function() {
     const duplicates = Storage.detectDuplicateAttendance();
     
     if (duplicates.length === 0) {
-        console.log('✓ No se encontraron duplicados');
+        console.log('[OK] No se encontraron duplicados');
         return;
     }
     
-    console.log(`⚠️ Se encontraron ${duplicates.length} duplicados`);
+    console.log(`[AVISO] Se encontraron ${duplicates.length} duplicados`);
     
     const confirm = window.confirm(
         `Se encontraron ${duplicates.length} registros duplicados.\n\n` +
@@ -457,16 +457,16 @@ window.cleanDuplicateAttendance = async function() {
             const toDelete = dup.duplicate.id;
             await Storage.deleteAttendance(toDelete);
             deleted++;
-            console.log(`✓ Eliminado duplicado: ${toDelete}`);
+            console.log(`[OK] Eliminado duplicado: ${toDelete}`);
         } catch (err) {
             console.error(`Error eliminando duplicado:`, err);
         }
     }
     
-    console.log(`✓ Proceso completado: ${deleted} duplicados eliminados`);
+    console.log(`[OK] Proceso completado: ${deleted} duplicados eliminados`);
     
     if (window.UI) {
-        UI.showSuccessToast(`✓ ${deleted} registros duplicados eliminados`);
+        UI.showSuccessToast(`[OK] ${deleted} registros duplicados eliminados`);
     }
     
     // Refrescar la vista si está en asistencia
