@@ -13,7 +13,7 @@ const Storage = (() => {
 
     // ─── CONFIGURACIÓN ───────────────────────────────────────────────────────
     // Pega aquí la URL de tu Apps Script después de desplegarlo:
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz9YubFTKIAFUXsQYoOh691HUytL7QwYZ9ZQL-WG0k2nab0w-_FzCCcX6Lm0SMC0TZA/exec';
+    const SCRIPT_URL = 'PEGA_AQUI_TU_URL_DE_APPS_SCRIPT';
     // ─────────────────────────────────────────────────────────────────────────
 
     const DEFAULT_SETTINGS = {
@@ -157,12 +157,21 @@ const Storage = (() => {
     }
 
     async function addAttendance(record) {
+        // Prevenir duplicados: verificar si ya existe
+        const existing = (cache.attendance || []).find(a => 
+            a.userId === record.userId && a.date === record.date
+        );
+        if (existing) {
+            return await updateAttendance(existing.id, record);
+        }
+        
         const newRecord = {
             id:        Utils.generateUUID(),
             ...record,
             createdAt: Utils.getCurrentDateTime()
         };
         await apiCall('addRow', { sheet: 'Asistencia', row: newRecord });
+        if (!cache.attendance) cache.attendance = [];
         cache.attendance.push(newRecord);
         return newRecord;
     }
