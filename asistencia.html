@@ -224,6 +224,17 @@ html, body { height: 100%; background: var(--bg); color: var(--text);
 .btn-attend.present.active { background: var(--success); border-color: var(--success); color: #0d1117; }
 .btn-attend.absent         { background: rgba(248,81,73,.12); border-color: rgba(248,81,73,.3); color: var(--danger); }
 .btn-attend.absent.active  { background: var(--danger);  border-color: var(--danger);  color: #fff; }
+.btn-attend.emergency { 
+    background: rgba(37,211,102,.12); 
+    border-color: rgba(37,211,102,.3); 
+    color: #25d366; 
+}
+.btn-attend.emergency:hover { 
+    background: rgba(37,211,102,.2); 
+    border-color: rgba(37,211,102,.5); 
+}
+
+
 
 /* ── Toast ───────────────────────────────────────────────── */
 .toast-box {
@@ -479,6 +490,10 @@ function renderList() {
                         onclick="markUser('${u.id}', 'ausente')" title="Ausente">
                     <i class="fas fa-times"></i>
                 </button>
+                <button class="btn-attend emergency"
+                        onclick="contactEmergency('${u.id}')" title="WhatsApp Emergencia">
+                    <i class="fab fa-whatsapp"></i>
+                </button>
             </div>
         </div>`;
     }).join('');
@@ -544,6 +559,37 @@ document.getElementById('btnMarkAll').addEventListener('click', async () => {
         } catch (_) { /* continuar */ }
     }
 });
+
+
+/* ── Contactar emergencia ─────────────────────────────────── */
+function contactEmergency(userId) {
+    const user = usersCache.find(u => u.id === userId);
+    if (!user) {
+        showToast('Usuario no encontrado', 'info');
+        return;
+    }
+
+    if (!user.emergencyContact || !user.emergencyPhone) {
+        showToast('Este usuario no tiene contacto de emergencia registrado', 'info');
+        return;
+    }
+
+    const userName = user.name;
+    const emergencyName = user.emergencyContact;
+    const emergencyPhone = (user.emergencyPhone || '').replace(/\D/g, '');
+
+    if (!emergencyPhone || emergencyPhone.length < 10) {
+        showToast('Número de emergencia inválido', 'info');
+        return;
+    }
+
+    const msg = `Hola ${emergencyName}, te contactamos desde Antología Box23 como contacto de emergencia de ${userName}.\n\nNecesitamos comunicarnos contigo por una situación que requiere tu atención.\n\nPor favor, contáctanos lo antes posible.\n\nGracias.`;
+    
+    const url = `https://wa.me/57${emergencyPhone}?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+    
+    showToast(`WhatsApp abierto para ${emergencyName}`, 'success');
+}
 
 /* ── Búsqueda ────────────────────────────────────────────── */
 document.getElementById('searchInput').addEventListener('input', (e) => {
