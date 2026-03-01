@@ -144,6 +144,11 @@ const Attendance = (() => {
                         <i class="fas fa-times"></i>
                     </button>
                 </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-success" onclick="Attendance.contactEmergency('${user.id}')" title="WhatsApp Emergencia">
+                        <i class="fab fa-whatsapp"></i>
+                    </button>
+                </td>
             </tr>`;
         }).join('');
     }
@@ -287,6 +292,35 @@ const Attendance = (() => {
         window.open(url, '_blank');
     }
 
+    function contactEmergency(userId) {
+        const user = Storage.getUserById(userId);
+        if (!user) {
+            UI.showErrorToast('Usuario no encontrado');
+            return;
+        }
+
+        if (!user.emergencyContact || !user.emergencyPhone) {
+            UI.showWarningToast('Este usuario no tiene contacto de emergencia registrado');
+            return;
+        }
+
+        const userName = user.name;
+        const emergencyName = user.emergencyContact;
+        const emergencyPhone = (user.emergencyPhone || '').replace(/\D/g, '');
+
+        if (!emergencyPhone || emergencyPhone.length < 10) {
+            UI.showErrorToast('Número de emergencia inválido');
+            return;
+        }
+
+        const msg = `Hola ${emergencyName}, te contactamos desde Antología Box23 como contacto de emergencia de ${userName}.\n\nNecesitamos comunicarnos contigo por una situación que requiere tu atención.\n\nPor favor, contáctanos lo antes posible.\n\nGracias.`;
+        
+        const url = `https://wa.me/57${emergencyPhone}?text=${encodeURIComponent(msg)}`;
+        window.open(url, '_blank');
+        
+        UI.showSuccessToast(`WhatsApp abierto para ${emergencyName}`);
+    }
+
     return {
         initialize,
         mark: async (userId, status) => {
@@ -299,6 +333,7 @@ const Attendance = (() => {
         inactivarUsuario,
         renderAlerts,
         whatsappInasistencia,
+        contactEmergency,
         populateReportUsers: () => {
             const sel = document.getElementById('reportUser');
             if (!sel) return;
