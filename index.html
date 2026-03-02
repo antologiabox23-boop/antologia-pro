@@ -514,28 +514,34 @@
                     </div>
                     <div class="card-body">
                         <!-- Filters -->
-                        <div class="row mb-3">
+                        <div class="row mb-3 g-2">
                             <div class="col-md-3">
-                                <input type="date" class="form-control" id="paymentDateFrom" 
-                                       placeholder="Fecha desde">
+                                <label class="form-label small text-muted mb-1">Buscar por usuario</label>
+                                <input type="text" class="form-control" id="paymentUserSearch" 
+                                       placeholder="Nombre del usuario...">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small text-muted mb-1">Desde</label>
+                                <input type="date" class="form-control" id="paymentDateFrom">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small text-muted mb-1">Hasta</label>
+                                <input type="date" class="form-control" id="paymentDateTo">
                             </div>
                             <div class="col-md-3">
-                                <input type="date" class="form-control" id="paymentDateTo" 
-                                       placeholder="Fecha hasta">
-                            </div>
-                            <div class="col-md-3">
+                                <label class="form-label small text-muted mb-1">Tipo de pago</label>
                                 <select class="form-select" id="paymentTypeFilter">
-                                        <option value="">Todos los tipos</option>
-                                        <option value="Mensualidad">Mensualidad</option>
-                                        <option value="Paquete 10 clases">Paquete 10 clases</option>
-                                        <option value="Personalizado Diana">Personalizado Diana</option>
-                                        <option value="Clase suelta">Clase suelta</option>
-                                        <option value="Movimientos caja">Movimientos caja</option>
-                                    </select>
+                                    <option value="">Todos los tipos</option>
+                                    <option value="Mensualidad">Mensualidad</option>
+                                    <option value="Paquete 10 clases">Paquete 10 clases</option>
+                                    <option value="Personalizado Diana">Personalizado Diana</option>
+                                    <option value="Clase suelta">Clase suelta</option>
+                                    <option value="Movimientos caja">Movimientos caja</option>
+                                </select>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2 d-flex align-items-end">
                                 <button class="btn btn-primary w-100" id="applyPaymentFilters">
-                                    <i class="fas fa-filter me-2"></i>Filtrar
+                                    <i class="fas fa-filter me-1"></i>Filtrar
                                 </button>
                             </div>
                         </div>
