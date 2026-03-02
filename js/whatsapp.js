@@ -15,6 +15,7 @@ const WhatsApp = (() => {
     function setupEventListeners() {
         document.getElementById('waBirthdayProximos')?.addEventListener('click', () => checkBirthdays('proximos'));
         document.getElementById('waBirthdayMes')?.addEventListener('click',      () => checkBirthdays('mes'));
+        document.getElementById('waBirthdayMensajeGrupal')?.addEventListener('click', enviarMensajeCumpleanerosMes);
         document.getElementById('enviarNuevoIngresoBtn')?.addEventListener('click', enviarNuevoIngreso);
 
         // Preview en tiempo real
@@ -72,12 +73,12 @@ const WhatsApp = (() => {
 4. Tipo de sangre (RH):
 5. EPS:
 6. Alguna patolog\u00EDa o condici\u00F3n m\u00E9dica que debamos conocer:
-7. Nombre del contacto de emergencia:
-8. Tel\u00E9fono de contacto de emergencia:
+7. Tel\u00E9fono de contacto de emergencia:
+8. Nombre del contacto de emergencia:
 
 \u00A1Gracias por colaborar!${grupoLine}
 
-\uD83D\uDCCB O completa nuestro formulario en l\u00EDnea (para que habilite el link contesta el mensaje o guarda el contacto):
+\uD83D\uDCCB O completa nuestro formulario (para que habilite el mensaje contesta el mensaje o guarda el contacto) en l\u00EDnea:
 ${FORM_LINK}`;
     }
 
@@ -116,7 +117,7 @@ ${FORM_LINK}`;
         const vigencia = payment.startDate && payment.endDate
             ? `\n\uD83D\uDCC5 Vigencia: ${Utils.formatDate(payment.startDate)} al ${Utils.formatDate(payment.endDate)}`
             : '';
-        const msg = `\u00A1Hola ${nombre}! \uD83D\uDC4B\n tu pago en Antologia Box23 \u2705\n\n\uD83D\uDCB0 por un valor de *_*${Utils.formatCurrency(payment.amount)}*\n\uD83D\uDCCC _* Tipo: *${payment.paymentType}*\n\uD83D\uDCB3 M\u00E9todo: *${payment.paymentMethod}*_${vigencia}_*_*\n\n\u00A1_* Gracias por confiar en *${GYM_NAME}*! \uD83C\uDFCB\uFE0F`;
+        const msg = `\u00A1Hola ${nombre}! \uD83D\uDC4B\nHemos recibido tu pago correctamente. \u2705\n\n\uD83D\uDCB0 Monto: *${Utils.formatCurrency(payment.amount)}*\n\uD83D\uDCCC Tipo: *${payment.paymentType}*\n\uD83D\uDCB3 M\u00E9todo: *${payment.paymentMethod}*${vigencia}\n\n\u00A1Gracias por confiar en *${GYM_NAME}*! \uD83C\uDFCB\uFE0F`;
         openWA(user.phone, msg);
     }
 
@@ -290,6 +291,49 @@ ${FORM_LINK}`;
                 </td>
             </tr>`;
         }).join('');
+    }
+
+    function enviarMensajeCumpleanerosMes() {
+        const hoy = new Date();
+        const mesActual = hoy.getMonth(); // 0-11
+        const nombreMes = hoy.toLocaleDateString('es-ES', { month: 'long' });
+        
+        // Obtener todos los usuarios con cumpleaños este mes
+        const users = Storage.getUsers().filter(u => u.status === 'active' && u.affiliationType !== 'Entrenador(a)');
+        
+        const cumpleaneros = users
+            .filter(u => {
+                if (!u.birthdate) return false;
+                const bd = Utils.normalizeDate(u.birthdate);
+                if (!bd) return false;
+                const [y, m, d] = bd.split('-');
+                return parseInt(m) - 1 === mesActual;
+            })
+            .map(u => {
+                const bd = Utils.normalizeDate(u.birthdate);
+                const [y, m, d] = bd.split('-');
+                return { user: u, dia: parseInt(d) };
+            })
+            .sort((a, b) => a.dia - b.dia);
+        
+        if (cumpleaneros.length === 0) {
+            UI.showWarningToast(`No hay cumpleaños registrados en ${nombreMes}`);
+            return;
+        }
+        
+        // Construir lista de cumpleañeros con fechas
+        const listaCumpleaneros = cumpleaneros
+            .map(c => `${c.user.name.split(' ')[0]} (${c.dia})`)
+            .join(', ');
+        
+        // Mensaje grupal
+        const mensaje = `🎉 ¡Feliz cumpleaños! 🎂\n\nEn el mes de ${nombreMes} celebramos a:\n${listaCumpleaneros}\n\nDesde Antología Box23 les deseamos un día lleno de alegría, salud y muchas bendiciones. ¡Que disfruten su día especial!\n\n💪 ¡Nos vemos en el box!`;
+        
+        // Abrir WhatsApp con el mensaje pre-escrito
+        const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+        window.open(url, '_blank');
+        
+        UI.showSuccessToast(`Mensaje grupal preparado para ${cumpleaneros.length} cumpleañeros de ${nombreMes}`);
     }
 
     return {

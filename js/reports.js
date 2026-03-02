@@ -179,7 +179,9 @@ const Reports = (() => {
                 paymentsCount: userPayments.length,
                 totalPaid
             };
-        });
+        })
+        // Filtrar usuarios con al menos 1 asistencia O 1 pago
+        .filter(d => d.attendance > 0 || d.paymentsCount > 0);
 
         // Ordenar por asistencias (descendente)
         reportData.sort((a, b) => b.attendance - a.attendance);
