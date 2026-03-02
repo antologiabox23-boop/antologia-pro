@@ -298,8 +298,8 @@ ${FORM_LINK}`;
         const mesActual = hoy.getMonth(); // 0-11
         const nombreMes = hoy.toLocaleDateString('es-ES', { month: 'long' });
         
-        // Obtener todos los usuarios con cumpleaños este mes
-        const users = Storage.getUsers().filter(u => u.status === 'active' && u.affiliationType !== 'Entrenador(a)');
+        // Obtener TODOS los usuarios (activos e inactivos) excepto entrenadores
+        const users = Storage.getUsers().filter(u => u.affiliationType !== 'Entrenador(a)');
         
         const cumpleaneros = users
             .filter(u => {
@@ -321,13 +321,13 @@ ${FORM_LINK}`;
             return;
         }
         
-        // Construir lista de cumpleañeros con fechas
+        // Construir lista de cumpleañeros con formato mejorado
         const listaCumpleaneros = cumpleaneros
-            .map(c => `${c.user.name.split(' ')[0]} (${c.dia})`)
-            .join(', ');
+            .map(c => `- ${c.user.name} ${c.dia}`)
+            .join('\n');
         
-        // Mensaje grupal
-        const mensaje = `🎉 ¡Feliz cumpleaños! 🎂\n\nEn el mes de ${nombreMes} celebramos a:\n${listaCumpleaneros}\n\nDesde Antología Box23 les deseamos un día lleno de alegría, salud y muchas bendiciones. ¡Que disfruten su día especial!\n\n💪 ¡Nos vemos en el box!`;
+        // Mensaje grupal mejorado con emojis
+        const mensaje = `Cordial saludo atletas.\n\nEn este mes de ${nombreMes} 🙌🏼 celebramos con alegría el cumpleaños de:\n\n${listaCumpleaneros}\n\nDe parte del Equipo Antología Box 23, les felicitamos y obsequiamos una proteína preparada para que la reclames dentro del mes el día que quieras.\n\nFeliz cumpleaños, nos vemos en el box 🕯️🍰`;
         
         // Abrir WhatsApp con el mensaje pre-escrito
         const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;

@@ -94,6 +94,11 @@ const Income = (() => {
         });
 
         document.getElementById('applyPaymentFilters')?.addEventListener('click', renderIncome);
+        
+        // Búsqueda en tiempo real al escribir nombre de usuario
+        document.getElementById('paymentUserSearch')?.addEventListener('input', 
+            Utils.debounce(() => { currentPage = 1; renderIncome(); }, 300)
+        );
 
         // Recalcular vigencia cuando cambia el tipo de pago
         document.getElementById('incomeType')?.addEventListener('change', () => {
@@ -402,12 +407,21 @@ const Income = (() => {
         const dateFrom   = document.getElementById('paymentDateFrom')?.value  || '';
         const dateTo     = document.getElementById('paymentDateTo')?.value    || '';
         const typeFilter = document.getElementById('paymentTypeFilter')?.value || '';
+        const userSearch = document.getElementById('paymentUserSearch')?.value.toLowerCase().trim() || '';
 
         let filtered = income.filter(p => {
             const pd = (p.paymentDate || '');
             if (dateFrom && pd < dateFrom) return false;
             if (dateTo   && pd > dateTo)   return false;
             if (typeFilter && p.paymentType !== typeFilter) return false;
+            
+            // Filtro por nombre de usuario
+            if (userSearch) {
+                const user = Storage.getUserById(p.userId);
+                const userName = user ? user.name.toLowerCase() : '';
+                if (!userName.includes(userSearch)) return false;
+            }
+            
             return true;
         }).sort((a, b) => (b.paymentDate || '').localeCompare(a.paymentDate || ''));
 
