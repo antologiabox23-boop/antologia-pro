@@ -99,9 +99,9 @@ const Income = (() => {
             if (sel) sel.style.display = 'none';
             const lp  = document.getElementById('incomeUserLastPay');
             if (lp)  lp.style.display  = 'none';
-            // Restaurar botón guardar y ocultar botón WA
+            // Restaurar texto del botón guardar (sin reasignar onclick para evitar doble registro)
             const saveBtn = document.getElementById('saveIncomeBtn');
-            if (saveBtn) { saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>Guardar Pago'; saveBtn.onclick = saveIncome; }
+            if (saveBtn) { saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>Guardar Pago'; delete saveBtn.dataset.mode; }
             const waBtn = document.getElementById('waConfirmPaymentBtn');
             if (waBtn) { waBtn.classList.add('d-none'); waBtn.onclick = null; }
             _hideDropdown();
@@ -360,6 +360,10 @@ const Income = (() => {
     }
 
     async function saveIncome() {
+        // Evitar doble ejecución cuando el botón está en modo "Listo"
+        const saveBtn = document.getElementById('saveIncomeBtn');
+        if (saveBtn?.dataset.mode === 'done') { UI.hideModal('incomeModal'); return; }
+
         const validation = Validation.validateForm('incomeForm', Validation.schemas.income);
         if (!validation.isValid) {
             UI.showErrorToast('Corrige los errores en el formulario');
@@ -421,7 +425,11 @@ const Income = (() => {
                     waBtn.classList.remove('d-none');
                     waBtn.onclick = () => { sendPaymentWA(savedPayment.id || savedPayment); UI.hideModal('incomeModal'); };
                     const saveBtn = document.getElementById('saveIncomeBtn');
-                    if (saveBtn) { saveBtn.innerHTML = '<i class="fas fa-check me-2"></i>Listo'; saveBtn.onclick = () => UI.hideModal('incomeModal'); }
+                    if (saveBtn) {
+                        saveBtn.innerHTML = '<i class="fas fa-check me-2"></i>Listo';
+                        // Reemplazar el listener usando un flag para evitar doble registro
+                        saveBtn.dataset.mode = 'done';
+                    }
                     UI.showSuccessToast('✅ Pago registrado — ¿Enviar comprobante por WhatsApp?');
                 } else {
                     UI.hideModal('incomeModal');
@@ -558,7 +566,6 @@ Hemos registrado tu pago correctamente. ✅
 
 💰 Monto: *${monto}*
 📌 Tipo: *${tipo}*
-💳 Método: *${metodo}*
 🗓️ Fecha: *${fecha}*${vigencia}
 
 ¡Gracias por confiar en *Antología Box23*! 🥊💪`;
