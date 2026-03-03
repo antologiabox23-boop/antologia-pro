@@ -318,7 +318,7 @@ ${table.outerHTML}
         }
     }
 
-    // ═══ MOVIMIENTOS POR CUENTA ══════════════════════════════════════════
+    // ═══ MOVIMIENTOS POR CUENTA (EXTRACTO) ═══════════════════════════════
 
     function generateAccountReport() {
         const dateFrom = document.getElementById('accountReportFrom').value;
@@ -334,18 +334,6 @@ ${table.outerHTML}
             return;
         }
 
-        // Filtrar pagos
-        let payments = Storage.getIncome().filter(p =>
-            p.paymentDate >= dateFrom && p.paymentDate <= dateTo
-        );
-        if (method !== 'all') {
-            payments = payments.filter(p => p.paymentMethod === method);
-        }
-
-        // Ordenar por fecha
-        payments.sort((a, b) => a.paymentDate.localeCompare(b.paymentDate));
-
-        // Resumen por cuenta
         const accounts = method === 'all'
             ? ['Efectivo', 'Bancolombia', 'Daviplata', 'Nequi']
             : [method];
@@ -353,51 +341,154 @@ ${table.outerHTML}
         const icons  = { Efectivo: '💵', Bancolombia: '🏦', Daviplata: '📱', Nequi: '📱' };
         const colors = { Efectivo: 'success', Bancolombia: 'primary', Daviplata: 'info', Nequi: 'warning' };
 
+        // ── Todos los movimientos del período para la(s) cuenta(s) ─────────
+        const allIncome   = Storage.getIncome();
+        const allExpenses = Storage.getExpenses();
+
+        // Calcular saldo INICIAL (todo lo anterior a dateFrom)
+        function getSaldoInicial(acc) {
+            const ing = allIncome
+                .filter(p => p.paymentMethod === acc && p.paymentDate < dateFrom)
+                .reduce((s, p) => s + Utils.parseAmount(p.amount), 0);
+            const gas = allExpenses
+                .filter(e => e.account === acc && e.date < dateFrom)
+                .reduce((s, e) => s + Utils.parseAmount(e.amount), 0);
+            return ing - gas;
+        }
+
+        // Filtrar movimientos del período
+        function getMovimientos(acc) {
+            const ing = allIncome
+                .filter(p => p.paymentMethod === acc && p.paymentDate >= dateFrom && p.paymentDate <= dateTo)
+                .map(p => ({
+                    fecha: p.paymentDate,
+                    descripcion: (() => { const u = Storage.getUserById(p.userId); return `Ingreso — ${p.paymentType || 'Pago'}${u ? ' · ' + u.name : ''}`; })(),
+                    tipo: 'ingreso',
+                    debe: 0,
+                    haber: Utils.parseAmount(p.amount),
+                    raw: p
+                }));
+            const gas = allExpenses
+                .filter(e => e.account === acc && e.date >= dateFrom && e.date <= dateTo)
+                .map(e => ({
+                    fecha: e.date,
+                    descripcion: `Gasto — ${e.category}${e.description ? ' · ' + e.description : ''}`,
+                    tipo: 'gasto',
+                    debe: Utils.parseAmount(e.amount),
+                    haber: 0,
+                    raw: e
+                }));
+            return [...ing, ...gas].sort((a, b) => a.fecha.localeCompare(b.fecha));
+        }
+
+        // ── Tarjetas de resumen ────────────────────────────────────────────
         const summaryCards = document.getElementById('accountSummaryCards');
-        summaryCards.innerHTML = accounts.map(acc => {
-            const accPayments = payments.filter(p => p.paymentMethod === acc);
-            const total = accPayments.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
-            if (method === 'all' && accPayments.length === 0) return '';
-            return `<div class="col-6 col-md-3">
-                <div class="card border-${colors[acc] || 'secondary'} text-center py-2">
-                    <div class="card-body p-2">
+        let summaryHtml = '';
+        let allMovimientos = [];
+
+        accounts.forEach(acc => {
+            const movs = getMovimientos(acc);
+            const saldoInicial = getSaldoInicial(acc);
+            const totalIng = movs.reduce((s, m) => s + m.haber, 0);
+            const totalGas = movs.reduce((s, m) => s + m.debe, 0);
+            const saldoFinal = saldoInicial + totalIng - totalGas;
+
+            // Agregar cuenta a cada movimiento para tabla global
+            movs.forEach(m => { m.account = acc; });
+            allMovimientos.push({ acc, movs, saldoInicial, totalIng, totalGas, saldoFinal });
+
+            if (method === 'all' && movs.length === 0 && saldoInicial === 0) return;
+
+            summaryHtml += `
+            <div class="col-6 col-md-3">
+                <div class="card border-${colors[acc] || 'secondary'} h-100">
+                    <div class="card-body p-2 text-center">
                         <div class="fs-4">${icons[acc] || '💳'}</div>
                         <div class="fw-bold small">${acc}</div>
-                        <div class="text-${colors[acc] || 'secondary'} fw-bold">${Utils.formatCurrency(total)}</div>
-                        <div class="text-muted" style="font-size:11px">${accPayments.length} movimiento${accPayments.length !== 1 ? 's' : ''}</div>
+                        <div class="text-muted" style="font-size:10px">Saldo inicial</div>
+                        <div class="small">${Utils.formatCurrency(saldoInicial)}</div>
+                        <hr class="my-1">
+                        <div class="text-success small">+${Utils.formatCurrency(totalIng)}</div>
+                        <div class="text-danger small">-${Utils.formatCurrency(totalGas)}</div>
+                        <hr class="my-1">
+                        <div class="text-muted" style="font-size:10px">Saldo final</div>
+                        <div class="fw-bold text-${colors[acc] || 'secondary'}">${Utils.formatCurrency(saldoFinal)}</div>
                     </div>
                 </div>
             </div>`;
-        }).join('');
+        });
 
-        // Tabla de detalle
-        const total = payments.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
+        summaryCards.innerHTML = summaryHtml || '<div class="col-12 text-muted small">Sin datos para las cuentas seleccionadas</div>';
+
+        // ── Tabla de detalle tipo extracto ─────────────────────────────────
         const tbody = document.getElementById('accountReportList');
-        tbody.innerHTML = payments.length === 0
-            ? '<tr><td colspan="5" class="text-center text-muted">No hay movimientos en el período seleccionado</td></tr>'
-            : payments.map(p => {
-                const user = Storage.getUserById(p.userId);
-                const acc = p.paymentMethod || 'N/A';
-                return `<tr>
-                    <td>${p.paymentDate}</td>
-                    <td>${Utils.escapeHtml(user?.name || 'N/A')}</td>
-                    <td>${Utils.escapeHtml(p.paymentType || '')}</td>
-                    <td><span class="badge bg-${colors[acc] || 'secondary'}">${icons[acc] || '💳'} ${acc}</span></td>
-                    <td class="text-end fw-bold">${Utils.formatCurrency(parseFloat(p.amount || 0))}</td>
-                </tr>`;
-            }).join('');
+        const tfoot = document.getElementById('accountReportTfoot');
+        let tableRows = '';
+        let grandSaldoInicial = 0;
+        let grandHaber = 0;
+        let grandDebe = 0;
 
-        document.getElementById('accountReportTfoot').innerHTML = `
-            <tr class="table-success fw-bold">
-                <td colspan="4">Total del período</td>
-                <td class="text-end">${Utils.formatCurrency(total)}</td>
+        allMovimientos.forEach(({ acc, movs, saldoInicial, totalIng, totalGas, saldoFinal }) => {
+            if (method === 'all' && movs.length === 0 && saldoInicial === 0) return;
+
+            grandSaldoInicial += saldoInicial;
+            grandHaber += totalIng;
+            grandDebe  += totalGas;
+
+            // Fila de saldo inicial de la cuenta
+            if (method === 'all') {
+                tableRows += `<tr class="table-${colors[acc] || 'secondary'} bg-opacity-10">
+                    <td colspan="5" class="fw-bold small">
+                        <span class="badge bg-${colors[acc] || 'secondary'}">${icons[acc] || '💳'} ${acc}</span>
+                        &nbsp; Saldo inicial al ${dateFrom}: <strong>${Utils.formatCurrency(saldoInicial)}</strong>
+                    </td>
+                </tr>`;
+            }
+
+            if (movs.length === 0) {
+                tableRows += `<tr><td colspan="5" class="text-muted small text-center fst-italic">Sin movimientos en el período</td></tr>`;
+            } else {
+                let saldoAcumulado = saldoInicial;
+                movs.forEach(m => {
+                    saldoAcumulado += m.haber - m.debe;
+                    tableRows += `<tr>
+                        <td class="small">${m.fecha}</td>
+                        <td class="small">${Utils.escapeHtml(m.descripcion)}</td>
+                        <td class="text-end small ${m.debe > 0 ? 'text-danger' : 'text-muted'}">${m.debe > 0 ? Utils.formatCurrency(m.debe) : '—'}</td>
+                        <td class="text-end small ${m.haber > 0 ? 'text-success' : 'text-muted'}">${m.haber > 0 ? Utils.formatCurrency(m.haber) : '—'}</td>
+                        <td class="text-end small fw-bold ${saldoAcumulado >= 0 ? '' : 'text-danger'}">${Utils.formatCurrency(saldoAcumulado)}</td>
+                    </tr>`;
+                });
+            }
+
+            // Subtotal por cuenta si hay varias
+            if (method === 'all') {
+                tableRows += `<tr class="table-light">
+                    <td colspan="2" class="small fw-bold text-end">Saldo final ${acc}:</td>
+                    <td class="text-end text-danger small fw-bold">-${Utils.formatCurrency(totalGas)}</td>
+                    <td class="text-end text-success small fw-bold">+${Utils.formatCurrency(totalIng)}</td>
+                    <td class="text-end fw-bold">${Utils.formatCurrency(saldoFinal)}</td>
+                </tr>`;
+            }
+        });
+
+        tbody.innerHTML = tableRows || `<tr><td colspan="5" class="text-center text-muted">No hay movimientos en el período seleccionado</td></tr>`;
+
+        const grandSaldoFinal = grandSaldoInicial + grandHaber - grandDebe;
+        tfoot.innerHTML = `
+            <tr class="table-dark fw-bold">
+                <td colspan="2">TOTALES DEL PERÍODO</td>
+                <td class="text-end text-danger">-${Utils.formatCurrency(grandDebe)}</td>
+                <td class="text-end text-success">+${Utils.formatCurrency(grandHaber)}</td>
+                <td class="text-end">${Utils.formatCurrency(grandSaldoFinal)}</td>
             </tr>`;
 
         document.getElementById('accountReportResult').classList.remove('d-none');
         document.getElementById('accountReportEmpty').classList.add('d-none');
 
-        window._accountReportData = { payments, dateFrom, dateTo, method };
-        UI.showSuccessToast(`${payments.length} movimiento${payments.length !== 1 ? 's' : ''} encontrado${payments.length !== 1 ? 's' : ''}`);
+        window._accountReportData = { allMovimientos, dateFrom, dateTo, method };
+        const totalMovs = allMovimientos.reduce((s, a) => s + a.movs.length, 0);
+        UI.showSuccessToast(`${totalMovs} movimiento${totalMovs !== 1 ? 's' : ''} encontrado${totalMovs !== 1 ? 's' : ''}`);
     }
 
     async function exportAccountReportExcel() {
@@ -405,7 +496,7 @@ ${table.outerHTML}
             UI.showWarningToast('Primero genera el reporte');
             return;
         }
-        const { payments, dateFrom, dateTo, method } = window._accountReportData;
+        const { allMovimientos, dateFrom, dateTo, method } = window._accountReportData;
         try {
             if (typeof XLSX === 'undefined') {
                 const script = document.createElement('script');
@@ -413,44 +504,46 @@ ${table.outerHTML}
                 await new Promise((res, rej) => { script.onload = res; script.onerror = rej; document.head.appendChild(script); });
             }
 
-            const data = payments.map((p, i) => {
-                const user = Storage.getUserById(p.userId);
-                return {
-                    '#': i + 1,
-                    'Fecha': p.paymentDate,
-                    'Usuario': user?.name || 'N/A',
-                    'Documento': user?.document || '',
-                    'Tipo de Pago': p.paymentType || '',
-                    'Cuenta / Método': p.paymentMethod || '',
-                    'Monto': parseFloat(p.amount || 0),
-                    'Notas': p.notes || ''
-                };
-            });
-
-            // Hoja de detalle
             const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(data);
-            ws['!cols'] = [
-                { wch: 4 }, { wch: 12 }, { wch: 28 }, { wch: 15 },
-                { wch: 20 }, { wch: 15 }, { wch: 14 }, { wch: 20 }
-            ];
-            XLSX.utils.book_append_sheet(wb, ws, 'Movimientos');
 
-            // Hoja resumen por cuenta
-            const accounts = ['Efectivo', 'Bancolombia', 'Daviplata', 'Nequi'];
-            const summaryData = accounts.map(acc => {
-                const accP = payments.filter(p => p.paymentMethod === acc);
-                return {
-                    'Cuenta': acc,
-                    'Cantidad de Movimientos': accP.length,
-                    'Total Recaudado': accP.reduce((s, p) => s + parseFloat(p.amount || 0), 0)
-                };
+            // Hoja de detalle por cuenta
+            allMovimientos.forEach(({ acc, movs, saldoInicial, saldoFinal }) => {
+                if (method === 'all' && movs.length === 0 && saldoInicial === 0) return;
+
+                const data = [];
+                data.push({ 'Fecha': `Saldo inicial al ${dateFrom}`, 'Descripción': '', 'Gasto (Débito)': '', 'Ingreso (Crédito)': '', 'Saldo': saldoInicial });
+
+                let saldo = saldoInicial;
+                movs.forEach(m => {
+                    saldo += m.haber - m.debe;
+                    data.push({
+                        'Fecha': m.fecha,
+                        'Descripción': m.descripcion,
+                        'Gasto (Débito)': m.debe || '',
+                        'Ingreso (Crédito)': m.haber || '',
+                        'Saldo': saldo
+                    });
+                });
+                data.push({ 'Fecha': `Saldo final al ${dateTo}`, 'Descripción': '', 'Gasto (Débito)': '', 'Ingreso (Crédito)': '', 'Saldo': saldoFinal });
+
+                const ws = XLSX.utils.json_to_sheet(data);
+                ws['!cols'] = [{ wch: 14 }, { wch: 40 }, { wch: 18 }, { wch: 18 }, { wch: 16 }];
+                XLSX.utils.book_append_sheet(wb, ws, acc.substring(0, 31));
             });
-            const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-            wsSummary['!cols'] = [{ wch: 15 }, { wch: 25 }, { wch: 20 }];
-            XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumen por Cuenta');
 
-            const filename = `Movimientos_${method === 'all' ? 'TodasCuentas' : method}_${dateFrom}_${dateTo}.xlsx`;
+            // Hoja resumen general
+            const summaryData = allMovimientos.map(({ acc, saldoInicial, totalIng, totalGas, saldoFinal }) => ({
+                'Cuenta': acc,
+                'Saldo Inicial': saldoInicial,
+                'Total Ingresos': totalIng,
+                'Total Gastos': totalGas,
+                'Saldo Final': saldoFinal
+            }));
+            const wsResumen = XLSX.utils.json_to_sheet(summaryData);
+            wsResumen['!cols'] = [{ wch: 15 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 14 }];
+            XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
+
+            const filename = `Extracto_${method === 'all' ? 'TodasCuentas' : method}_${dateFrom}_${dateTo}.xlsx`;
             XLSX.writeFile(wb, filename);
             UI.showSuccessToast('✓ Exportado: ' + filename);
         } catch (err) {
