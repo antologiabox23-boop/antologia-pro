@@ -27,6 +27,8 @@ const Income = (() => {
 
         const labelEl = document.getElementById('incomeModalLabel');
 
+        const waBtn = document.getElementById('waConfirmPaymentBtn');
+
         if (paymentId) {
             const p = Storage.getIncome().find(x => x.id === paymentId);
             if (!p) return;
@@ -48,6 +50,11 @@ const Income = (() => {
                 if (selBox && selName) { selBox.style.display = 'block'; selName.textContent = user.name; }
             }
             showVigenciaInfo();
+            // Botón WhatsApp visible en edición
+            if (waBtn) {
+                waBtn.classList.remove('d-none');
+                waBtn.onclick = () => sendPaymentWA(p.id);
+            }
         } else {
             if (labelEl) labelEl.innerHTML = '<i class="fas fa-dollar-sign me-2"></i>Registrar Pago';
             const today = Utils.getCurrentDate();
@@ -61,6 +68,8 @@ const Income = (() => {
             if (sel) sel.style.display = 'none';
             const lp  = document.getElementById('incomeUserLastPay');
             if (lp)  lp.style.display  = 'none';
+            // Ocultar botón WhatsApp al registrar (aparece al guardar)
+            if (waBtn) waBtn.classList.add('d-none');
         }
         UI.showModal('incomeModal');
     }
@@ -90,6 +99,11 @@ const Income = (() => {
             if (sel) sel.style.display = 'none';
             const lp  = document.getElementById('incomeUserLastPay');
             if (lp)  lp.style.display  = 'none';
+            // Restaurar botón guardar y ocultar botón WA
+            const saveBtn = document.getElementById('saveIncomeBtn');
+            if (saveBtn) { saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>Guardar Pago'; saveBtn.onclick = saveIncome; }
+            const waBtn = document.getElementById('waConfirmPaymentBtn');
+            if (waBtn) { waBtn.classList.add('d-none'); waBtn.onclick = null; }
             _hideDropdown();
         });
 
@@ -384,16 +398,35 @@ const Income = (() => {
                 // Edición
                 await Storage.updateIncome(paymentId, incomeData);
                 UI.showSuccessToast('Pago actualizado');
+                // Refrescar botón WA con datos actualizados
+                const updatedP = Storage.getIncome().find(x => x.id === paymentId);
+                const waBtn = document.getElementById('waConfirmPaymentBtn');
+                if (waBtn && updatedP) {
+                    waBtn.classList.remove('d-none');
+                    waBtn.onclick = () => sendPaymentWA(updatedP.id);
+                }
                 UI.hideModal('incomeModal');
                 renderIncome();
                 if (window.Dashboard) Dashboard.updateStats();
             } else {
-                // Nuevo
+                // Nuevo — mostrar botón WA en el modal antes de cerrarlo
                 const saved = await Storage.addIncome(incomeData);
-                UI.hideModal('incomeModal');
                 renderIncome();
                 if (window.Dashboard) Dashboard.updateStats();
-                ofrecerWhatsApp(saved || incomeData);
+                const savedPayment = saved || incomeData;
+                const waBtn = document.getElementById('waConfirmPaymentBtn');
+                const user = Storage.getUserById(savedPayment.userId);
+                if (waBtn && user && user.phone) {
+                    // Mostrar botón WA y cambiar botón guardar a "Cerrar"
+                    waBtn.classList.remove('d-none');
+                    waBtn.onclick = () => { sendPaymentWA(savedPayment.id || savedPayment); UI.hideModal('incomeModal'); };
+                    const saveBtn = document.getElementById('saveIncomeBtn');
+                    if (saveBtn) { saveBtn.innerHTML = '<i class="fas fa-check me-2"></i>Listo'; saveBtn.onclick = () => UI.hideModal('incomeModal'); }
+                    UI.showSuccessToast('✅ Pago registrado — ¿Enviar comprobante por WhatsApp?');
+                } else {
+                    UI.hideModal('incomeModal');
+                    UI.showSuccessToast('Pago registrado exitosamente');
+                }
             }
         } catch (err) {
             UI.showErrorToast('Error al guardar: ' + err.message);
@@ -464,6 +497,9 @@ const Income = (() => {
                     <button class="btn btn-sm btn-warning me-1" onclick="Income.editPayment('${p.id}')" title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
+                    <button class="btn btn-sm btn-success me-1" onclick="Income.sendPaymentWA('${p.id}')" title="Enviar comprobante por WhatsApp">
+                        <i class="fab fa-whatsapp"></i>
+                    </button>
                     <button class="btn btn-sm btn-danger" onclick="Income.deletePayment('${p.id}')" title="Eliminar">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -493,9 +529,43 @@ const Income = (() => {
         }, true);
     }
 
-    // ── WhatsApp confirmación de pago ────────────────────────────────────
+    // ── WhatsApp: enviar comprobante de pago ─────────────────────────────
 
-    function ofrecerWhatsApp(payment) {
+    function sendPaymentWA(paymentOrId) {
+        const p = typeof paymentOrId === 'string'
+            ? Storage.getIncome().find(x => x.id === paymentOrId)
+            : paymentOrId;
+        if (!p) return;
+
+        const user = Storage.getUserById(p.userId);
+        if (!user || !user.phone) {
+            UI.showWarningToast('El usuario no tiene número de teléfono registrado');
+            return;
+        }
+
+        const nombre   = user.name.split(' ')[0];
+        const monto    = Utils.formatCurrency(Utils.parseAmount(p.amount));
+        const tipo     = p.paymentType  || 'Membresía';
+        const metodo   = p.paymentMethod || '';
+        const fecha    = p.paymentDate   ? Utils.formatDate(p.paymentDate) : '';
+        const vigencia = p.startDate && p.endDate
+            ? `\n📅 Vigencia: ${Utils.formatDate(p.startDate)} al ${Utils.formatDate(p.endDate)}`
+            : '';
+
+        const msg =
+`¡Hola ${nombre}! 👋
+Hemos registrado tu pago correctamente. ✅
+
+💰 Monto: *${monto}*
+📌 Tipo: *${tipo}*
+💳 Método: *${metodo}*
+🗓️ Fecha: *${fecha}*${vigencia}
+
+¡Gracias por confiar en *Antología Box23*! 🥊💪`;
+
+        const phone = user.phone.replace(/\D/g, '');
+        window.open(`https://wa.me/57${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
         const user = Storage.getUserById(payment.userId);
         if (!user || !user.phone) {
             UI.showSuccessToast('Pago registrado exitosamente');
@@ -549,6 +619,7 @@ const Income = (() => {
         deletePayment,
         selectUser,
         clearUserSearch,
+        sendPaymentWA,
         populateSelect: populateUserSelect
     };
 })();
