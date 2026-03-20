@@ -130,6 +130,7 @@ const Users = (() => {
                 await Storage.addUser(userData);
                 UI.showSuccessToast('Usuario registrado');
             }
+            // Cerrar modal y actualizar UI solo si el servidor respondió bien
             UI.hideModal('userModal');
             renderUsers();
             if (window.Dashboard) Dashboard.updateStats();

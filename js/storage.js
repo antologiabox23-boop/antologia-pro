@@ -47,10 +47,25 @@ const Storage = (() => {
         const data   = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(payload)))));
         const url    = `${SCRIPT_URL}?action=${action}&payload=${data}`;
 
-        const res = await fetch(url, {
-            method:   'GET',
-            redirect: 'follow'   // Apps Script redirige la respuesta — seguimos la redirección
-        });
+        // Timeout de 15 segundos para evitar que la app quede bloqueada
+        const controller = new AbortController();
+        const timeoutId  = setTimeout(() => controller.abort(), 15000);
+
+        let res;
+        try {
+            res = await fetch(url, {
+                method:   'GET',
+                redirect: 'follow',
+                signal:   controller.signal
+            });
+        } catch (fetchErr) {
+            clearTimeout(timeoutId);
+            if (fetchErr.name === 'AbortError') {
+                throw new Error('Tiempo de espera agotado. Verifica tu conexión e intenta de nuevo.');
+            }
+            throw fetchErr;
+        }
+        clearTimeout(timeoutId);
 
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
@@ -119,17 +134,25 @@ const Storage = (() => {
             createdAt: Utils.getCurrentDateTime(),
             updatedAt: Utils.getCurrentDateTime()
         };
-        const saved = await apiCall('addRow', { sheet: 'Usuarios', row: newUser });
-        cache.users.push(saved || newUser);
-        return saved || newUser;
+        // Actualizar caché inmediatamente para que la UI no espere
+        cache.users.push(newUser);
+        // Sincronizar con el servidor en segundo plano
+        apiCall('addRow', { sheet: 'Usuarios', row: newUser }).catch(err => {
+            console.warn('Error al sincronizar usuario con Sheets:', err.message);
+        });
+        return newUser;
     }
 
     async function updateUser(id, updates) {
         const idx = cache.users.findIndex(u => u.id === id);
         if (idx === -1) return null;
         const updated = { ...cache.users[idx], ...updates, updatedAt: Utils.getCurrentDateTime() };
-        await apiCall('updateRow', { sheet: 'Usuarios', id, data: updated });
+        // Actualizar caché inmediatamente
         cache.users[idx] = updated;
+        // Sincronizar con el servidor en segundo plano
+        apiCall('updateRow', { sheet: 'Usuarios', id, data: updated }).catch(err => {
+            console.warn('Error al sincronizar usuario con Sheets:', err.message);
+        });
         return updated;
     }
 
@@ -239,8 +262,12 @@ const Storage = (() => {
             ...payment,
             createdAt: Utils.getCurrentDateTime()
         };
-        await apiCall('addRow', { sheet: 'Ingresos', row: newPayment });
+        // Actualizar caché inmediatamente
         cache.income.push(newPayment);
+        // Sincronizar con servidor en segundo plano
+        apiCall('addRow', { sheet: 'Ingresos', row: newPayment }).catch(err => {
+            console.warn('Error al sincronizar ingreso con Sheets:', err.message);
+        });
         return newPayment;
     }
 
@@ -248,8 +275,12 @@ const Storage = (() => {
         const idx = cache.income.findIndex(i => i.id === id);
         if (idx === -1) return null;
         const updated = { ...cache.income[idx], ...updates };
-        await apiCall('updateRow', { sheet: 'Ingresos', id, data: updated });
+        // Actualizar caché inmediatamente
         cache.income[idx] = updated;
+        // Sincronizar con servidor en segundo plano
+        apiCall('updateRow', { sheet: 'Ingresos', id, data: updated }).catch(err => {
+            console.warn('Error al sincronizar ingreso con Sheets:', err.message);
+        });
         return updated;
     }
 
