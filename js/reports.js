@@ -579,6 +579,9 @@ ${table.outerHTML}
             users = users.filter(u => u.affiliationType !== 'Entrenador(a)');
         }
 
+        // Obtener TODOS los pagos (para determinar membresía vigente)
+        const allPayments = Storage.getIncome();
+
         // Obtener asistencias y pagos del período
         const attendance = Storage.getAttendance().filter(a => 
             a.status === 'presente' && 
@@ -586,22 +589,43 @@ ${table.outerHTML}
             a.date <= dateTo
         );
 
-        const payments = Storage.getIncome().filter(p =>
+        const payments = allPayments.filter(p =>
             p.paymentDate >= dateFrom &&
             p.paymentDate <= dateTo
         );
 
         // Construir datos combinados
         const reportData = users.map(user => {
-            const userAttendance = attendance.filter(a => a.userId === user.id).length;
+            const userAttendance = attendance.filter(a => a.userId === user.id);
             const userPayments = payments.filter(p => p.userId === user.id);
             const totalPaid = userPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
 
+            // Fecha de vencimiento: último pago con endDate registrado hasta la fecha final del reporte
+            const lastPayWithEnd = allPayments
+                .filter(p => p.userId === user.id && p.endDate)
+                .sort((a, b) => (Utils.normalizeDate(b.endDate) || '').localeCompare(Utils.normalizeDate(a.endDate) || ''))[0];
+
+            const membershipEndRaw = lastPayWithEnd ? Utils.normalizeDate(lastPayWithEnd.endDate) : null;
+
+            // ¿Venció dentro del período del reporte?
+            const expiredInPeriod = membershipEndRaw
+                && membershipEndRaw >= dateFrom
+                && membershipEndRaw <= dateTo;
+
+            // Clases asistidas DESPUÉS del vencimiento (dentro del período)
+            let postExpiryAttendance = 0;
+            if (membershipEndRaw) {
+                postExpiryAttendance = userAttendance.filter(a => a.date > membershipEndRaw).length;
+            }
+
             return {
                 user,
-                attendance: userAttendance,
+                attendance: userAttendance.length,
                 paymentsCount: userPayments.length,
-                totalPaid
+                totalPaid,
+                membershipEnd: membershipEndRaw,
+                expiredInPeriod: !!expiredInPeriod,
+                postExpiryAttendance
             };
         })
         // Filtrar usuarios con al menos 1 asistencia O 1 pago
@@ -613,24 +637,64 @@ ${table.outerHTML}
         // Totales
         const totalAttendance = reportData.reduce((s, d) => s + d.attendance, 0);
         const totalIncome = reportData.reduce((s, d) => s + d.totalPaid, 0);
+        const expiredCount = reportData.filter(d => d.expiredInPeriod).length;
+        const postExpTotal = reportData.reduce((s, d) => s + d.postExpiryAttendance, 0);
 
         // Actualizar badges
         document.getElementById('combinedReportCount').textContent = reportData.length;
         document.getElementById('combinedReportTotalAttendance').textContent = totalAttendance;
         document.getElementById('combinedReportTotalIncome').textContent = Utils.formatCurrency(totalIncome);
 
+        const expBadge = document.getElementById('combinedReportExpiredBadge');
+        const postBadge = document.getElementById('combinedReportPostExpBadge');
+        if (expiredCount > 0) {
+            document.getElementById('combinedReportExpiredCount').textContent = expiredCount;
+            expBadge.style.display = '';
+        } else {
+            expBadge.style.display = 'none';
+        }
+        if (postExpTotal > 0) {
+            document.getElementById('combinedReportPostExpTotal').textContent = postExpTotal;
+            postBadge.style.display = '';
+        } else {
+            postBadge.style.display = 'none';
+        }
+
         // Renderizar tabla
         const tbody = document.getElementById('combinedReportList');
-        tbody.innerHTML = reportData.map((d, i) => `
-            <tr>
+        tbody.innerHTML = reportData.map((d, i) => {
+            // Celda de vencimiento
+            let vencCell = '<span class="text-muted small">—</span>';
+            if (d.membershipEnd) {
+                if (d.expiredInPeriod) {
+                    vencCell = `<span class="badge bg-danger" title="Venció dentro del período">${Utils.formatDate(d.membershipEnd)}</span>`;
+                } else if (d.membershipEnd < dateFrom) {
+                    vencCell = `<span class="badge bg-secondary" title="Ya estaba vencida al inicio del período">${Utils.formatDate(d.membershipEnd)}</span>`;
+                } else {
+                    vencCell = `<span class="badge bg-success" title="Membresía vigente">${Utils.formatDate(d.membershipEnd)}</span>`;
+                }
+            }
+
+            // Celda de clases post-vencimiento
+            let postCell = '<span class="text-muted small">—</span>';
+            if (d.postExpiryAttendance > 0) {
+                postCell = `<span class="badge bg-warning text-dark" title="Clases asistidas sin membresía vigente">${d.postExpiryAttendance}</span>`;
+            } else if (d.membershipEnd) {
+                postCell = '<span class="text-success small">✓</span>';
+            }
+
+            return `
+            <tr class="${d.expiredInPeriod && d.postExpiryAttendance > 0 ? 'table-warning' : ''}">
                 <td>${i + 1}</td>
                 <td><strong>${Utils.escapeHtml(d.user.name)}</strong></td>
                 <td><span class="badge bg-${d.user.status === 'active' ? 'success' : 'secondary'}">${d.user.status === 'active' ? 'Activo' : 'Inactivo'}</span></td>
+                <td class="text-center">${vencCell}</td>
                 <td class="text-center"><span class="badge bg-info">${d.attendance}</span></td>
+                <td class="text-center">${postCell}</td>
                 <td class="text-center"><span class="badge bg-primary">${d.paymentsCount}</span></td>
                 <td class="text-end"><strong>${Utils.formatCurrency(d.totalPaid)}</strong></td>
-            </tr>
-        `).join('');
+            </tr>`;
+        }).join('');
 
         // Mostrar/ocultar secciones
         document.getElementById('combinedReportResult')?.classList.remove('d-none');
@@ -638,6 +702,7 @@ ${table.outerHTML}
 
         // Guardar datos para exportación
         window._combinedReportData = { reportData, dateFrom, dateTo };
+        UI.showSuccessToast('Informe generado');
     }
 
     async function exportCombinedReport() {
@@ -667,7 +732,10 @@ ${table.outerHTML}
                 'Documento': d.user.document || '',
                 'Teléfono': d.user.phone || '',
                 'Estado': d.user.status === 'active' ? 'Activo' : 'Inactivo',
+                'Vencimiento Membresía': d.membershipEnd || '',
+                'Venció en Período': d.expiredInPeriod ? 'Sí' : 'No',
                 'Asistencias': d.attendance,
+                'Clases Post-Vencimiento': d.postExpiryAttendance,
                 'Pagos Realizados': d.paymentsCount,
                 'Total Pagado': d.totalPaid,
             }));
@@ -683,7 +751,10 @@ ${table.outerHTML}
                 { wch: 15 }, // Documento
                 { wch: 15 }, // Teléfono
                 { wch: 10 }, // Estado
+                { wch: 20 }, // Vencimiento Membresía
+                { wch: 16 }, // Venció en Período
                 { wch: 12 }, // Asistencias
+                { wch: 20 }, // Clases Post-Vencimiento
                 { wch: 15 }, // Pagos Realizados
                 { wch: 15 }, // Total Pagado
             ];
