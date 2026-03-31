@@ -16,11 +16,6 @@ const Reports = (() => {
         // Informe combinado
         document.getElementById('generateCombinedReportBtn')?.addEventListener('click', generateCombinedReport);
         document.getElementById('exportCombinedReportBtn')?.addEventListener('click', exportCombinedReport);
-
-        // Vencimiento de membresías
-        document.getElementById('generateMembershipReport')?.addEventListener('click', generateMembershipReport);
-        document.getElementById('exportMembershipReportExcel')?.addEventListener('click', exportMembershipReportExcel);
-        document.getElementById('membershipReportFilter')?.addEventListener('change', generateMembershipReport);
     }
 
     function generateAttendanceReport() {
@@ -160,14 +155,16 @@ const Reports = (() => {
             users = users.filter(u => u.affiliationType !== 'Entrenador(a)');
         }
 
+        // Todas las asistencias (sin filtro de fecha) para calcular clases post-vencimiento
+        const allAttendance = Storage.getAttendance().filter(a => a.status === 'presente');
+        const allIncome     = Storage.getIncome();
+
         // Obtener asistencias y pagos del período
-        const attendance = Storage.getAttendance().filter(a => 
-            a.status === 'presente' && 
-            a.date >= dateFrom && 
-            a.date <= dateTo
+        const attendance = allAttendance.filter(a =>
+            a.date >= dateFrom && a.date <= dateTo
         );
 
-        const payments = Storage.getIncome().filter(p =>
+        const payments = allIncome.filter(p =>
             p.paymentDate >= dateFrom &&
             p.paymentDate <= dateTo
         );
@@ -175,17 +172,35 @@ const Reports = (() => {
         // Construir datos combinados
         const reportData = users.map(user => {
             const userAttendance = attendance.filter(a => a.userId === user.id).length;
-            const userPayments = payments.filter(p => p.userId === user.id);
-            const totalPaid = userPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+            const userPayments   = payments.filter(p => p.userId === user.id);
+            const totalPaid      = userPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+
+            // Último endDate de cualquier pago del usuario (hasta dateTo)
+            const lastPayment = allIncome
+                .filter(p => p.userId === user.id && p.endDate && p.paymentDate <= dateTo)
+                .sort((a, b) => (Utils.normalizeDate(b.endDate) || '').localeCompare(Utils.normalizeDate(a.endDate) || ''))[0];
+
+            const endDate = lastPayment ? (Utils.normalizeDate(lastPayment.endDate) || lastPayment.endDate) : null;
+
+            // Clases tomadas DESPUÉS del vencimiento, dentro del período del informe
+            const postExpiry = endDate
+                ? allAttendance.filter(a =>
+                    a.userId === user.id &&
+                    a.date > endDate &&
+                    a.date >= dateFrom &&
+                    a.date <= dateTo
+                  ).length
+                : 0;
 
             return {
                 user,
                 attendance: userAttendance,
+                postExpiry,
+                endDate,
                 paymentsCount: userPayments.length,
                 totalPaid
             };
         })
-        // Filtrar usuarios con al menos 1 asistencia O 1 pago
         .filter(d => d.attendance > 0 || d.paymentsCount > 0);
 
         // Ordenar por asistencias (descendente)
@@ -193,25 +208,45 @@ const Reports = (() => {
 
         // Totales
         const totalAttendance = reportData.reduce((s, d) => s + d.attendance, 0);
-        const totalIncome = reportData.reduce((s, d) => s + d.totalPaid, 0);
+        const totalIncome     = reportData.reduce((s, d) => s + d.totalPaid, 0);
+        const totalPostExpiry = reportData.reduce((s, d) => s + d.postExpiry, 0);
 
         // Actualizar badges
-        document.getElementById('combinedReportCount').textContent = reportData.length;
+        document.getElementById('combinedReportCount').textContent           = reportData.length;
         document.getElementById('combinedReportTotalAttendance').textContent = totalAttendance;
-        document.getElementById('combinedReportTotalIncome').textContent = Utils.formatCurrency(totalIncome);
+        document.getElementById('combinedReportTotalIncome').textContent     = Utils.formatCurrency(totalIncome);
+
+        // Badge clases post-vencimiento
+        let postBadge = document.getElementById('combinedReportPostExpiry');
+        if (!postBadge) {
+            postBadge = document.createElement('span');
+            postBadge.id = 'combinedReportPostExpiry';
+            postBadge.className = 'badge bg-danger';
+            const badgesContainer = document.getElementById('combinedReportTotalIncome')?.closest('.badge')?.parentNode;
+            if (badgesContainer) badgesContainer.appendChild(postBadge);
+        }
+        if (postBadge) postBadge.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i>${totalPostExpiry} clases post-venc.`;
+        if (postBadge) postBadge.style.display = totalPostExpiry > 0 ? '' : 'none';
 
         // Renderizar tabla
         const tbody = document.getElementById('combinedReportList');
-        tbody.innerHTML = reportData.map((d, i) => `
-            <tr>
+        tbody.innerHTML = reportData.map((d, i) => {
+            const postExpiryCell = d.postExpiry > 0
+                ? `<span class="badge bg-danger" title="Clases asistidas después del ${d.endDate ? Utils.formatDate(d.endDate) : 'vencimiento'}">${d.postExpiry}</span>`
+                : d.endDate
+                    ? `<span class="text-muted">—</span>`
+                    : `<span class="text-muted small">sin fecha</span>`;
+            return `
+            <tr ${d.postExpiry > 0 ? 'class="table-danger bg-opacity-25"' : ''}>
                 <td>${i + 1}</td>
                 <td><strong>${Utils.escapeHtml(d.user.name)}</strong></td>
                 <td><span class="badge bg-${d.user.status === 'active' ? 'success' : 'secondary'}">${d.user.status === 'active' ? 'Activo' : 'Inactivo'}</span></td>
                 <td class="text-center"><span class="badge bg-info">${d.attendance}</span></td>
+                <td class="text-center">${postExpiryCell}</td>
                 <td class="text-center"><span class="badge bg-primary">${d.paymentsCount}</span></td>
                 <td class="text-end"><strong>${Utils.formatCurrency(d.totalPaid)}</strong></td>
-            </tr>
-        `).join('');
+            </tr>`;
+        }).join('');
 
         // Mostrar/ocultar secciones
         document.getElementById('combinedReportResult')?.classList.remove('d-none');
@@ -249,6 +284,8 @@ const Reports = (() => {
                 'Teléfono': d.user.phone || '',
                 'Estado': d.user.status === 'active' ? 'Activo' : 'Inactivo',
                 'Asistencias': d.attendance,
+                'Clases Post-Vencimiento': d.postExpiry,
+                'Vencimiento Membresía': d.endDate ? d.endDate : '',
                 'Pagos Realizados': d.paymentsCount,
                 'Total Pagado': d.totalPaid,
             }));
@@ -257,7 +294,6 @@ const Reports = (() => {
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.json_to_sheet(data);
 
-            // Anchos de columna
             ws['!cols'] = [
                 { wch: 4 },  // #
                 { wch: 30 }, // Usuario
@@ -265,7 +301,9 @@ const Reports = (() => {
                 { wch: 15 }, // Teléfono
                 { wch: 10 }, // Estado
                 { wch: 12 }, // Asistencias
-                { wch: 15 }, // Pagos Realizados
+                { wch: 22 }, // Clases Post-Vencimiento
+                { wch: 22 }, // Vencimiento Membresía
+                { wch: 18 }, // Pagos Realizados
                 { wch: 15 }, // Total Pagado
             ];
 
@@ -280,144 +318,6 @@ const Reports = (() => {
         } catch (err) {
             console.error('Error al exportar:', err);
             UI.showErrorToast('Error al generar archivo Excel');
-        }
-    }
-
-    // ═══ INFORME DE VENCIMIENTO DE MEMBRESÍAS ════════════════════════════
-
-    function generateMembershipReport() {
-        const filterEl  = document.getElementById('membershipReportFilter');
-        const filter    = filterEl ? filterEl.value : 'all';
-        const today     = Utils.getCurrentDate();
-
-        const users    = Storage.getUsers().filter(u => u.affiliationType !== 'Entrenador(a)');
-        const allIncome = Storage.getIncome();
-
-        const data = users.map(user => {
-            // Tomar el pago con endDate más reciente del usuario
-            const lastPayment = allIncome
-                .filter(p => p.userId === user.id && p.endDate)
-                .sort((a, b) => (Utils.normalizeDate(b.endDate) || '').localeCompare(Utils.normalizeDate(a.endDate) || ''))[0];
-
-            const endDate = lastPayment ? (Utils.normalizeDate(lastPayment.endDate) || lastPayment.endDate) : null;
-            const payType = lastPayment ? lastPayment.paymentType : null;
-
-            let diasRestantes = null;
-            let estado = 'sin-pago';
-
-            if (endDate) {
-                const diff = Math.ceil((new Date(endDate + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000);
-                diasRestantes = diff;
-                if (diff < 0)       estado = 'vencida';
-                else if (diff <= 5) estado = 'por-vencer';
-                else                estado = 'vigente';
-            }
-
-            return { user, endDate, payType, diasRestantes, estado };
-        });
-
-        // Aplicar filtro
-        const filtered = data.filter(d => {
-            if (filter === 'all')       return true;
-            if (filter === 'vigente')   return d.estado === 'vigente';
-            if (filter === 'por-vencer') return d.estado === 'por-vencer';
-            if (filter === 'vencida')   return d.estado === 'vencida';
-            if (filter === 'sin-pago')  return d.estado === 'sin-pago';
-            return true;
-        });
-
-        // Ordenar: vencidas primero, luego por-vencer, luego vigentes, luego sin pago
-        const order = { 'vencida': 0, 'por-vencer': 1, 'vigente': 2, 'sin-pago': 3 };
-        filtered.sort((a, b) => {
-            const od = order[a.estado] - order[b.estado];
-            if (od !== 0) return od;
-            if (a.endDate && b.endDate) return a.endDate.localeCompare(b.endDate);
-            return 0;
-        });
-
-        // Badges resumen
-        const counts = data.reduce((acc, d) => { acc[d.estado] = (acc[d.estado] || 0) + 1; return acc; }, {});
-        document.getElementById('msVigenteCount').textContent   = counts['vigente']    || 0;
-        document.getElementById('msPorVencerCount').textContent = counts['por-vencer'] || 0;
-        document.getElementById('msVencidaCount').textContent   = counts['vencida']    || 0;
-        document.getElementById('msSinPagoCount').textContent   = counts['sin-pago']   || 0;
-
-        const tbody = document.getElementById('membershipReportList');
-        tbody.innerHTML = filtered.length === 0
-            ? `<tr><td colspan="6" class="text-center text-muted py-3">Sin usuarios para mostrar</td></tr>`
-            : filtered.map((d, i) => {
-                const { user, endDate, payType, diasRestantes, estado } = d;
-
-                const estadoBadge = {
-                    'vigente':    '<span class="badge bg-success">Vigente</span>',
-                    'por-vencer': '<span class="badge bg-warning text-dark">Por vencer</span>',
-                    'vencida':    '<span class="badge bg-danger">Vencida</span>',
-                    'sin-pago':   '<span class="badge bg-secondary">Sin pago</span>',
-                }[estado];
-
-                const diasCell = diasRestantes !== null
-                    ? (diasRestantes < 0
-                        ? `<span class="text-danger fw-bold">${Math.abs(diasRestantes)} días vencida</span>`
-                        : diasRestantes === 0
-                            ? `<span class="text-warning fw-bold">Vence hoy</span>`
-                            : `<span class="${diasRestantes <= 5 ? 'text-warning fw-bold' : ''}">${diasRestantes} días</span>`)
-                    : '<span class="text-muted">—</span>';
-
-                return `<tr>
-                    <td>${i + 1}</td>
-                    <td><strong>${Utils.escapeHtml(user.name)}</strong><br>
-                        <small class="text-muted">${Utils.escapeHtml(user.affiliationType || '')}</small></td>
-                    <td>${Utils.formatPhone ? Utils.formatPhone(user.phone) : user.phone || '—'}</td>
-                    <td>${endDate ? Utils.formatDate(endDate) : '<span class="text-muted">—</span>'}</td>
-                    <td>${diasCell}</td>
-                    <td>${estadoBadge}</td>
-                </tr>`;
-            }).join('');
-
-        document.getElementById('membershipReportResult').classList.remove('d-none');
-        document.getElementById('membershipReportEmpty').classList.add('d-none');
-        const expBtn = document.getElementById('membershipExportBtn');
-        if (expBtn) expBtn.style.display = '';
-
-        // Guardar para exportar
-        window._membershipReportData = { filtered, today };
-        UI.showSuccessToast(`${filtered.length} usuario${filtered.length !== 1 ? 's' : ''} encontrado${filtered.length !== 1 ? 's' : ''}`);
-    }
-
-    async function exportMembershipReportExcel() {
-        if (!window._membershipReportData) { UI.showWarningToast('Primero genera el informe'); return; }
-        const { filtered, today } = window._membershipReportData;
-
-        try {
-            if (typeof XLSX === 'undefined') {
-                const script = document.createElement('script');
-                script.src = 'https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';
-                await new Promise((res, rej) => { script.onload = res; script.onerror = rej; document.head.appendChild(script); });
-            }
-
-            const data = filtered.map((d, i) => ({
-                '#':                i + 1,
-                'Nombre':           d.user.name,
-                'Teléfono':         d.user.phone || '',
-                'Tipo Membresía':   d.user.affiliationType || '',
-                'Último Pago':      d.payType || '',
-                'Fecha Vencimiento': d.endDate ? d.endDate : '',
-                'Días Restantes':   d.diasRestantes !== null ? d.diasRestantes : '',
-                'Estado':           { vigente: 'Vigente', 'por-vencer': 'Por vencer', vencida: 'Vencida', 'sin-pago': 'Sin pago' }[d.estado] || ''
-            }));
-
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(data);
-            ws['!cols'] = [
-                { wch: 4 }, { wch: 30 }, { wch: 14 }, { wch: 20 },
-                { wch: 22 }, { wch: 18 }, { wch: 15 }, { wch: 12 }
-            ];
-            XLSX.utils.book_append_sheet(wb, ws, 'Vencimientos');
-            XLSX.writeFile(wb, `Vencimientos_Membresias_${today}.xlsx`);
-            UI.showSuccessToast('✓ Informe exportado');
-        } catch (err) {
-            console.error(err);
-            UI.showErrorToast('Error al exportar');
         }
     }
 
