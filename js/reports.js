@@ -16,6 +16,13 @@ const Reports = (() => {
         // Informe combinado
         document.getElementById('generateCombinedReportBtn')?.addEventListener('click', generateCombinedReport);
         document.getElementById('exportCombinedReportBtn')?.addEventListener('click', exportCombinedReport);
+
+        // Reporte personalizado
+        document.getElementById('generateCustomReport')?.addEventListener('click', generateCustomReport);
+
+        // Movimientos por cuenta
+        document.getElementById('generateAccountReport')?.addEventListener('click', generateAccountReport);
+        document.getElementById('exportAccountReportExcel')?.addEventListener('click', exportAccountReportExcel);
     }
 
     function generateAttendanceReport() {
@@ -120,12 +127,429 @@ const Reports = (() => {
         UI.showSuccessToast('Reporte exportado');
     }
 
-    function exportCustomPDF() {
-        UI.showInfoToast('Exportación PDF en desarrollo');
+    // ═══ REPORTE PERSONALIZADO ═══════════════════════════════════════════
+
+    function generateCustomReport() {
+        const start = document.getElementById('customReportStart').value;
+        const end   = document.getElementById('customReportEnd').value;
+        const type  = document.getElementById('customReportType').value;
+
+        if (!start || !end) {
+            UI.showWarningToast('Selecciona el rango de fechas');
+            return;
+        }
+        if (start > end) {
+            UI.showErrorToast('La fecha inicio debe ser menor a la final');
+            return;
+        }
+
+        const thead = document.getElementById('customReportThead');
+        const tbody = document.getElementById('customReportList');
+        const tfoot = document.getElementById('customReportTfoot');
+        let rows = [];
+        let headers = '';
+        let totalRow = '';
+
+        if (type === 'attendance' || type === 'complete') {
+            const attendance = Storage.getAttendance().filter(a =>
+                a.status === 'presente' && a.date >= start && a.date <= end
+            );
+            if (type === 'attendance') {
+                headers = '<tr><th>Fecha</th><th>Usuario</th><th>Estado</th></tr>';
+                rows = attendance.map(a => {
+                    const user = Storage.getUserById(a.userId);
+                    return `<tr>
+                        <td>${a.date}</td>
+                        <td>${Utils.escapeHtml(user?.name || 'N/A')}</td>
+                        <td><span class="badge bg-success">Presente</span></td>
+                    </tr>`;
+                });
+                totalRow = `<tr class="table-light fw-bold"><td colspan="2">Total asistencias</td><td>${rows.length}</td></tr>`;
+                window._customReportData = { type, start, end, attendance };
+            }
+        }
+
+        if (type === 'income') {
+            const payments = Storage.getIncome().filter(p => p.paymentDate >= start && p.paymentDate <= end);
+            headers = '<tr><th>Fecha</th><th>Usuario</th><th>Tipo</th><th>Método</th><th class="text-end">Monto</th></tr>';
+            const total = payments.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
+            rows = payments.map(p => {
+                const user = Storage.getUserById(p.userId);
+                return `<tr>
+                    <td>${p.paymentDate}</td>
+                    <td>${Utils.escapeHtml(user?.name || 'N/A')}</td>
+                    <td>${Utils.escapeHtml(p.paymentType || '')}</td>
+                    <td>${Utils.escapeHtml(p.paymentMethod || '')}</td>
+                    <td class="text-end"><strong>${Utils.formatCurrency(parseFloat(p.amount || 0))}</strong></td>
+                </tr>`;
+            });
+            totalRow = `<tr class="table-success fw-bold"><td colspan="4">Total ingresos</td><td class="text-end">${Utils.formatCurrency(total)}</td></tr>`;
+            window._customReportData = { type, start, end, payments };
+        }
+
+        if (type === 'users') {
+            const users = Storage.getUsers().filter(u => u.affiliationType !== 'Entrenador(a)');
+            headers = '<tr><th>#</th><th>Nombre</th><th>Documento</th><th>Teléfono</th><th>Estado</th><th>Tipo</th></tr>';
+            rows = users.map((u, i) => `<tr>
+                <td>${i + 1}</td>
+                <td>${Utils.escapeHtml(u.name)}</td>
+                <td>${Utils.escapeHtml(u.document || '')}</td>
+                <td>${Utils.escapeHtml(u.phone || '')}</td>
+                <td><span class="badge bg-${u.status === 'active' ? 'success' : 'secondary'}">${u.status === 'active' ? 'Activo' : 'Inactivo'}</span></td>
+                <td>${Utils.escapeHtml(u.affiliationType || '')}</td>
+            </tr>`);
+            totalRow = `<tr class="table-light fw-bold"><td colspan="5">Total usuarios</td><td>${rows.length}</td></tr>`;
+            window._customReportData = { type, start, end, users };
+        }
+
+        if (type === 'complete') {
+            const payments = Storage.getIncome().filter(p => p.paymentDate >= start && p.paymentDate <= end);
+            const attendance = Storage.getAttendance().filter(a =>
+                a.status === 'presente' && a.date >= start && a.date <= end
+            );
+            const users = Storage.getUsers().filter(u => u.affiliationType !== 'Entrenador(a)');
+            headers = '<tr><th>#</th><th>Usuario</th><th>Estado</th><th class="text-center">Asistencias</th><th class="text-center">Pagos</th><th class="text-end">Total Pagado</th></tr>';
+            const data = users.map(u => ({
+                user: u,
+                att: attendance.filter(a => a.userId === u.id).length,
+                pays: payments.filter(p => p.userId === u.id),
+            })).filter(d => d.att > 0 || d.pays.length > 0)
+               .sort((a, b) => b.att - a.att);
+            const grandTotal = data.reduce((s, d) => s + d.pays.reduce((ss, p) => ss + parseFloat(p.amount || 0), 0), 0);
+            rows = data.map((d, i) => `<tr>
+                <td>${i + 1}</td>
+                <td><strong>${Utils.escapeHtml(d.user.name)}</strong></td>
+                <td><span class="badge bg-${d.user.status === 'active' ? 'success' : 'secondary'}">${d.user.status === 'active' ? 'Activo' : 'Inactivo'}</span></td>
+                <td class="text-center"><span class="badge bg-info">${d.att}</span></td>
+                <td class="text-center"><span class="badge bg-primary">${d.pays.length}</span></td>
+                <td class="text-end"><strong>${Utils.formatCurrency(d.pays.reduce((s, p) => s + parseFloat(p.amount || 0), 0))}</strong></td>
+            </tr>`);
+            totalRow = `<tr class="table-success fw-bold"><td colspan="5">Total ingresos</td><td class="text-end">${Utils.formatCurrency(grandTotal)}</td></tr>`;
+            window._customReportData = { type, start, end, data };
+        }
+
+        thead.innerHTML = headers;
+        tbody.innerHTML = rows.join('') || `<tr><td colspan="6" class="text-center text-muted">Sin datos para el período seleccionado</td></tr>`;
+        tfoot.innerHTML = totalRow;
+
+        document.getElementById('customReportCount').textContent = rows.length;
+        document.getElementById('customReportResult').classList.remove('d-none');
+        document.getElementById('customReportEmpty').classList.add('d-none');
+        UI.showSuccessToast('Reporte generado');
     }
 
-    function exportCustomExcel() {
-        UI.showInfoToast('Exportación personalizada en desarrollo');
+    async function exportCustomPDF() {
+        if (!window._customReportData) {
+            UI.showWarningToast('Primero genera el reporte');
+            return;
+        }
+        const { type, start, end } = window._customReportData;
+        // Generar HTML para imprimir
+        const table = document.querySelector('#customReportList')?.closest('table');
+        if (!table) return;
+        const win = window.open('', '_blank');
+        win.document.write(`<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<title>Reporte Personalizado ${start} - ${end}</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; }
+  h2 { color: #333; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+  th { background: #f0f0f0; font-weight: bold; }
+  tfoot tr { background: #e8f5e9; font-weight: bold; }
+  .badge { padding: 2px 6px; border-radius: 4px; font-size: 11px; background: #999; color: #fff; }
+</style>
+</head><body>
+<h2>Reporte Personalizado — ${type === 'complete' ? 'Completo' : type === 'income' ? 'Ingresos' : type === 'attendance' ? 'Asistencia' : 'Usuarios'}</h2>
+<p>Período: ${start} al ${end} | Generado: ${new Date().toLocaleString('es-CO')}</p>
+${table.outerHTML}
+</body></html>`);
+        win.document.close();
+        setTimeout(() => { win.print(); }, 500);
+        UI.showSuccessToast('Abriendo ventana de impresión/PDF');
+    }
+
+    async function exportCustomExcel() {
+        if (!window._customReportData) {
+            UI.showWarningToast('Primero genera el reporte');
+            return;
+        }
+        const { type, start, end } = window._customReportData;
+        try {
+            if (typeof XLSX === 'undefined') {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';
+                await new Promise((res, rej) => { script.onload = res; script.onerror = rej; document.head.appendChild(script); });
+            }
+
+            let data = [];
+            if (type === 'income') {
+                data = (window._customReportData.payments || []).map(p => {
+                    const user = Storage.getUserById(p.userId);
+                    return { Fecha: p.paymentDate, Usuario: user?.name || 'N/A', Tipo: p.paymentType, Método: p.paymentMethod, Monto: parseFloat(p.amount || 0) };
+                });
+            } else if (type === 'attendance') {
+                data = (window._customReportData.attendance || []).map(a => {
+                    const user = Storage.getUserById(a.userId);
+                    return { Fecha: a.date, Usuario: user?.name || 'N/A', Estado: 'Presente' };
+                });
+            } else if (type === 'users') {
+                data = (window._customReportData.users || []).map((u, i) => ({
+                    '#': i + 1, Nombre: u.name, Documento: u.document || '', Teléfono: u.phone || '',
+                    Estado: u.status === 'active' ? 'Activo' : 'Inactivo', Tipo: u.affiliationType || ''
+                }));
+            } else {
+                data = (window._customReportData.data || []).map((d, i) => ({
+                    '#': i + 1, Usuario: d.user.name, Estado: d.user.status === 'active' ? 'Activo' : 'Inactivo',
+                    Asistencias: d.att, Pagos: d.pays.length,
+                    'Total Pagado': d.pays.reduce((s, p) => s + parseFloat(p.amount || 0), 0)
+                }));
+            }
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(data);
+            XLSX.utils.book_append_sheet(wb, ws, 'Reporte');
+            XLSX.writeFile(wb, `Reporte_${type}_${start}_${end}.xlsx`);
+            UI.showSuccessToast('Reporte exportado a Excel');
+        } catch (err) {
+            console.error(err);
+            UI.showErrorToast('Error al exportar Excel');
+        }
+    }
+
+    // ═══ MOVIMIENTOS POR CUENTA (EXTRACTO) ═══════════════════════════════
+
+    function generateAccountReport() {
+        const dateFrom = document.getElementById('accountReportFrom').value;
+        const dateTo   = document.getElementById('accountReportTo').value;
+        const method   = document.getElementById('accountReportMethod').value;
+
+        if (!dateFrom || !dateTo) {
+            UI.showWarningToast('Selecciona el rango de fechas');
+            return;
+        }
+        if (dateFrom > dateTo) {
+            UI.showErrorToast('La fecha inicial debe ser menor a la final');
+            return;
+        }
+
+        const accounts = method === 'all'
+            ? ['Efectivo', 'Bancolombia', 'Daviplata', 'Nequi']
+            : [method];
+
+        const icons  = { Efectivo: '💵', Bancolombia: '🏦', Daviplata: '📱', Nequi: '📱' };
+        const colors = { Efectivo: 'success', Bancolombia: 'primary', Daviplata: 'info', Nequi: 'warning' };
+
+        // ── Todos los movimientos del período para la(s) cuenta(s) ─────────
+        const allIncome   = Storage.getIncome();
+        const allExpenses = Storage.getExpenses();
+
+        // Calcular saldo INICIAL (todo lo anterior a dateFrom)
+        function getSaldoInicial(acc) {
+            const ing = allIncome
+                .filter(p => p.paymentMethod === acc && p.paymentDate < dateFrom)
+                .reduce((s, p) => s + Utils.parseAmount(p.amount), 0);
+            const gas = allExpenses
+                .filter(e => e.account === acc && e.date < dateFrom)
+                .reduce((s, e) => s + Utils.parseAmount(e.amount), 0);
+            return ing - gas;
+        }
+
+        // Filtrar movimientos del período
+        function getMovimientos(acc) {
+            const ing = allIncome
+                .filter(p => p.paymentMethod === acc && p.paymentDate >= dateFrom && p.paymentDate <= dateTo)
+                .map(p => ({
+                    fecha: p.paymentDate,
+                    descripcion: (() => { const u = Storage.getUserById(p.userId); return `Ingreso — ${p.paymentType || 'Pago'}${u ? ' · ' + u.name : ''}`; })(),
+                    tipo: 'ingreso',
+                    debe: 0,
+                    haber: Utils.parseAmount(p.amount),
+                    raw: p
+                }));
+            const gas = allExpenses
+                .filter(e => e.account === acc && e.date >= dateFrom && e.date <= dateTo)
+                .map(e => ({
+                    fecha: e.date,
+                    descripcion: `Gasto — ${e.category}${e.description ? ' · ' + e.description : ''}`,
+                    tipo: 'gasto',
+                    debe: Utils.parseAmount(e.amount),
+                    haber: 0,
+                    raw: e
+                }));
+            return [...ing, ...gas].sort((a, b) => a.fecha.localeCompare(b.fecha));
+        }
+
+        // ── Tarjetas de resumen ────────────────────────────────────────────
+        const summaryCards = document.getElementById('accountSummaryCards');
+        let summaryHtml = '';
+        let allMovimientos = [];
+
+        accounts.forEach(acc => {
+            const movs = getMovimientos(acc);
+            const saldoInicial = getSaldoInicial(acc);
+            const totalIng = movs.reduce((s, m) => s + m.haber, 0);
+            const totalGas = movs.reduce((s, m) => s + m.debe, 0);
+            const saldoFinal = saldoInicial + totalIng - totalGas;
+
+            // Agregar cuenta a cada movimiento para tabla global
+            movs.forEach(m => { m.account = acc; });
+            allMovimientos.push({ acc, movs, saldoInicial, totalIng, totalGas, saldoFinal });
+
+            if (method === 'all' && movs.length === 0 && saldoInicial === 0) return;
+
+            summaryHtml += `
+            <div class="col-6 col-md-3">
+                <div class="card border-${colors[acc] || 'secondary'} h-100">
+                    <div class="card-body p-2 text-center">
+                        <div class="fs-4">${icons[acc] || '💳'}</div>
+                        <div class="fw-bold small">${acc}</div>
+                        <div class="text-muted" style="font-size:10px">Saldo inicial</div>
+                        <div class="small">${Utils.formatCurrency(saldoInicial)}</div>
+                        <hr class="my-1">
+                        <div class="text-success small">+${Utils.formatCurrency(totalIng)}</div>
+                        <div class="text-danger small">-${Utils.formatCurrency(totalGas)}</div>
+                        <hr class="my-1">
+                        <div class="text-muted" style="font-size:10px">Saldo final</div>
+                        <div class="fw-bold text-${colors[acc] || 'secondary'}">${Utils.formatCurrency(saldoFinal)}</div>
+                    </div>
+                </div>
+            </div>`;
+        });
+
+        summaryCards.innerHTML = summaryHtml || '<div class="col-12 text-muted small">Sin datos para las cuentas seleccionadas</div>';
+
+        // ── Tabla de detalle tipo extracto ─────────────────────────────────
+        const tbody = document.getElementById('accountReportList');
+        const tfoot = document.getElementById('accountReportTfoot');
+        let tableRows = '';
+        let grandSaldoInicial = 0;
+        let grandHaber = 0;
+        let grandDebe = 0;
+
+        allMovimientos.forEach(({ acc, movs, saldoInicial, totalIng, totalGas, saldoFinal }) => {
+            if (method === 'all' && movs.length === 0 && saldoInicial === 0) return;
+
+            grandSaldoInicial += saldoInicial;
+            grandHaber += totalIng;
+            grandDebe  += totalGas;
+
+            // Fila de saldo inicial de la cuenta
+            if (method === 'all') {
+                tableRows += `<tr class="table-${colors[acc] || 'secondary'} bg-opacity-10">
+                    <td colspan="5" class="fw-bold small">
+                        <span class="badge bg-${colors[acc] || 'secondary'}">${icons[acc] || '💳'} ${acc}</span>
+                        &nbsp; Saldo inicial al ${dateFrom}: <strong>${Utils.formatCurrency(saldoInicial)}</strong>
+                    </td>
+                </tr>`;
+            }
+
+            if (movs.length === 0) {
+                tableRows += `<tr><td colspan="5" class="text-muted small text-center fst-italic">Sin movimientos en el período</td></tr>`;
+            } else {
+                let saldoAcumulado = saldoInicial;
+                movs.forEach(m => {
+                    saldoAcumulado += m.haber - m.debe;
+                    tableRows += `<tr>
+                        <td class="small">${m.fecha}</td>
+                        <td class="small">${Utils.escapeHtml(m.descripcion)}</td>
+                        <td class="text-end small ${m.debe > 0 ? 'text-danger' : 'text-muted'}">${m.debe > 0 ? Utils.formatCurrency(m.debe) : '—'}</td>
+                        <td class="text-end small ${m.haber > 0 ? 'text-success' : 'text-muted'}">${m.haber > 0 ? Utils.formatCurrency(m.haber) : '—'}</td>
+                        <td class="text-end small fw-bold ${saldoAcumulado >= 0 ? '' : 'text-danger'}">${Utils.formatCurrency(saldoAcumulado)}</td>
+                    </tr>`;
+                });
+            }
+
+            // Subtotal por cuenta si hay varias
+            if (method === 'all') {
+                tableRows += `<tr class="table-light">
+                    <td colspan="2" class="small fw-bold text-end">Saldo final ${acc}:</td>
+                    <td class="text-end text-danger small fw-bold">-${Utils.formatCurrency(totalGas)}</td>
+                    <td class="text-end text-success small fw-bold">+${Utils.formatCurrency(totalIng)}</td>
+                    <td class="text-end fw-bold">${Utils.formatCurrency(saldoFinal)}</td>
+                </tr>`;
+            }
+        });
+
+        tbody.innerHTML = tableRows || `<tr><td colspan="5" class="text-center text-muted">No hay movimientos en el período seleccionado</td></tr>`;
+
+        const grandSaldoFinal = grandSaldoInicial + grandHaber - grandDebe;
+        tfoot.innerHTML = `
+            <tr class="table-dark fw-bold">
+                <td colspan="2">TOTALES DEL PERÍODO</td>
+                <td class="text-end text-danger">-${Utils.formatCurrency(grandDebe)}</td>
+                <td class="text-end text-success">+${Utils.formatCurrency(grandHaber)}</td>
+                <td class="text-end">${Utils.formatCurrency(grandSaldoFinal)}</td>
+            </tr>`;
+
+        document.getElementById('accountReportResult').classList.remove('d-none');
+        document.getElementById('accountReportEmpty').classList.add('d-none');
+
+        window._accountReportData = { allMovimientos, dateFrom, dateTo, method };
+        const totalMovs = allMovimientos.reduce((s, a) => s + a.movs.length, 0);
+        UI.showSuccessToast(`${totalMovs} movimiento${totalMovs !== 1 ? 's' : ''} encontrado${totalMovs !== 1 ? 's' : ''}`);
+    }
+
+    async function exportAccountReportExcel() {
+        if (!window._accountReportData) {
+            UI.showWarningToast('Primero genera el reporte');
+            return;
+        }
+        const { allMovimientos, dateFrom, dateTo, method } = window._accountReportData;
+        try {
+            if (typeof XLSX === 'undefined') {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';
+                await new Promise((res, rej) => { script.onload = res; script.onerror = rej; document.head.appendChild(script); });
+            }
+
+            const wb = XLSX.utils.book_new();
+
+            // Hoja de detalle por cuenta
+            allMovimientos.forEach(({ acc, movs, saldoInicial, saldoFinal }) => {
+                if (method === 'all' && movs.length === 0 && saldoInicial === 0) return;
+
+                const data = [];
+                data.push({ 'Fecha': `Saldo inicial al ${dateFrom}`, 'Descripción': '', 'Gasto (Débito)': '', 'Ingreso (Crédito)': '', 'Saldo': saldoInicial });
+
+                let saldo = saldoInicial;
+                movs.forEach(m => {
+                    saldo += m.haber - m.debe;
+                    data.push({
+                        'Fecha': m.fecha,
+                        'Descripción': m.descripcion,
+                        'Gasto (Débito)': m.debe || '',
+                        'Ingreso (Crédito)': m.haber || '',
+                        'Saldo': saldo
+                    });
+                });
+                data.push({ 'Fecha': `Saldo final al ${dateTo}`, 'Descripción': '', 'Gasto (Débito)': '', 'Ingreso (Crédito)': '', 'Saldo': saldoFinal });
+
+                const ws = XLSX.utils.json_to_sheet(data);
+                ws['!cols'] = [{ wch: 14 }, { wch: 40 }, { wch: 18 }, { wch: 18 }, { wch: 16 }];
+                XLSX.utils.book_append_sheet(wb, ws, acc.substring(0, 31));
+            });
+
+            // Hoja resumen general
+            const summaryData = allMovimientos.map(({ acc, saldoInicial, totalIng, totalGas, saldoFinal }) => ({
+                'Cuenta': acc,
+                'Saldo Inicial': saldoInicial,
+                'Total Ingresos': totalIng,
+                'Total Gastos': totalGas,
+                'Saldo Final': saldoFinal
+            }));
+            const wsResumen = XLSX.utils.json_to_sheet(summaryData);
+            wsResumen['!cols'] = [{ wch: 15 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 14 }];
+            XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
+
+            const filename = `Extracto_${method === 'all' ? 'TodasCuentas' : method}_${dateFrom}_${dateTo}.xlsx`;
+            XLSX.writeFile(wb, filename);
+            UI.showSuccessToast('✓ Exportado: ' + filename);
+        } catch (err) {
+            console.error(err);
+            UI.showErrorToast('Error al exportar Excel');
+        }
     }
 
     // ═══ INFORME COMBINADO: USUARIOS + ASISTENCIAS + PAGOS ═══════════════
@@ -155,16 +579,14 @@ const Reports = (() => {
             users = users.filter(u => u.affiliationType !== 'Entrenador(a)');
         }
 
-        // Todas las asistencias (sin filtro de fecha) para calcular clases post-vencimiento
-        const allAttendance = Storage.getAttendance().filter(a => a.status === 'presente');
-        const allIncome     = Storage.getIncome();
-
         // Obtener asistencias y pagos del período
-        const attendance = allAttendance.filter(a =>
-            a.date >= dateFrom && a.date <= dateTo
+        const attendance = Storage.getAttendance().filter(a => 
+            a.status === 'presente' && 
+            a.date >= dateFrom && 
+            a.date <= dateTo
         );
 
-        const payments = allIncome.filter(p =>
+        const payments = Storage.getIncome().filter(p =>
             p.paymentDate >= dateFrom &&
             p.paymentDate <= dateTo
         );
@@ -172,35 +594,17 @@ const Reports = (() => {
         // Construir datos combinados
         const reportData = users.map(user => {
             const userAttendance = attendance.filter(a => a.userId === user.id).length;
-            const userPayments   = payments.filter(p => p.userId === user.id);
-            const totalPaid      = userPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
-
-            // Último endDate de cualquier pago del usuario (hasta dateTo)
-            const lastPayment = allIncome
-                .filter(p => p.userId === user.id && p.endDate && p.paymentDate <= dateTo)
-                .sort((a, b) => (Utils.normalizeDate(b.endDate) || '').localeCompare(Utils.normalizeDate(a.endDate) || ''))[0];
-
-            const endDate = lastPayment ? (Utils.normalizeDate(lastPayment.endDate) || lastPayment.endDate) : null;
-
-            // Clases tomadas DESPUÉS del vencimiento, dentro del período del informe
-            const postExpiry = endDate
-                ? allAttendance.filter(a =>
-                    a.userId === user.id &&
-                    a.date > endDate &&
-                    a.date >= dateFrom &&
-                    a.date <= dateTo
-                  ).length
-                : 0;
+            const userPayments = payments.filter(p => p.userId === user.id);
+            const totalPaid = userPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
 
             return {
                 user,
                 attendance: userAttendance,
-                postExpiry,
-                endDate,
                 paymentsCount: userPayments.length,
                 totalPaid
             };
         })
+        // Filtrar usuarios con al menos 1 asistencia O 1 pago
         .filter(d => d.attendance > 0 || d.paymentsCount > 0);
 
         // Ordenar por asistencias (descendente)
@@ -208,45 +612,25 @@ const Reports = (() => {
 
         // Totales
         const totalAttendance = reportData.reduce((s, d) => s + d.attendance, 0);
-        const totalIncome     = reportData.reduce((s, d) => s + d.totalPaid, 0);
-        const totalPostExpiry = reportData.reduce((s, d) => s + d.postExpiry, 0);
+        const totalIncome = reportData.reduce((s, d) => s + d.totalPaid, 0);
 
         // Actualizar badges
-        document.getElementById('combinedReportCount').textContent           = reportData.length;
+        document.getElementById('combinedReportCount').textContent = reportData.length;
         document.getElementById('combinedReportTotalAttendance').textContent = totalAttendance;
-        document.getElementById('combinedReportTotalIncome').textContent     = Utils.formatCurrency(totalIncome);
-
-        // Badge clases post-vencimiento
-        let postBadge = document.getElementById('combinedReportPostExpiry');
-        if (!postBadge) {
-            postBadge = document.createElement('span');
-            postBadge.id = 'combinedReportPostExpiry';
-            postBadge.className = 'badge bg-danger';
-            const badgesContainer = document.getElementById('combinedReportTotalIncome')?.closest('.badge')?.parentNode;
-            if (badgesContainer) badgesContainer.appendChild(postBadge);
-        }
-        if (postBadge) postBadge.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i>${totalPostExpiry} clases post-venc.`;
-        if (postBadge) postBadge.style.display = totalPostExpiry > 0 ? '' : 'none';
+        document.getElementById('combinedReportTotalIncome').textContent = Utils.formatCurrency(totalIncome);
 
         // Renderizar tabla
         const tbody = document.getElementById('combinedReportList');
-        tbody.innerHTML = reportData.map((d, i) => {
-            const postExpiryCell = d.postExpiry > 0
-                ? `<span class="badge bg-danger" title="Clases asistidas después del ${d.endDate ? Utils.formatDate(d.endDate) : 'vencimiento'}">${d.postExpiry}</span>`
-                : d.endDate
-                    ? `<span class="text-muted">—</span>`
-                    : `<span class="text-muted small">sin fecha</span>`;
-            return `
-            <tr ${d.postExpiry > 0 ? 'class="table-danger bg-opacity-25"' : ''}>
+        tbody.innerHTML = reportData.map((d, i) => `
+            <tr>
                 <td>${i + 1}</td>
                 <td><strong>${Utils.escapeHtml(d.user.name)}</strong></td>
                 <td><span class="badge bg-${d.user.status === 'active' ? 'success' : 'secondary'}">${d.user.status === 'active' ? 'Activo' : 'Inactivo'}</span></td>
                 <td class="text-center"><span class="badge bg-info">${d.attendance}</span></td>
-                <td class="text-center">${postExpiryCell}</td>
                 <td class="text-center"><span class="badge bg-primary">${d.paymentsCount}</span></td>
                 <td class="text-end"><strong>${Utils.formatCurrency(d.totalPaid)}</strong></td>
-            </tr>`;
-        }).join('');
+            </tr>
+        `).join('');
 
         // Mostrar/ocultar secciones
         document.getElementById('combinedReportResult')?.classList.remove('d-none');
@@ -284,8 +668,6 @@ const Reports = (() => {
                 'Teléfono': d.user.phone || '',
                 'Estado': d.user.status === 'active' ? 'Activo' : 'Inactivo',
                 'Asistencias': d.attendance,
-                'Clases Post-Vencimiento': d.postExpiry,
-                'Vencimiento Membresía': d.endDate ? d.endDate : '',
                 'Pagos Realizados': d.paymentsCount,
                 'Total Pagado': d.totalPaid,
             }));
@@ -294,6 +676,7 @@ const Reports = (() => {
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.json_to_sheet(data);
 
+            // Anchos de columna
             ws['!cols'] = [
                 { wch: 4 },  // #
                 { wch: 30 }, // Usuario
@@ -301,9 +684,7 @@ const Reports = (() => {
                 { wch: 15 }, // Teléfono
                 { wch: 10 }, // Estado
                 { wch: 12 }, // Asistencias
-                { wch: 22 }, // Clases Post-Vencimiento
-                { wch: 22 }, // Vencimiento Membresía
-                { wch: 18 }, // Pagos Realizados
+                { wch: 15 }, // Pagos Realizados
                 { wch: 15 }, // Total Pagado
             ];
 
