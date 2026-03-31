@@ -362,7 +362,7 @@
                                     <option value="">Todas las afiliaciones</option>
                                     <option value="Mensualidad">Mensualidad</option>
                                     <option value="Paquete 10 clases">Paquete 10 clases</option>
-                                    <option value="Semipersonalizado Diana">Semipersonalizado Diana</option>
+                                    <option value="Personalizado Diana">Personalizado Diana</option>
                                     <option value="Clase suelta">Clase suelta</option>
                                     <option value="GAP">GAP</option>
                                     <option value="FLEX">FLEX</option>
@@ -534,7 +534,7 @@
                                     <option value="">Todos los tipos</option>
                                     <option value="Mensualidad">Mensualidad</option>
                                     <option value="Paquete 10 clases">Paquete 10 clases</option>
-                                    <option value="Semipersonalizado Diana">Semipersonalizado Diana</option>
+                                    <option value="Personalizado Diana">Personalizado Diana</option>
                                     <option value="Clase suelta">Clase suelta</option>
                                     <option value="Movimientos caja">Movimientos caja</option>
                                 </select>
@@ -781,7 +781,7 @@
                                     <select class="form-select form-select-sm" id="classType" required>
                                         <option value="">Tipo...</option>
                                         <option>Crossfit</option><option>GAP</option>
-                                        <option>FLEX</option><option>Semipersonalizado</option>
+                                        <option>FLEX</option><option>Personalizado</option>
                                         <option>Mantenimiento</option><option>Otro</option>
                                     </select>
                                 </div>
@@ -1229,136 +1229,136 @@
                         </div>
                     </div>
 
-                    <!-- Custom Report -->
+                    <!-- Informe Vencimiento de Membresías -->
                     <div class="col-12">
-                        <div class="card border-secondary">
-                            <div class="card-header bg-secondary bg-opacity-10">
-                                <h5 class="mb-0"><i class="fas fa-file-alt me-2 text-secondary"></i>Reporte Personalizado</h5>
-                                <small class="text-muted">Filtra y exporta datos combinados por rango de fechas y tipo</small>
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning bg-opacity-10">
+                                <h5 class="mb-0"><i class="fas fa-id-card me-2 text-warning"></i>Vencimiento de Membresías</h5>
+                                <small class="text-muted">Estado actual de las membresías de todos los usuarios</small>
                             </div>
                             <div class="card-body">
+                                <!-- Resumen rápido -->
                                 <div class="row g-2 mb-3">
-                                    <div class="col-md-3 mb-3">
-                                        <label class="form-label small">Fecha Inicio *</label>
-                                        <input type="date" class="form-control form-control-sm" id="customReportStart">
+                                    <div class="col-6 col-md-3">
+                                        <div class="card border-success text-center py-2 h-100">
+                                            <div class="card-body p-2">
+                                                <div class="fs-4 text-success fw-bold" id="msVigenteCount">0</div>
+                                                <div class="small text-success">Vigentes</div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label class="form-label small">Fecha Fin *</label>
-                                        <input type="date" class="form-control form-control-sm" id="customReportEnd">
+                                    <div class="col-6 col-md-3">
+                                        <div class="card border-warning text-center py-2 h-100">
+                                            <div class="card-body p-2">
+                                                <div class="fs-4 text-warning fw-bold" id="msPorVencerCount">0</div>
+                                                <div class="small text-warning">Por vencer (≤5 días)</div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label class="form-label small">Tipo de Reporte</label>
-                                        <select class="form-select form-select-sm" id="customReportType">
+                                    <div class="col-6 col-md-3">
+                                        <div class="card border-danger text-center py-2 h-100">
+                                            <div class="card-body p-2">
+                                                <div class="fs-4 text-danger fw-bold" id="msVencidaCount">0</div>
+                                                <div class="small text-danger">Vencidas</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="card border-secondary text-center py-2 h-100">
+                                            <div class="card-body p-2">
+                                                <div class="fs-4 text-secondary fw-bold" id="msSinPagoCount">0</div>
+                                                <div class="small text-secondary">Sin pago</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Filtro y acciones -->
+                                <div class="row g-2 mb-3 align-items-end">
+                                    <div class="col-md-4">
+                                        <label class="form-label small">Filtrar por estado</label>
+                                        <select class="form-select form-select-sm" id="membershipReportFilter">
+                                            <option value="all">Todos</option>
+                                            <option value="vigente">Vigentes</option>
+                                            <option value="por-vencer">Por vencer (≤5 días)</option>
+                                            <option value="vencida">Vencidas</option>
+                                            <option value="sin-pago">Sin pago registrado</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button class="btn btn-warning btn-sm w-100" id="generateMembershipReport">
+                                            <i class="fas fa-search me-1"></i>Generar Informe
+                                        </button>
+                                    </div>
+                                    <div class="col-md-4" id="membershipExportBtn" style="display:none">
+                                        <button class="btn btn-success btn-sm w-100" id="exportMembershipReportExcel">
+                                            <i class="fas fa-file-excel me-1"></i>Exportar Excel
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Tabla -->
+                                <div id="membershipReportResult" class="d-none">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>Usuario</th>
+                                                    <th>Teléfono</th>
+                                                    <th>Vence</th>
+                                                    <th>Días restantes</th>
+                                                    <th>Estado</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="membershipReportList"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div id="membershipReportEmpty" class="text-center text-muted py-4">
+                                    <i class="fas fa-id-card fa-2x mb-2 opacity-50"></i>
+                                    <p class="mb-0 small">Presiona "Generar Informe" para ver el estado de las membresías</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Custom Report -->
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Reporte Personalizado</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Fecha Inicio</label>
+                                        <input type="date" class="form-control" id="customReportStart">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Fecha Fin</label>
+                                        <input type="date" class="form-control" id="customReportEnd">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Tipo de Reporte</label>
+                                        <select class="form-select" id="customReportType">
                                             <option value="complete">Completo</option>
                                             <option value="attendance">Solo Asistencia</option>
                                             <option value="income">Solo Ingresos</option>
                                             <option value="users">Solo Usuarios</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-3 d-flex align-items-end mb-3">
-                                        <button class="btn btn-secondary btn-sm w-100" id="generateCustomReport">
-                                            <i class="fas fa-search me-1"></i>Generar Reporte
-                                        </button>
-                                    </div>
                                 </div>
-
-                                <!-- Resultado reporte personalizado -->
-                                <div id="customReportResult" class="d-none">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <div>
-                                            <span class="badge bg-secondary me-1"><span id="customReportCount">0</span> registros</span>
-                                            <span class="badge bg-primary" id="customReportTotalBadge" style="display:none!important"></span>
-                                        </div>
-                                        <div class="d-flex gap-2">
-                                            <button class="btn btn-danger btn-sm" id="exportCustomReportPDF">
-                                                <i class="fas fa-file-pdf me-1"></i>PDF
-                                            </button>
-                                            <button class="btn btn-success btn-sm" id="exportCustomReportExcel">
-                                                <i class="fas fa-file-excel me-1"></i>Excel
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="table-responsive">
-                                        <table class="table table-sm table-hover mb-0">
-                                            <thead class="table-light" id="customReportThead"></thead>
-                                            <tbody id="customReportList"></tbody>
-                                            <tfoot id="customReportTfoot"></tfoot>
-                                        </table>
-                                    </div>
-                                </div>
-                                <div id="customReportEmpty" class="text-center text-muted py-3">
-                                    <i class="fas fa-filter fa-2x mb-2 opacity-50"></i>
-                                    <p class="mb-0 small">Selecciona rango de fechas y tipo de reporte, luego presiona Generar</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Account Movements Report -->
-                    <div class="col-12">
-                        <div class="card border-success">
-                            <div class="card-header bg-success bg-opacity-10">
-                                <h5 class="mb-0"><i class="fas fa-university me-2 text-success"></i>Movimientos por Cuenta</h5>
-                                <small class="text-muted">Detalle de pagos recibidos por método de pago (Bancolombia, Nequi, etc.)</small>
-                            </div>
-                            <div class="card-body">
-                                <div class="row g-2 mb-3">
-                                    <div class="col-6 col-md-3">
-                                        <label class="form-label small">Desde *</label>
-                                        <input type="date" class="form-control form-control-sm" id="accountReportFrom">
-                                    </div>
-                                    <div class="col-6 col-md-3">
-                                        <label class="form-label small">Hasta *</label>
-                                        <input type="date" class="form-control form-control-sm" id="accountReportTo">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small">Cuenta / Método</label>
-                                        <select class="form-select form-select-sm" id="accountReportMethod">
-                                            <option value="all">Todas las cuentas</option>
-                                            <option value="Efectivo">💵 Efectivo</option>
-                                            <option value="Bancolombia">🏦 Bancolombia</option>
-                                            <option value="Daviplata">📱 Daviplata</option>
-                                            <option value="Nequi">📱 Nequi</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3 d-flex align-items-end">
-                                        <button class="btn btn-success btn-sm w-100" id="generateAccountReport">
-                                            <i class="fas fa-search me-1"></i>Generar
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Resumen por cuenta -->
-                                <div id="accountReportResult" class="d-none">
-                                    <!-- Summary badges -->
-                                    <div class="row g-2 mb-3" id="accountSummaryCards"></div>
-
-                                    <!-- Tabla detalle -->
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="mb-0 text-muted small fw-bold">DETALLE DE MOVIMIENTOS</h6>
-                                        <button class="btn btn-success btn-sm" id="exportAccountReportExcel">
-                                            <i class="fas fa-file-excel me-1"></i>Exportar Excel
-                                        </button>
-                                    </div>
-                                    <div class="table-responsive">
-                                        <table class="table table-sm table-hover mb-0">
-                                            <thead class="table-light">
-                                                <tr>
-                                                    <th>Fecha</th>
-                                                    <th>Descripción</th>
-                                                    <th class="text-end text-danger">Débito (−)</th>
-                                                    <th class="text-end text-success">Crédito (+)</th>
-                                                    <th class="text-end">Saldo</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="accountReportList"></tbody>
-                                            <tfoot id="accountReportTfoot"></tfoot>
-                                        </table>
-                                    </div>
-                                </div>
-                                <div id="accountReportEmpty" class="text-center text-muted py-4">
-                                    <i class="fas fa-university fa-2x mb-2 opacity-50"></i>
-                                    <p class="mb-0 small">Selecciona un rango de fechas y genera el informe de movimientos por cuenta</p>
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <button class="btn btn-primary" id="generateCustomReport">
+                                        <i class="fas fa-cogs me-2"></i>Generar Reporte
+                                    </button>
+                                    <button class="btn btn-success" id="exportCustomReportPDF">
+                                        <i class="fas fa-file-pdf me-2"></i>Exportar PDF
+                                    </button>
+                                    <button class="btn btn-success" id="exportCustomReportExcel">
+                                        <i class="fas fa-file-excel me-2"></i>Exportar Excel
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1620,7 +1620,7 @@
                                     <option value="">Seleccionar...</option>
                                     <option value="Mensualidad">Mensualidad</option>
                                     <option value="Paquete 10 clases">Paquete 10 clases</option>
-                                    <option value="Semipersonalizado Diana">Semipersonalizado Diana</option>
+                                    <option value="Personalizado Diana">Personalizado Diana</option>
                                     <option value="Clase suelta">Clase suelta</option>
                                     <option value="GAP">GAP</option>
                                     <option value="FLEX">FLEX</option>
@@ -1703,7 +1703,7 @@
                                 <option value="">Seleccionar...</option>
                                 <option value="Mensualidad">Mensualidad</option>
                                 <option value="Paquete 10 clases">Paquete 10 clases</option>
-                                <option value="Semipersonalizado Diana">Semipersonalizado Diana</option>
+                                <option value="Personalizado Diana">Personalizado Diana</option>
                                 <option value="Clase suelta">Clase suelta</option>
                                 <option value="Movimientos caja">Movimientos caja</option>
                             </select>
@@ -1762,9 +1762,6 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <i class="fas fa-times me-2"></i>Cancelar
-                    </button>
-                    <button type="button" class="btn btn-success d-none" id="waConfirmPaymentBtn" title="Enviar comprobante de pago por WhatsApp">
-                        <i class="fab fa-whatsapp me-2"></i>Enviar Comprobante
                     </button>
                     <button type="button" class="btn btn-primary" id="saveIncomeBtn">
                         <i class="fas fa-save me-2"></i>Guardar Pago
