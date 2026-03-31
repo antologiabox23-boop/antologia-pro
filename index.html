@@ -362,7 +362,7 @@
                                     <option value="">Todas las afiliaciones</option>
                                     <option value="Mensualidad">Mensualidad</option>
                                     <option value="Paquete 10 clases">Paquete 10 clases</option>
-                                    <option value="Personalizado Diana">Personalizado Diana</option>
+                                    <option value="Semipersonalizado Diana">Semipersonalizado Diana</option>
                                     <option value="Clase suelta">Clase suelta</option>
                                     <option value="GAP">GAP</option>
                                     <option value="FLEX">FLEX</option>
@@ -534,7 +534,7 @@
                                     <option value="">Todos los tipos</option>
                                     <option value="Mensualidad">Mensualidad</option>
                                     <option value="Paquete 10 clases">Paquete 10 clases</option>
-                                    <option value="Personalizado Diana">Personalizado Diana</option>
+                                    <option value="Semipersonalizado Diana">Semipersonalizado Diana</option>
                                     <option value="Clase suelta">Clase suelta</option>
                                     <option value="Movimientos caja">Movimientos caja</option>
                                 </select>
@@ -781,7 +781,7 @@
                                     <select class="form-select form-select-sm" id="classType" required>
                                         <option value="">Tipo...</option>
                                         <option>Crossfit</option><option>GAP</option>
-                                        <option>FLEX</option><option>Personalizado</option>
+                                        <option>FLEX</option><option>Semipersonalizado</option>
                                         <option>Mantenimiento</option><option>Otro</option>
                                     </select>
                                 </div>
@@ -1212,6 +1212,7 @@
                                                     <th>Usuario</th>
                                                     <th>Estado</th>
                                                     <th class="text-center">Asistencias</th>
+                                                    <th class="text-center text-danger" title="Clases asistidas después del vencimiento de la membresía">Clases post-venc.</th>
                                                     <th class="text-center">Pagos Realizados</th>
                                                     <th class="text-end">Total Pagado</th>
                                                 </tr>
@@ -1224,100 +1225,6 @@
                                 <div id="combinedReportEmpty" class="text-center text-muted py-4">
                                     <i class="fas fa-chart-line fa-2x mb-2 opacity-50"></i>
                                     <p class="mb-0">Selecciona un rango de fechas y genera el informe para ver la actividad de usuarios</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Informe Vencimiento de Membresías -->
-                    <div class="col-12">
-                        <div class="card border-warning">
-                            <div class="card-header bg-warning bg-opacity-10">
-                                <h5 class="mb-0"><i class="fas fa-id-card me-2 text-warning"></i>Vencimiento de Membresías</h5>
-                                <small class="text-muted">Estado actual de las membresías de todos los usuarios</small>
-                            </div>
-                            <div class="card-body">
-                                <!-- Resumen rápido -->
-                                <div class="row g-2 mb-3">
-                                    <div class="col-6 col-md-3">
-                                        <div class="card border-success text-center py-2 h-100">
-                                            <div class="card-body p-2">
-                                                <div class="fs-4 text-success fw-bold" id="msVigenteCount">0</div>
-                                                <div class="small text-success">Vigentes</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-6 col-md-3">
-                                        <div class="card border-warning text-center py-2 h-100">
-                                            <div class="card-body p-2">
-                                                <div class="fs-4 text-warning fw-bold" id="msPorVencerCount">0</div>
-                                                <div class="small text-warning">Por vencer (≤5 días)</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-6 col-md-3">
-                                        <div class="card border-danger text-center py-2 h-100">
-                                            <div class="card-body p-2">
-                                                <div class="fs-4 text-danger fw-bold" id="msVencidaCount">0</div>
-                                                <div class="small text-danger">Vencidas</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-6 col-md-3">
-                                        <div class="card border-secondary text-center py-2 h-100">
-                                            <div class="card-body p-2">
-                                                <div class="fs-4 text-secondary fw-bold" id="msSinPagoCount">0</div>
-                                                <div class="small text-secondary">Sin pago</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Filtro y acciones -->
-                                <div class="row g-2 mb-3 align-items-end">
-                                    <div class="col-md-4">
-                                        <label class="form-label small">Filtrar por estado</label>
-                                        <select class="form-select form-select-sm" id="membershipReportFilter">
-                                            <option value="all">Todos</option>
-                                            <option value="vigente">Vigentes</option>
-                                            <option value="por-vencer">Por vencer (≤5 días)</option>
-                                            <option value="vencida">Vencidas</option>
-                                            <option value="sin-pago">Sin pago registrado</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <button class="btn btn-warning btn-sm w-100" id="generateMembershipReport">
-                                            <i class="fas fa-search me-1"></i>Generar Informe
-                                        </button>
-                                    </div>
-                                    <div class="col-md-4" id="membershipExportBtn" style="display:none">
-                                        <button class="btn btn-success btn-sm w-100" id="exportMembershipReportExcel">
-                                            <i class="fas fa-file-excel me-1"></i>Exportar Excel
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Tabla -->
-                                <div id="membershipReportResult" class="d-none">
-                                    <div class="table-responsive">
-                                        <table class="table table-sm table-hover mb-0">
-                                            <thead class="table-light">
-                                                <tr>
-                                                    <th>#</th>
-                                                    <th>Usuario</th>
-                                                    <th>Teléfono</th>
-                                                    <th>Vence</th>
-                                                    <th>Días restantes</th>
-                                                    <th>Estado</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="membershipReportList"></tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                                <div id="membershipReportEmpty" class="text-center text-muted py-4">
-                                    <i class="fas fa-id-card fa-2x mb-2 opacity-50"></i>
-                                    <p class="mb-0 small">Presiona "Generar Informe" para ver el estado de las membresías</p>
                                 </div>
                             </div>
                         </div>
@@ -1620,7 +1527,7 @@
                                     <option value="">Seleccionar...</option>
                                     <option value="Mensualidad">Mensualidad</option>
                                     <option value="Paquete 10 clases">Paquete 10 clases</option>
-                                    <option value="Personalizado Diana">Personalizado Diana</option>
+                                    <option value="Semipersonalizado Diana">Semipersonalizado Diana</option>
                                     <option value="Clase suelta">Clase suelta</option>
                                     <option value="GAP">GAP</option>
                                     <option value="FLEX">FLEX</option>
@@ -1703,7 +1610,7 @@
                                 <option value="">Seleccionar...</option>
                                 <option value="Mensualidad">Mensualidad</option>
                                 <option value="Paquete 10 clases">Paquete 10 clases</option>
-                                <option value="Personalizado Diana">Personalizado Diana</option>
+                                <option value="Semipersonalizado Diana">Semipersonalizado Diana</option>
                                 <option value="Clase suelta">Clase suelta</option>
                                 <option value="Movimientos caja">Movimientos caja</option>
                             </select>
