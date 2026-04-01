@@ -686,10 +686,9 @@ ${table.outerHTML}
             // Botón WhatsApp recordatorio membresía
             let waBtn = '';
             if (d.user.phone && d.membershipEnd) {
-                const nombre = user.user.name.split(' ')[0];
                 const clean = d.user.phone.replace(/\D/g, '');
                 const msgWA = encodeURIComponent(
-                    `Hola, *${d.nombre}* 😊\n\n` +
+                    `Hola, *${d.user.name}* 😊\n\n` +
                     `Estamos realizando el cierre del mes y al revisar nuestro sistema notamos que tu membresía venció el *${Utils.formatDate(d.membershipEnd)}* y no hemos registrado tu pago.\n\n` +
                     `Si ya cancelaste, alleganos tu comprobante para actualizar tu estado en el sistema.\n\n` +
                     `Cualquier inquietud, con mucho gusto te atendemos. ¡Gracias por confiar en *Antología Box23* 🌟!`
