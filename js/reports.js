@@ -683,10 +683,25 @@ ${table.outerHTML}
                 postCell = '<span class="text-success small">✓</span>';
             }
 
+            // Botón WhatsApp recordatorio membresía
+            let waBtn = '';
+            if (d.user.phone && d.membershipEnd) {
+                const clean = d.user.phone.replace(/\D/g, '');
+                const msgWA = encodeURIComponent(
+                    `Hola, *${d.user.name}* 😊\n\n` +
+                    `Estamos realizando el cierre del mes y al revisar nuestro sistema notamos que tu membresía venció el *${Utils.formatDate(d.membershipEnd)}* y no hemos registrado tu pago.\n\n` +
+                    `Si ya cancelaste, te pedimos el favor de allegarnos tu comprobante para actualizar tu estado y que puedas seguir entrenando sin interrupciones.\n\n` +
+                    `Si aún no has podido renovar, recuerda que mantenerte activo(a) con nosotros te permite seguir disfrutando de tu espacio, tus clases y toda la comunidad que te acompaña cada día en *Antología Box23* 🌟\n\n` +
+                    `Cualquier inquietud, con mucho gusto te atendemos. ¡Gracias por confiar en nosotros!`
+                );
+                const waUrl = `https://wa.me/57${clean}?text=${msgWA}`;
+                waBtn = `<a href="${waUrl}" target="_blank" class="btn btn-success btn-sm py-0 px-1 ms-1" title="Enviar recordatorio WhatsApp" style="font-size:11px"><i class="fab fa-whatsapp"></i></a>`;
+            }
+
             return `
             <tr class="${d.expiredInPeriod && d.postExpiryAttendance > 0 ? 'table-warning' : ''}">
                 <td>${i + 1}</td>
-                <td><strong>${Utils.escapeHtml(d.user.name)}</strong></td>
+                <td><strong>${Utils.escapeHtml(d.user.name)}</strong>${waBtn}</td>
                 <td><span class="badge bg-${d.user.status === 'active' ? 'success' : 'secondary'}">${d.user.status === 'active' ? 'Activo' : 'Inactivo'}</span></td>
                 <td class="text-center">${vencCell}</td>
                 <td class="text-center"><span class="badge bg-info">${d.attendance}</span></td>
