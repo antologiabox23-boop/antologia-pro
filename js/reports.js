@@ -686,7 +686,7 @@ ${table.outerHTML}
             // Botón WhatsApp recordatorio membresía
             let waBtn = '';
             if (d.user.phone && d.membershipEnd) {
-                const nombre = user.name.split(' ')[0];
+                const nombre = user.user.name.split(' ')[0];
                 const clean = d.user.phone.replace(/\D/g, '');
                 const msgWA = encodeURIComponent(
                     `Hola, *${nombre}* 😊\n\n` +
