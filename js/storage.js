@@ -13,7 +13,7 @@ const Storage = (() => {
 
     // ─── CONFIGURACIÓN ───────────────────────────────────────────────────────
     // Pega aquí la URL de tu Apps Script después de desplegarlo:
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby6OvnevYk52Fv1JunrpmNlsvFJEuRL73QtDnYkOMuL4jJC11GOb3jY4OtIR-wZSv50/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz9YubFTKIAFUXsQYoOh691HUytL7QwYZ9ZQL-WG0k2nab0w-_FzCCcX6Lm0SMC0TZA/exec';
     // ─────────────────────────────────────────────────────────────────────────
 
     const DEFAULT_SETTINGS = {
@@ -38,7 +38,7 @@ const Storage = (() => {
     // ─── HELPERS HTTP ────────────────────────────────────────────────────────
 
     async function apiCall(action, payload = {}) {
-        if (!SCRIPT_URL || SCRIPT_URL === 'https://script.google.com/macros/s/AKfycby6OvnevYk52Fv1JunrpmNlsvFJEuRL73QtDnYkOMuL4jJC11GOb3jY4OtIR-wZSv50/exec') {
+        if (!SCRIPT_URL || SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbz9YubFTKIAFUXsQYoOh691HUytL7QwYZ9ZQL-WG0k2nab0w-_FzCCcX6Lm0SMC0TZA/exec') {
             throw new Error('⚙️ Configura SCRIPT_URL en storage.js primero.');
         }
 
