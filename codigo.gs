@@ -599,30 +599,35 @@ function addMembership(payload) {
 }
 
 
-function checkMembership(payload) {
-  var userId  = payload.userId  || '';
-  var userDoc = payload.userDoc || '';
+/**
+ * _getActiveMem — busca la membresía activa y vigente de un usuario.
+ * Soporta match por userId exacto, cédula en userDoc, o cédula en userId.
+ * Soporta fechas como Date nativa, YYYY-MM-DD y DD/MM/YYYY.
+ * Retorna el objeto de membresía con rowIndex, o null si no hay ninguna activa.
+ */
+function _getActiveMem(userId, userDoc) {
   var sh = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEETS.MEMBRESIAS);
   if (!sh) return null;
   var data    = sh.getDataRange().getValues();
+  if (data.length <= 1) return null;
   var headers = data[0].map(function(h){ return String(h).trim(); });
   var H       = _hmap(headers);
   var now     = new Date();
+  var cleanDoc = (userDoc || '').replace(/\D/g, '');
 
   for (var i = 1; i < data.length; i++) {
-    var row     = data[i];
-    var rUid    = String(row[H['userId']]  || '').trim();
-    var rUdoc   = String(row[H['userDoc']] || '').trim().replace(/\D/g, '');
-    var estado  = String(row[H['estado']]  || '').trim();
-    // Match por ID interno, por cédula en userDoc, O por cédula guardada en userId
-    var cleanDoc  = (userDoc || '').replace(/\D/g, '');
+    var row      = data[i];
+    var rUid     = String(row[H['userId']]  || '').trim();
+    var rUdoc    = String(row[H['userDoc']] || '').trim().replace(/\D/g, '');
+    var estado   = String(row[H['estado']]  || '').trim();
     var cleanRuid = rUid.replace(/\D/g, '');
-    var match = (userId  && rUid  === userId)           // ID interno exacto
-             || (cleanDoc && rUdoc === cleanDoc)         // cédula en userDoc
-             || (cleanDoc && cleanRuid === cleanDoc);    // cédula puesta en userId
+
+    var match = (userId   && rUid       === userId)   // ID interno exacto
+             || (cleanDoc && rUdoc      === cleanDoc)  // cédula en userDoc
+             || (cleanDoc && cleanRuid  === cleanDoc); // cédula guardada en userId
     if (!match || estado !== 'activa') continue;
 
-    // Parseo robusto de fecha: soporta Date nativa, YYYY-MM-DD y DD/MM/YYYY
+    // Parseo robusto de vigenciaHasta
     var vigVal = row[H['vigenciaHasta']];
     var vigHasta;
     if (vigVal instanceof Date) {
