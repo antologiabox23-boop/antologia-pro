@@ -460,20 +460,22 @@
 
 <script>
 // ══════════════════════════════════════════
-//  CONFIGURACIÓN DE HORARIOS — DIANA
+//  CONFIGURACIÓN — DIANA
 // ══════════════════════════════════════════
 const SCHEDULE_CONFIG = {
-    lunes:     ['06:00','07:00','08:00','09:00','17:00','18:00','19:00'],
-    martes:    ['06:00','07:00','08:00','09:00','17:00','18:00','19:00'],
+    lunes:      ['06:00','07:00','08:00','09:00','17:00','18:00','19:00'],
+    martes:     ['06:00','07:00','08:00','09:00','17:00','18:00','19:00'],
     'miércoles':['06:00','07:00','08:00','09:00','17:00','18:00','19:00'],
-    jueves:    ['06:00','07:00','08:00','09:00','17:00','18:00','19:00'],
-    viernes:   ['06:00','07:00','08:00','09:00','17:00','18:00','19:00'],
-    'sábado':  ['08:00','09:00','10:00'],
+    jueves:     ['06:00','07:00','08:00','09:00','17:00','18:00','19:00'],
+    viernes:    ['06:00','07:00','08:00','09:00','17:00','18:00','19:00'],
+    'sábado':   ['08:00','09:00','10:00'],
 };
 const MAX_PER_SLOT = 4;
 const CLASS_TYPE   = 'semipersonalizado_diana';
 const SCRIPT_URL   = 'https://script.google.com/macros/s/AKfycbz9YubFTKIAFUXsQYoOh691HUytL7QwYZ9ZQL-WG0k2nab0w-_FzCCcX6Lm0SMC0TZA/exec';
 const CANCEL_HOURS = 18;
+// Tipos de pago en Ingresos que corresponden a clases Diana
+const DIANA_INCOME_TYPES = ['semipersonalizado diana','personalizado diana','semipersonalizados diana','diana'];
 
 // ══════════════════════════════════════════
 //  ESTADO
@@ -506,18 +508,93 @@ async function gasCall(action, payload={}) {
 
 async function loadBookings() {
     try {
-        const json = await gasCall('getClasses', { classType: CLASS_TYPE });
+        const json = await gasCall('getProgramacion', { classType: CLASS_TYPE });
         state.bookings = (json.data||json.classes||[]).filter(b=>b.classType===CLASS_TYPE);
     } catch(e) { state.bookings=[]; }
     refreshSlots();
 }
 
 // ══════════════════════════════════════════
+//  INFERIR MEMBRESÍA
+//  1° busca en hoja Membresias (checkMembership)
+//  2° fallback: último ingreso tipo Diana en hoja Ingresos
+//  Si encuentra en Ingresos y no en Membresias → auto-registra
+// ══════════════════════════════════════════
+async function resolverMembresia(userId, userDoc) {
+    // Intento 1: hoja Membresias
+    try {
+        const r = await gasCall('checkMembership', { userId, userDoc });
+        if (r.canBook || r.membership) return r;
+    } catch(e) {}
+
+    // Intento 2: hoja Ingresos
+    try {
+        const incR  = await gasCall('getIncome');
+        const todos  = incR.data || [];
+        const docClean = (userDoc||'').replace(/\D/g,'');
+
+        const mios = todos.filter(p => {
+            const pUid  = p.userId || '';
+            const pDoc  = (p.userDoc||p.document||p.notes||'').replace(/\D/g,'');
+            const byId  = userId  && pUid  === userId;
+            const byDoc = docClean && (pDoc === docClean || (pUid||'').replace(/\D/g,'') === docClean);
+            const tipoOk = DIANA_INCOME_TYPES.some(t =>
+                (p.paymentType||'').toLowerCase().includes(t)
+            );
+            return (byId||byDoc) && tipoOk;
+        });
+
+        if (!mios.length) {
+            return { success:true, canBook:false,
+                reason:'Sin plan Diana activo. Contacta a tu instructora.',
+                membership:null };
+        }
+
+        // Ordenar por endDate más reciente
+        mios.sort((a,b) => new Date(b.endDate||'2000-01-01') - new Date(a.endDate||'2000-01-01'));
+        const ult = mios[0];
+        const hoy = new Date(); hoy.setHours(0,0,0,0);
+        const fin = ult.endDate ? new Date(ult.endDate+'T12:00:00') : null;
+        const vigente = fin && fin >= hoy;
+
+        if (!vigente) {
+            const finStr = ult.endDate || '?';
+            return { success:true, canBook:false,
+                reason:`Plan Diana venció el ${finStr}. Renueva con Diana.`,
+                membership:null };
+        }
+
+        // Auto-registrar en Membresias (silencioso)
+        gasCall('addMembership', {
+            userId, userDoc,
+            userName: state.user?.name || '',
+            tipo: 'membresia_mensual',
+            vigenciaDesde: ult.startDate || ult.paymentDate || '',
+            vigenciaHasta: ult.endDate,
+            estado: 'activa'
+        }).catch(()=>{});
+
+        return {
+            success:true, canBook:true,
+            reason:`Plan Diana vigente hasta ${ult.endDate}`,
+            membership:{
+                tipo:'membresia_mensual', vigenciaHasta:ult.endDate,
+                vigenciaDesde: ult.startDate||ult.paymentDate||'',
+                clasesTotal:'', clasesUsadas:'', estado:'activa',
+                fromIncome:true
+            }
+        };
+    } catch(e) {
+        return { success:true, canBook:false, reason:'Error al verificar plan.', membership:null };
+    }
+}
+
+// ══════════════════════════════════════════
 //  IDENTIFICACIÓN
 // ══════════════════════════════════════════
 async function handleIdentify() {
-    const doc   = (document.getElementById('loginDoc').value  ||'').replace(/\D/g,'');
-    const pass  = (document.getElementById('loginPass').value ||'').replace(/\D/g,'');
+    const doc   = (document.getElementById('loginDoc').value ||'').replace(/\D/g,'');
+    const pass  = (document.getElementById('loginPass').value||'').replace(/\D/g,'');
     const errEl = document.getElementById('loginError');
     errEl.classList.remove('show');
     if (!doc||!pass) { showErr(errEl,'Completa todos los campos.'); return; }
@@ -542,11 +619,11 @@ async function handleIdentify() {
         }
         state.user = found;
 
-        const memJson = await gasCall('checkMembership', { userId:found.id, userDoc:found.document });
+        const memJson = await resolverMembresia(found.id, found.document);
         state.membership = memJson;
 
         if (!memJson.canBook) {
-            showErr(errEl, '⚠️ '+memJson.reason+'. No puedes programar clases.');
+            showErr(errEl, '⚠️ '+memJson.reason);
             btn.innerHTML = 'Continuar <i class="fas fa-arrow-right ms-1"></i>';
             btn.disabled  = false;
             showUserCard(found, memJson, false);
@@ -566,8 +643,11 @@ function showUserCard(u, mem, canBook) {
     const el = document.getElementById('userFoundCard');
     el.style.display = 'flex';
     el.className = 'user-found';
+    const fromTag = mem?.membership?.fromIncome
+        ? `<span style="font-size:.65rem;background:rgba(240,246,110,.12);border:1px solid var(--color-accent);color:var(--color-accent);border-radius:4px;padding:.1rem .35rem;margin-left:.4rem;">desde Ingresos</span>`
+        : '';
     const memInfo = mem ? `<div style="font-size:.75rem;color:${mem.canBook?'var(--color-secondary)':'#fca5a5'};margin-top:.2rem;">
-        <i class="fas fa-${mem.canBook?'check-circle':'exclamation-triangle'} me-1"></i>${mem.reason||'Sin plan activo'}
+        <i class="fas fa-${mem.canBook?'check-circle':'exclamation-triangle'} me-1"></i>${mem.reason||'Sin plan activo'}${fromTag}
     </div>` : '';
     const verBtn = !canBook ? `<button onclick="goMisClases()" style="margin-top:.5rem;font-size:.8rem;background:transparent;border:1.5px solid var(--color-primary);color:var(--color-primary);border-radius:8px;padding:.3rem .8rem;cursor:pointer;width:100%">
         <i class="fas fa-list me-1"></i>Ver mis clases</button>` : '';
@@ -583,7 +663,7 @@ function showUserCard(u, mem, canBook) {
 }
 
 // ══════════════════════════════════════════
-//  DAYS & SLOTS
+//  DÍAS & SLOTS
 // ══════════════════════════════════════════
 function buildDayTabs() {
     const days = Object.keys(SCHEDULE_CONFIG);
@@ -615,7 +695,7 @@ function countBookings(day, time) {
 }
 
 function refreshSlots() {
-    const grid  = document.getElementById('slotsGrid');
+    const grid = document.getElementById('slotsGrid');
     if (!grid) return;
     const times = SCHEDULE_CONFIG[state.selectedDay]||[];
     grid.innerHTML = '';
@@ -625,24 +705,24 @@ function refreshSlots() {
         const avail  = MAX_PER_SLOT-taken;
         const isFull = avail<=0;
         const isSel  = state.selectedTime===t;
-        const btn    = document.createElement('div');
-        btn.className = 'slot-btn'+(isFull?' full':'')+(isSel?' selected':'');
-        btn.innerHTML = `<div class="slot-time">${t}</div>
+        const div    = document.createElement('div');
+        div.className = 'slot-btn'+(isFull?' full':'')+(isSel?' selected':'');
+        div.innerHTML = `<div class="slot-time">${t}</div>
             <div class="slot-avail">${isFull?'Lleno':avail+' lugar'+(avail!==1?'es':'')+' libre'+(avail!==1?'s':'')}</div>`;
         if (!isFull) {
-            btn.onclick = ()=>{
+            div.onclick = ()=>{
                 state.selectedTime = t;
                 document.getElementById('btnConfirmSlot').disabled = false;
                 document.getElementById('slotError').classList.remove('show');
                 refreshSlots();
             };
         }
-        grid.appendChild(btn);
+        grid.appendChild(div);
     });
 }
 
 // ══════════════════════════════════════════
-//  STEPS NAV
+//  NAVEGACIÓN
 // ══════════════════════════════════════════
 function goStep(n) {
     if (n===3) {
@@ -666,7 +746,7 @@ function updateProgress(n) {
 }
 
 // ══════════════════════════════════════════
-//  SUMMARY
+//  RESUMEN
 // ══════════════════════════════════════════
 function buildSummary() {
     const u = state.user;
@@ -675,14 +755,11 @@ function buildSummary() {
     const today    = new Date();
     let diff = (dayMap[state.selectedDay]??0)-today.getDay();
     if (diff<=0) diff+=7;
-    const nextDate = new Date(today);
-    nextDate.setDate(today.getDate()+diff);
-    const dateStr = nextDate.toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'});
-
-    const memLine = state.membership
+    const nextDate = new Date(today); nextDate.setDate(today.getDate()+diff);
+    const dateStr  = nextDate.toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'});
+    const memLine  = state.membership
         ? `<div class="summary-row"><span class="label">Plan</span><span class="value" style="font-size:.82rem;color:var(--color-secondary);">${state.membership.reason}</span></div>`
         : '';
-
     document.getElementById('summaryContent').innerHTML = `
         <div class="summary-row"><span class="label">Usuario</span><span class="value">${u.name}</span></div>
         <div class="summary-row"><span class="label">Documento</span><span class="value">${u.document}</span></div>
@@ -691,7 +768,7 @@ function buildSummary() {
         <div class="summary-row"><span class="label">Día</span><span class="value">${dayLabel}</span></div>
         <div class="summary-row"><span class="label">Horario</span><span class="value">${state.selectedTime}</span></div>
         <div class="summary-row"><span class="label">Próxima fecha</span><span class="value">${dateStr}</span></div>
-        <div class="summary-row"><span class="label">Cupos</span>
+        <div class="summary-row"><span class="label">Cupos disponibles</span>
             <span class="value">${MAX_PER_SLOT-countBookings(state.selectedDay,state.selectedTime)} de ${MAX_PER_SLOT}</span></div>
     `;
 }
@@ -708,7 +785,7 @@ async function bookClass() {
     const avail = MAX_PER_SLOT-countBookings(state.selectedDay, state.selectedTime);
     if (avail<=0) { showErr(errEl,'Este horario ya se llenó.'); return; }
 
-    btn.disabled  = true;
+    btn.disabled = true;
     btnText.innerHTML = '<span class="spinner-sm"></span>Guardando...';
 
     const dayMap = {lunes:1,martes:2,'miércoles':3,jueves:4,viernes:5,'sábado':6,domingo:0};
@@ -732,14 +809,14 @@ async function bookClass() {
 
     try {
         const json = await gasCall('addClass', booking);
-        if (json.success===false) throw new Error(json.message||'Error');
-        state.bookings.push({ ...booking, status:'programada', id:json.bookingId||'' });
+        if (json.success===false) throw new Error(json.message||'Error al guardar');
+        state.bookings.push({ ...booking, status:'programada', ID:json.bookingId||'' });
         document.getElementById('successMsg').textContent =
             `${state.user.name}, quedaste en Semipersonalizados Diana el ${state.selectedDay} a las ${state.selectedTime}. ¡Hasta pronto!`;
         goStep(4);
     } catch(e) {
         showErr(errEl, e.message||'No se pudo guardar la reserva.');
-        btn.disabled  = false;
+        btn.disabled = false;
         btnText.textContent = 'Confirmar reserva';
     }
 }
@@ -751,7 +828,7 @@ async function goMisClases() {
     if (!state.user) return;
     goStep(5);
     document.getElementById('misClasesLoading').style.display = 'block';
-    document.getElementById('misClasesLista').innerHTML       = '';
+    document.getElementById('misClasesLista').innerHTML = '';
     try {
         const json = await gasCall('getUserClasses', { userId:state.user.id, userDoc:state.user.document });
         state.misClases = (json.classes||[]).filter(c=>c.classType===CLASS_TYPE);
@@ -760,11 +837,8 @@ async function goMisClases() {
     if (state.membership) {
         const banner = document.getElementById('membershipBanner');
         banner.style.display = 'block';
-        if (state.membership.canBook) {
-            banner.style.cssText = 'display:block;margin-bottom:1rem;padding:.75rem 1rem;border-radius:10px;font-size:.85rem;font-weight:600;background:rgba(39,249,212,.1);border:1.5px solid var(--color-secondary);color:var(--color-secondary);';
-        } else {
-            banner.style.cssText = 'display:block;margin-bottom:1rem;padding:.75rem 1rem;border-radius:10px;font-size:.85rem;font-weight:600;background:rgba(239,68,68,.1);border:1.5px solid #ef4444;color:#fca5a5;';
-        }
+        const ok = state.membership.canBook;
+        banner.style.cssText = `display:block;margin-bottom:1rem;padding:.75rem 1rem;border-radius:10px;font-size:.85rem;font-weight:600;background:rgba(${ok?'39,249,212':'239,68,68'},.1);border:1.5px solid ${ok?'var(--color-secondary)':'#ef4444'};color:${ok?'var(--color-secondary)':'#fca5a5'};`;
         banner.innerHTML = `<i class="fas fa-id-badge me-1"></i>${state.membership.reason}`;
     }
 
@@ -776,7 +850,6 @@ function renderMisClases() {
     const lista  = document.getElementById('misClasesLista');
     const filter = state.mcFilter;
     const all    = state.misClases;
-
     if (!all.length) {
         lista.innerHTML = '<div class="mc-empty"><i class="fas fa-calendar-times fa-2x mb-2" style="display:block;"></i>No tienes clases registradas aún.</div>';
         return;
@@ -785,7 +858,6 @@ function renderMisClases() {
     const cumpl  = all.filter(c=>c.status==='cumplida').length;
     const cancel = all.filter(c=>c.status==='cancelada').length;
     const filtered = filter==='todas' ? all : all.filter(c=>c.status===filter);
-
     lista.innerHTML = `
         <div class="mc-stats">
             <div class="mc-stat"><div class="val" style="color:var(--color-secondary)">${prog}</div><div class="lbl">Programadas</div></div>

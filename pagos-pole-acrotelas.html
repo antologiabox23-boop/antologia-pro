@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Pagos — Pole & Acrotelas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-primary:  #27F9D4;
+            --color-secondary:#FF729F;
+            --color-accent:   #F0F66E;
+            --color-bg:       #1a2332;
+            --color-card:     #273043;
+            --color-border:   #324466;
+            --color-text:     #f8f9fa;
+            --color-muted:    #8899aa;
+            --color-success:  #10b981;
+            --color-danger:   #ef4444;
+            --color-warning:  #f59e0b;
+        }
+        * { box-sizing:border-box; margin:0; padding:0; }
+        body { background:var(--color-bg); color:var(--color-text); font-family:'Inter',sans-serif; min-height:100vh; }
+
+        /* ── LOGIN SCREEN ── */
+        #loginScreen {
+            position:fixed; inset:0; background:var(--color-bg);
+            display:flex; align-items:center; justify-content:center;
+            z-index:9999; transition:opacity .3s;
+        }
+        .login-box {
+            background:var(--color-card); border:1.5px solid var(--color-border);
+            border-radius:20px; padding:2.5rem 2rem; width:100%; max-width:360px;
+            box-shadow:0 8px 40px rgba(0,0,0,.4);
+        }
+        .login-box h2 {
+            font-family:'Outfit',sans-serif; font-size:1.4rem; font-weight:700;
+            color:var(--color-primary); margin-bottom:.25rem;
+        }
+        .login-box p { font-size:.85rem; color:var(--color-muted); margin-bottom:1.5rem; }
+        @keyframes shake {
+            0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)}
+        }
+        .login-box.shake { animation:shake .4s ease; }
+
+        /* ── HEADER ── */
+        .page-header {
+            background:linear-gradient(135deg,#1a2332 0%,#273043 100%);
+            border-bottom:2px solid var(--color-primary);
+            padding:1rem 1.5rem; display:flex; align-items:center; gap:1rem;
+        }
+        .page-header .logo { height:40px; filter:drop-shadow(0 0 6px rgba(39,249,212,.5)); }
+        .page-header .title-block h1 {
+            font-family:'Outfit',sans-serif; font-size:1.3rem; font-weight:700;
+            color:var(--color-primary); line-height:1.1;
+        }
+        .page-header .title-block span { font-size:.8rem; color:var(--color-muted); }
+        .badge-admin {
+            background:linear-gradient(135deg,var(--color-accent),#d4e011);
+            color:#1a2332; font-weight:700; font-size:.75rem;
+            padding:.35em .75em; border-radius:20px; margin-left:auto; white-space:nowrap;
+        }
+
+        /* ── LAYOUT ── */
+        .main-wrap { max-width:600px; margin:0 auto; padding:2rem 1rem 4rem; }
+
+        /* ── CARD ── */
+        .pay-card {
+            background:var(--color-card); border:1px solid var(--color-border);
+            border-radius:16px; padding:1.75rem; margin-bottom:1.25rem;
+        }
+        .pay-card h2 {
+            font-family:'Outfit',sans-serif; font-size:1.05rem; font-weight:700;
+            color:var(--color-primary); margin-bottom:1.25rem;
+            display:flex; align-items:center; gap:.5rem;
+        }
+
+        /* ── FORM ── */
+        .form-label {
+            font-size:.82rem; font-weight:600; color:var(--color-muted);
+            margin-bottom:.35rem; text-transform:uppercase; letter-spacing:.04em; display:block;
+        }
+        .form-control, .form-select {
+            background:#1a2332; border:1.5px solid var(--color-border);
+            color:var(--color-text); border-radius:10px; padding:.6rem .9rem;
+            font-size:.95rem; width:100%; transition:border-color .2s, box-shadow .2s;
+        }
+        .form-control:focus, .form-select:focus {
+            outline:none; border-color:var(--color-primary);
+            box-shadow:0 0 0 3px rgba(39,249,212,.15); color:var(--color-text);
+        }
+        .form-control::placeholder { color:#556677; }
+        .form-select option { background:#1a2332; }
+        .mb-form { margin-bottom:1.1rem; }
+
+        /* ── USER SEARCH ── */
+        .user-search-wrap { position:relative; }
+        .user-results {
+            position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:100;
+            background:var(--color-card); border:1.5px solid var(--color-primary);
+            border-radius:10px; max-height:200px; overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,.4);
+        }
+        .user-result-item {
+            padding:.65rem 1rem; cursor:pointer; border-bottom:1px solid var(--color-border);
+            transition:background .15s;
+        }
+        .user-result-item:last-child { border-bottom:none; }
+        .user-result-item:hover { background:rgba(39,249,212,.08); }
+        .user-result-item .uname { font-weight:700; font-size:.9rem; }
+        .user-result-item .udoc  { font-size:.78rem; color:var(--color-muted); }
+        .user-selected-card {
+            background:rgba(16,185,129,.08); border:1.5px solid var(--color-success);
+            border-radius:10px; padding:.75rem 1rem; display:flex;
+            align-items:center; gap:.75rem; margin-top:.5rem;
+        }
+        .user-avatar {
+            width:38px; height:38px; border-radius:50%; flex-shrink:0;
+            background:linear-gradient(135deg,var(--color-primary),var(--color-secondary));
+            display:flex; align-items:center; justify-content:center;
+            font-weight:900; color:#1a2332; font-size:.95rem;
+        }
+
+        /* ── PLAN CHIPS ── */
+        .plan-chips { display:flex; gap:.6rem; flex-wrap:wrap; }
+        .plan-chip {
+            background:#1a2332; border:2px solid var(--color-border); border-radius:10px;
+            padding:.55rem 1rem; cursor:pointer; font-size:.88rem; font-weight:600;
+            color:var(--color-muted); transition:all .2s; user-select:none;
+        }
+        .plan-chip:hover { border-color:var(--color-primary); color:var(--color-primary); }
+        .plan-chip.selected {
+            border-color:var(--color-primary); background:rgba(39,249,212,.14);
+            color:var(--color-primary);
+        }
+
+        /* ── DISCIPLINA CHIPS ── */
+        .disc-chips { display:flex; gap:.6rem; flex-wrap:wrap; margin-bottom:1rem; }
+        .disc-chip {
+            background:#1a2332; border:2px solid var(--color-border); border-radius:10px;
+            padding:.55rem 1.1rem; cursor:pointer; font-size:.88rem; font-weight:700;
+            color:var(--color-muted); transition:all .2s; user-select:none;
+        }
+        .disc-chip.selected {
+            border-color:var(--color-secondary); background:rgba(255,114,159,.12);
+            color:var(--color-secondary);
+        }
+
+        /* ── VIGENCIA PREVIEW ── */
+        .vigencia-preview {
+            background:rgba(39,249,212,.07); border:1px solid rgba(39,249,212,.25);
+            border-radius:10px; padding:.7rem 1rem; margin-top:.5rem;
+            font-size:.85rem; color:var(--color-primary);
+        }
+
+        /* ── HISTORIAL ── */
+        .hist-item {
+            background:#1a2332; border:1px solid var(--color-border); border-radius:12px;
+            padding:.9rem 1.1rem; margin-bottom:.6rem;
+        }
+        .hist-item .hi-top { display:flex; justify-content:space-between; align-items:center; gap:.5rem; }
+        .hist-item .hi-name { font-weight:700; font-size:.9rem; }
+        .hist-item .hi-detail { font-size:.78rem; color:var(--color-muted); margin-top:.2rem; }
+        .badge-tipo {
+            font-size:.7rem; font-weight:700; padding:.25em .7em; border-radius:20px;
+            white-space:nowrap; flex-shrink:0;
+        }
+        .badge-mensual  { background:rgba(39,249,212,.12);  color:var(--color-primary);   border:1px solid var(--color-primary); }
+        .badge-paquete  { background:rgba(255,114,159,.12); color:var(--color-secondary); border:1px solid var(--color-secondary); }
+        .badge-suelta   { background:rgba(240,246,110,.12); color:var(--color-accent);    border:1px solid var(--color-accent); }
+        .badge-vencida  { background:rgba(239,68,68,.12);   color:#ef4444;               border:1px solid #ef4444; }
+
+        /* ── BUTTONS ── */
+        .btn-primary-custom {
+            background:linear-gradient(135deg,var(--color-primary),#1de5c0);
+            color:#1a2332; border:none; border-radius:10px;
+            padding:.75rem 1.5rem; font-weight:700; font-size:1rem;
+            width:100%; cursor:pointer; transition:opacity .2s,transform .1s;
+        }
+        .btn-primary-custom:hover { opacity:.9; transform:translateY(-1px); }
+        .btn-primary-custom:disabled { opacity:.45; cursor:not-allowed; transform:none; }
+
+        /* ── ALERTS ── */
+        .alert-err {
+            background:rgba(239,68,68,.12); border:1.5px solid var(--color-danger);
+            border-radius:10px; padding:.7rem 1rem; font-size:.88rem;
+            color:#fca5a5; display:none; margin-top:.75rem;
+        }
+        .alert-err.show { display:block; }
+        .alert-ok {
+            background:rgba(16,185,129,.12); border:1.5px solid var(--color-success);
+            border-radius:10px; padding:.75rem 1rem; font-size:.9rem;
+            color:var(--color-success); display:none; margin-top:.75rem; text-align:center;
+        }
+        .alert-ok.show { display:block; }
+
+        /* ── SPINNER ── */
+        .spinner-sm {
+            width:18px; height:18px; border:2.5px solid rgba(26,35,50,.4);
+            border-top-color:#1a2332; border-radius:50%;
+            animation:spin .6s linear infinite; display:inline-block;
+            vertical-align:middle; margin-right:.4rem;
+        }
+        @keyframes spin { to { transform:rotate(360deg); } }
+
+        /* ── TABS ── */
+        .page-tabs { display:flex; gap:.4rem; margin-bottom:1.5rem; }
+        .page-tab {
+            flex:1; background:#1a2332; border:2px solid var(--color-border);
+            border-radius:10px; padding:.6rem .5rem; text-align:center;
+            font-size:.85rem; font-weight:700; cursor:pointer; color:var(--color-muted);
+            transition:all .2s;
+        }
+        .page-tab.active {
+            border-color:var(--color-primary); color:var(--color-primary);
+            background:rgba(39,249,212,.1);
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══ LOGIN SCREEN (contraseña de entrenador) ═══ -->
+<div id="loginScreen">
+    <div class="login-box" id="loginBox">
+        <h2><i class="fas fa-lock me-2"></i>Acceso Entrenadores</h2>
+        <p>Solo personal autorizado puede registrar pagos.</p>
+        <div class="mb-form">
+            <label class="form-label">Contraseña</label>
+            <input type="password" class="form-control" id="adminPass" placeholder="••••••••" autocomplete="off">
+        </div>
+        <div class="alert-err" id="loginErr"></div>
+        <button class="btn-primary-custom mt-2" onclick="doLogin()">
+            <i class="fas fa-sign-in-alt me-2"></i>Ingresar
+        </button>
+    </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="appContainer" style="display:none;">
+
+<!-- HEADER -->
+<header class="page-header">
+    <img src="images/logo.png" class="logo" alt="Antología" onerror="this.style.display='none'">
+    <div class="title-block">
+        <h1><i class="fas fa-credit-card me-1"></i>Registro de Pagos</h1>
+        <span>Pole Sport &amp; Acrotelas — Entrenadores</span>
+    </div>
+    <div class="badge-admin"><i class="fas fa-shield-alt me-1"></i>Admin</div>
+</header>
+
+<div class="main-wrap">
+
+    <!-- TABS -->
+    <div class="page-tabs">
+        <div class="page-tab active" id="tab-registrar" onclick="showTab('registrar')">
+            <i class="fas fa-plus me-1"></i>Registrar pago
+        </div>
+        <div class="page-tab" id="tab-historial" onclick="showTab('historial')">
+            <i class="fas fa-history me-1"></i>Historial
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         TAB: REGISTRAR PAGO
+    ══════════════════════════════════════ -->
+    <div id="panel-registrar">
+
+        <!-- Buscar usuario -->
+        <div class="pay-card">
+            <h2><i class="fas fa-user-search"></i>Buscar alumno</h2>
+
+            <div class="mb-form">
+                <label class="form-label">Nombre o documento</label>
+                <div class="user-search-wrap">
+                    <input type="text" class="form-control" id="userSearch"
+                           placeholder="Escribe para buscar..." autocomplete="off"
+                           oninput="searchUsers()">
+                    <div class="user-results" id="userResults" style="display:none;"></div>
+                </div>
+            </div>
+
+            <div id="userSelectedCard" style="display:none;"></div>
+        </div>
+
+        <!-- Datos del pago -->
+        <div class="pay-card" id="formCard" style="display:none;">
+            <h2><i class="fas fa-file-invoice-dollar"></i>Datos del pago</h2>
+
+            <!-- Disciplina -->
+            <div class="mb-form">
+                <label class="form-label">Disciplina</label>
+                <div class="disc-chips">
+                    <div class="disc-chip" id="disc_pole" onclick="selectDisc('pole_sport')">
+                        🎗️ Pole Sport
+                    </div>
+                    <div class="disc-chip" id="disc_acrotelas" onclick="selectDisc('acrotelas')">
+                        🪢 Acrotelas
+                    </div>
+                </div>
+                <div class="alert-err" id="discErr"></div>
+            </div>
+
+            <!-- Plan -->
+            <div class="mb-form">
+                <label class="form-label">Tipo de plan</label>
+                <div class="plan-chips">
+                    <div class="plan-chip" id="plan_mensual"   onclick="selectPlan('membresia_mensual')">
+                        <i class="fas fa-calendar me-1"></i>Mensualidad
+                    </div>
+                    <div class="plan-chip" id="plan_paquete"   onclick="selectPlan('paquete_10')">
+                        <i class="fas fa-layer-group me-1"></i>Paquete 10 clases
+                    </div>
+                    <div class="plan-chip" id="plan_suelta"    onclick="selectPlan('clase_unica')">
+                        <i class="fas fa-star me-1"></i>Clase suelta
+                    </div>
+                </div>
+                <div class="alert-err" id="planErr"></div>
+            </div>
+
+            <!-- Fechas -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;" class="mb-form">
+                <div>
+                    <label class="form-label">Inicio vigencia</label>
+                    <input type="date" class="form-control" id="fechaInicio" oninput="calcFechaFin()">
+                </div>
+                <div>
+                    <label class="form-label">Fin vigencia</label>
+                    <input type="date" class="form-control" id="fechaFin">
+                </div>
+            </div>
+            <div id="vigenciaPreview" style="display:none;" class="vigencia-preview mb-form"></div>
+
+            <!-- Clases (solo paquete) -->
+            <div class="mb-form" id="clasesTotalWrap" style="display:none;">
+                <label class="form-label">Número de clases del paquete</label>
+                <input type="number" class="form-control" id="clasesTotal" value="10" min="1" max="50">
+            </div>
+
+            <!-- Notas opcionales -->
+            <div class="mb-form">
+                <label class="form-label">Notas (opcional)</label>
+                <input type="text" class="form-control" id="notas" placeholder="Método de pago, observaciones...">
+            </div>
+
+            <div class="alert-err" id="formErr"></div>
+            <div class="alert-ok" id="formOk"></div>
+
+            <button class="btn-primary-custom mt-2" id="btnGuardar" onclick="guardarPago()">
+                <i class="fas fa-save me-2"></i>Registrar membresía
+            </button>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         TAB: HISTORIAL
+    ══════════════════════════════════════ -->
+    <div id="panel-historial" style="display:none;">
+        <div class="pay-card">
+            <h2><i class="fas fa-list-alt"></i>Membresías registradas</h2>
+
+            <div class="mb-form" style="display:flex;gap:.6rem;flex-wrap:wrap;">
+                <input type="text" class="form-control" id="histSearch"
+                       placeholder="Buscar por nombre o documento..."
+                       oninput="renderHistorial()" style="flex:1;min-width:160px;">
+                <select class="form-select" id="histTipoFilter" onchange="renderHistorial()" style="max-width:170px;">
+                    <option value="">Todos los planes</option>
+                    <option value="membresia_mensual">Mensualidad</option>
+                    <option value="paquete_10">Paquete 10</option>
+                    <option value="clase_unica">Clase suelta</option>
+                </select>
+                <select class="form-select" id="histDiscFilter" onchange="renderHistorial()" style="max-width:160px;">
+                    <option value="">Todas las disc.</option>
+                    <option value="pole_sport">Pole Sport</option>
+                    <option value="acrotelas">Acrotelas</option>
+                </select>
+            </div>
+
+            <div id="historialLoading" style="text-align:center;padding:1.5rem;color:var(--color-muted);">
+                <i class="fas fa-spinner fa-spin me-2"></i>Cargando...
+            </div>
+            <div id="historialLista"></div>
+        </div>
+    </div>
+
+</div><!-- /main-wrap -->
+</div><!-- /appContainer -->
+
+<script>
+// ═══════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════
+const SCRIPT_URL    = 'https://script.google.com/macros/s/AKfycbz9YubFTKIAFUXsQYoOh691HUytL7QwYZ9ZQL-WG0k2nab0w-_FzCCcX6Lm0SMC0TZA/exec';
+const LS_AUTH_KEY   = 'box23_auth_session';
+const LS_PASS_KEY   = 'box23_password';
+const DEFAULT_PASS  = 'box23admin';
+const SESSION_HRS   = 12;
+
+// DURACIONES automáticas por plan (días)
+const PLAN_DIAS = {
+    membresia_mensual: 30,
+    paquete_10:        90,   // 3 meses para usar 10 clases
+    clase_unica:        1
+};
+
+const PLAN_LABELS = {
+    membresia_mensual: 'Mensualidad',
+    paquete_10:        'Paquete 10 clases',
+    clase_unica:       'Clase suelta'
+};
+
+const DISC_LABELS = { pole_sport:'Pole Sport', acrotelas:'Acrotelas' };
+
+// ═══════════════════════════════════════════
+//  ESTADO
+// ═══════════════════════════════════════════
+let allUsers    = [];
+let membresias  = [];
+let selUser     = null;
+let selPlan     = null;
+let selDisc     = null;
+let searchTimer = null;
+
+// ═══════════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════════
+function getSavedPass() { return localStorage.getItem(LS_PASS_KEY) || DEFAULT_PASS; }
+
+function isAuthenticated() {
+    try {
+        const s = JSON.parse(localStorage.getItem(LS_AUTH_KEY));
+        return s && Date.now() < s.expiresAt;
+    } catch { return false; }
+}
+
+function saveSession() {
+    localStorage.setItem(LS_AUTH_KEY, JSON.stringify({
+        timestamp: Date.now(),
+        expiresAt: Date.now() + SESSION_HRS * 3600000
+    }));
+}
+
+function doLogin() {
+    const val = document.getElementById('adminPass').value;
+    const err = document.getElementById('loginErr');
+    err.style.display = 'none';
+    if (!val) { err.textContent='Ingresa la contraseña.'; err.style.display='block'; return; }
+    if (val === getSavedPass()) {
+        saveSession();
+        document.getElementById('loginScreen').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'block';
+            initApp();
+        }, 300);
+    } else {
+        err.textContent = 'Contraseña incorrecta.';
+        err.style.display = 'block';
+        document.getElementById('loginBox').classList.add('shake');
+        setTimeout(() => document.getElementById('loginBox').classList.remove('shake'), 400);
+        document.getElementById('adminPass').value = '';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('adminPass').addEventListener('keydown', e => {
+        if (e.key === 'Enter') doLogin();
+    });
+    if (isAuthenticated()) {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('appContainer').style.display = 'block';
+        initApp();
+    }
+});
+
+// ═══════════════════════════════════════════
+//  GAS CALL
+// ═══════════════════════════════════════════
+async function gasCall(action, payload={}) {
+    const data = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(payload)))));
+    const url  = `${SCRIPT_URL}?action=${action}&payload=${data}`;
+    const res  = await fetch(url, { redirect:'follow' });
+    const text = await res.text();
+    const m    = text.match(/\{[\s\S]*\}/);
+    if (m) return JSON.parse(m[0]);
+    throw new Error('Respuesta inválida del servidor');
+}
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+async function initApp() {
+    try {
+        const r = await gasCall('getUsers');
+        allUsers = r.data || r.users || [];
+    } catch(e) { allUsers = []; }
+    // Poner fecha inicio = hoy
+    const hoy = new Date().toISOString().split('T')[0];
+    document.getElementById('fechaInicio').value = hoy;
+    calcFechaFin();
+}
+
+// ═══════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════
+function showTab(tab) {
+    ['registrar','historial'].forEach(t => {
+        document.getElementById('panel-'+t).style.display = t===tab ? 'block' : 'none';
+        document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+    });
+    if (tab === 'historial') loadHistorial();
+}
+
+// ═══════════════════════════════════════════
+//  BÚSQUEDA DE USUARIO
+// ═══════════════════════════════════════════
+function searchUsers() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+        const q = (document.getElementById('userSearch').value || '').toLowerCase().trim();
+        const box = document.getElementById('userResults');
+        if (!q || q.length < 2) { box.style.display='none'; return; }
+        const hits = allUsers.filter(u =>
+            (u.name||'').toLowerCase().includes(q) ||
+            (u.document||'').replace(/\D/g,'').includes(q.replace(/\D/g,''))
+        ).slice(0,8);
+        if (!hits.length) { box.style.display='none'; return; }
+        box.innerHTML = hits.map(u => `
+            <div class="user-result-item" onclick="selectUser('${u.id}')">
+                <div class="uname">${u.name}</div>
+                <div class="udoc"><i class="fas fa-id-card me-1"></i>${u.document}</div>
+            </div>`).join('');
+        box.style.display = 'block';
+    }, 200);
+}
+
+function selectUser(uid) {
+    selUser = allUsers.find(u => u.id === uid);
+    if (!selUser) return;
+    document.getElementById('userResults').style.display = 'none';
+    document.getElementById('userSearch').value = selUser.name;
+
+    const initial = (selUser.name||'?').charAt(0).toUpperCase();
+    const card = document.getElementById('userSelectedCard');
+    card.style.display = 'flex';
+    card.innerHTML = `
+        <div class="user-avatar">${initial}</div>
+        <div style="flex:1;">
+            <div style="font-weight:700;">${selUser.name}</div>
+            <div style="font-size:.78rem;color:var(--color-muted);">
+                <i class="fas fa-id-card me-1"></i>${selUser.document}
+                ${selUser.phone?`&nbsp;·&nbsp;<i class="fas fa-phone me-1"></i>${selUser.phone}`:''}
+            </div>
+        </div>
+        <button onclick="clearUser()" style="background:transparent;border:none;color:var(--color-muted);cursor:pointer;font-size:1.1rem;">
+            <i class="fas fa-times"></i>
+        </button>`;
+    document.getElementById('formCard').style.display = 'block';
+    document.getElementById('formErr').classList.remove('show');
+    document.getElementById('formOk').classList.remove('show');
+}
+
+function clearUser() {
+    selUser = null;
+    document.getElementById('userSearch').value = '';
+    document.getElementById('userSelectedCard').style.display = 'none';
+    document.getElementById('formCard').style.display = 'none';
+}
+
+// Cerrar resultados al hacer clic afuera
+document.addEventListener('click', e => {
+    if (!e.target.closest('.user-search-wrap')) {
+        document.getElementById('userResults').style.display = 'none';
+    }
+});
+
+// ═══════════════════════════════════════════
+//  SELECCIÓN DISCIPLINA Y PLAN
+// ═══════════════════════════════════════════
+function selectDisc(disc) {
+    selDisc = disc;
+    document.querySelectorAll('.disc-chip').forEach(c => c.classList.remove('selected'));
+    document.getElementById('disc_'+disc.replace('_sport','').replace('pole','pole')).classList.add('selected');
+    // fix ids
+    if (disc==='pole_sport') document.getElementById('disc_pole').classList.add('selected');
+    if (disc==='acrotelas')  document.getElementById('disc_acrotelas').classList.add('selected');
+    document.getElementById('discErr').classList.remove('show');
+}
+
+function selectPlan(plan) {
+    selPlan = plan;
+    document.querySelectorAll('.plan-chip').forEach(c => c.classList.remove('selected'));
+    const ids = { membresia_mensual:'plan_mensual', paquete_10:'plan_paquete', clase_unica:'plan_suelta' };
+    document.getElementById(ids[plan])?.classList.add('selected');
+    document.getElementById('planErr').classList.remove('show');
+    document.getElementById('clasesTotalWrap').style.display = plan==='paquete_10' ? 'block' : 'none';
+    calcFechaFin();
+}
+
+// ═══════════════════════════════════════════
+//  CÁLCULO AUTOMÁTICO FECHA FIN
+// ═══════════════════════════════════════════
+function calcFechaFin() {
+    const inicio = document.getElementById('fechaInicio').value;
+    const preview = document.getElementById('vigenciaPreview');
+    if (!inicio) { preview.style.display='none'; return; }
+
+    const dias  = selPlan ? PLAN_DIAS[selPlan] : 30;
+    const start = new Date(inicio+'T12:00:00');
+    const end   = new Date(start); end.setDate(start.getDate() + dias - 1);
+    const endStr = end.toISOString().split('T')[0];
+    document.getElementById('fechaFin').value = endStr;
+
+    const fmtStart = start.toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'});
+    const fmtEnd   = end.toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'});
+    preview.style.display = 'block';
+    preview.innerHTML = `<i class="fas fa-calendar-check me-1"></i>
+        Vigente del <strong>${fmtStart}</strong> al <strong>${fmtEnd}</strong>
+        <span style="color:var(--color-muted);"> (${dias} días)</span>`;
+}
+
+// ═══════════════════════════════════════════
+//  GUARDAR PAGO
+// ═══════════════════════════════════════════
+async function guardarPago() {
+    const errEl = document.getElementById('formErr');
+    const okEl  = document.getElementById('formOk');
+    errEl.classList.remove('show');
+    okEl.classList.remove('show');
+
+    if (!selUser) { errEl.textContent='Selecciona un alumno.'; errEl.classList.add('show'); return; }
+    if (!selDisc) {
+        document.getElementById('discErr').textContent='Selecciona la disciplina.';
+        document.getElementById('discErr').classList.add('show'); return;
+    }
+    if (!selPlan) {
+        document.getElementById('planErr').textContent='Selecciona el tipo de plan.';
+        document.getElementById('planErr').classList.add('show'); return;
+    }
+
+    const inicio = document.getElementById('fechaInicio').value;
+    const fin    = document.getElementById('fechaFin').value;
+    if (!inicio || !fin) { errEl.textContent='Completa las fechas de vigencia.'; errEl.classList.add('show'); return; }
+    if (fin < inicio)    { errEl.textContent='La fecha de fin no puede ser anterior al inicio.'; errEl.classList.add('show'); return; }
+
+    const clasesTotal = selPlan==='paquete_10'
+        ? (parseInt(document.getElementById('clasesTotal').value)||10)
+        : '';
+
+    const notas = document.getElementById('notas').value.trim();
+
+    const btn = document.getElementById('btnGuardar');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-sm"></span>Guardando...';
+
+    try {
+        const r = await gasCall('addMembership', {
+            userId:        selUser.id,
+            userDoc:       selUser.document,
+            userName:      selUser.name,
+            tipo:          selPlan,
+            disciplina:    selDisc,          // guardado en notas si no hay columna propia
+            vigenciaDesde: inicio,
+            vigenciaHasta: fin,
+            clasesTotal:   String(clasesTotal),
+            estado:        'activa',
+            notas:         `${DISC_LABELS[selDisc]}${notas?' — '+notas:''}`,
+        });
+
+        if (r.success === false) throw new Error(r.message || 'Error al guardar');
+
+        okEl.innerHTML = `<i class="fas fa-check-circle me-2"></i>
+            Membresía registrada para <strong>${selUser.name}</strong> —
+            ${PLAN_LABELS[selPlan]} en ${DISC_LABELS[selDisc]}.<br>
+            Vigente hasta <strong>${fin}</strong>.`;
+        okEl.classList.add('show');
+
+        // Limpiar formulario para el próximo pago
+        selPlan = null; selDisc = null;
+        document.querySelectorAll('.plan-chip,.disc-chip').forEach(c=>c.classList.remove('selected'));
+        document.getElementById('clasesTotalWrap').style.display='none';
+        document.getElementById('notas').value='';
+        document.getElementById('vigenciaPreview').style.display='none';
+        const hoy = new Date().toISOString().split('T')[0];
+        document.getElementById('fechaInicio').value = hoy;
+        document.getElementById('fechaFin').value    = '';
+
+    } catch(e) {
+        errEl.textContent = 'Error: '+(e.message||'No se pudo guardar.');
+        errEl.classList.add('show');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save me-2"></i>Registrar membresía';
+    }
+}
+
+// ═══════════════════════════════════════════
+//  HISTORIAL
+// ═══════════════════════════════════════════
+async function loadHistorial() {
+    document.getElementById('historialLoading').style.display = 'block';
+    document.getElementById('historialLista').innerHTML = '';
+    try {
+        const r = await gasCall('getMembresias');
+        membresias = (r.data || []).sort((a,b) => new Date(b.createdAt||0) - new Date(a.createdAt||0));
+    } catch(e) { membresias = []; }
+    document.getElementById('historialLoading').style.display = 'none';
+    renderHistorial();
+}
+
+function renderHistorial() {
+    const lista   = document.getElementById('historialLista');
+    const q       = (document.getElementById('histSearch')?.value||'').toLowerCase();
+    const tipoF   = document.getElementById('histTipoFilter')?.value||'';
+    const discF   = document.getElementById('histDiscFilter')?.value||'';
+    const hoy     = new Date(); hoy.setHours(0,0,0,0);
+
+    const filtered = membresias.filter(m => {
+        const nombre = (m.userName||'').toLowerCase();
+        const doc    = (m.userDoc||'').replace(/\D/g,'');
+        const matchQ = !q || nombre.includes(q) || doc.includes(q.replace(/\D/g,''));
+        const matchT = !tipoF || m.tipo === tipoF;
+        const notas  = (m.notas||m.notes||'').toLowerCase();
+        const matchD = !discF || notas.includes(discF.replace('_',' '));
+        return matchQ && matchT && matchD;
+    });
+
+    if (!filtered.length) {
+        lista.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--color-muted);">Sin registros para los filtros seleccionados.</div>';
+        return;
+    }
+
+    lista.innerHTML = filtered.map(m => {
+        const fin     = m.vigenciaHasta ? new Date(m.vigenciaHasta+'T12:00:00') : null;
+        const vigente = fin && fin >= hoy && m.estado === 'activa';
+        const finStr  = fin ? fin.toLocaleDateString('es-CO',{day:'numeric',month:'short',year:'numeric'}) : '?';
+        const tipoCls = m.tipo==='membresia_mensual'?'mensual': m.tipo==='paquete_10'?'paquete':'suelta';
+        const badgeCls= vigente ? `badge-${tipoCls}` : 'badge-vencida';
+
+        let detalle = `${PLAN_LABELS[m.tipo]||m.tipo}`;
+        if (m.tipo==='paquete_10') {
+            const usadas = parseInt(m.clasesUsadas||0);
+            const total  = parseInt(m.clasesTotal||10);
+            detalle += ` — ${total-usadas} de ${total} clases restantes`;
+        }
+        const notasDisp = (m.notas||m.notes||'').trim();
+
+        return `<div class="hist-item">
+            <div class="hi-top">
+                <div>
+                    <div class="hi-name">${m.userName||'—'}</div>
+                    <div class="hi-detail"><i class="fas fa-id-card me-1"></i>${m.userDoc||'—'}</div>
+                </div>
+                <span class="badge-tipo ${badgeCls}">${vigente?PLAN_LABELS[m.tipo]||m.tipo:'Vencida'}</span>
+            </div>
+            <div class="hi-detail" style="margin-top:.4rem;">
+                <i class="fas fa-info-circle me-1"></i>${detalle}
+            </div>
+            ${notasDisp?`<div class="hi-detail"><i class="fas fa-tag me-1"></i>${notasDisp}</div>`:''}
+            <div class="hi-detail">
+                <i class="fas fa-calendar me-1"></i>
+                ${m.vigenciaDesde||'?'} → <strong style="color:${vigente?'var(--color-success)':'#ef4444'}">${finStr}</strong>
+            </div>
+        </div>`;
+    }).join('');
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
