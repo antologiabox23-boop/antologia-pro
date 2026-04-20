@@ -25,7 +25,7 @@ const COLUMNS = {
   Gastos:              ['id','date','description','amount','category','account','createdAt'],
   Clases:              ['id','date','hour','trainerId','classType','duration','payment','createdAt'],
   'Programacion Clases': ['ID','userId','userName','userDoc','classType','level','instructor','day','time','classDate','status','cancelReason','createdAt','updatedAt'],
-  Membresias:          ['ID','userId','userName','userDoc','tipo','vigenciaDesde','vigenciaHasta','clasesTotal','clasesUsadas','estado','createdAt','updatedAt']
+  Membresias:          ['ID','userId','userName','userDoc','tipo','disciplina','vigenciaDesde','vigenciaHasta','clasesTotal','clasesUsadas','estado','notas','createdAt','updatedAt']
 };
 
 // Horas mínimas de antelación para cancelar
@@ -103,6 +103,8 @@ function dispatch(action, payload) {
     case 'cancelClass':       return cancelClass(payload);
     case 'checkMembership':   return checkMembership(payload);
     case 'markCumplida':      return markCumplida(payload);
+    case 'addMembership':     return addMembership(payload);
+    case 'getMembresias':     return getAllRows(SHEETS.MEMBRESIAS);
     default: throw new Error('Acción desconocida: ' + action);
   }
 }
@@ -332,7 +334,11 @@ function getUserClasses(payload) {
     var row     = data[i];
     var rUid    = String(row[H['userId']]  || '').trim();
     var rUdoc   = String(row[H['userDoc']] || '').trim().replace(/\D/g, '');
-    var match   = (userId && rUid === userId) || (userDoc && rUdoc === userDoc);
+    var cleanDocU  = (userDoc || '').replace(/\D/g, '');
+    var cleanRuidU = rUid.replace(/\D/g, '');
+    var match = (userId && rUid === userId)
+             || (cleanDocU && rUdoc === cleanDocU)
+             || (cleanDocU && cleanRuidU === cleanDocU);
     if (!match) continue;
     var cls = { rowIndex: i + 1 };
     headers.forEach(function(h, j){ cls[h] = serializeCell(row[j], h, SHEETS.PROGRAMACION); });
@@ -539,7 +545,63 @@ function setupDailyTrigger() {
 }
 
 // ── MEMBRESÍAS — helpers internos ────────────────────────────────────────────
-function _getActiveMem(userId, userDoc) {
+
+/**
+ * addMembership — crea o actualiza una membresía para un usuario.
+ * Requiere: userId, userDoc, userName, tipo, vigenciaDesde, vigenciaHasta
+ * Opcional: clasesTotal (para paquete_10), estado (default 'activa')
+ */
+function addMembership(payload) {
+  var userId    = payload.userId    || '';
+  var userDoc   = (payload.userDoc  || '').replace(/\D/g, '');
+  var userName  = payload.userName  || '';
+  var tipo      = payload.tipo      || 'membresia_mensual';
+  var vigDesde  = payload.vigenciaDesde || '';
+  var vigHasta  = payload.vigenciaHasta || '';
+  var clasesTotal = (tipo === 'paquete_10') ? (payload.clasesTotal || '10') : '';
+  var estado    = payload.estado    || 'activa';
+
+  if (!userDoc && !userId) {
+    return { success: false, message: 'Falta userId o userDoc.' };
+  }
+  if (!vigHasta) {
+    return { success: false, message: 'Falta vigenciaHasta.' };
+  }
+
+  var id  = 'mem_' + Utilities.getUuid().replace(/-/g, '').substring(0, 12);
+  var now = new Date().toISOString();
+  var sh  = getOrCreateSheet(SHEETS.MEMBRESIAS);
+
+  var disciplina = payload.disciplina || '';
+  var notas      = payload.notas      || '';
+
+  var row = COLUMNS[SHEETS.MEMBRESIAS].map(function(col) {
+    var map = {
+      'ID':           id,
+      'userId':       userId,
+      'userName':     userName,
+      'userDoc':      userDoc,
+      'tipo':         tipo,
+      'disciplina':   disciplina,
+      'vigenciaDesde':vigDesde,
+      'vigenciaHasta':vigHasta,
+      'clasesTotal':  clasesTotal,
+      'clasesUsadas': '0',
+      'estado':       estado,
+      'notas':        notas,
+      'createdAt':    now,
+      'updatedAt':    now
+    };
+    return map[col] !== undefined ? map[col] : '';
+  });
+  sh.appendRow(row);
+  return { success: true, id: id, message: 'Membresía registrada correctamente.' };
+}
+
+
+function checkMembership(payload) {
+  var userId  = payload.userId  || '';
+  var userDoc = payload.userDoc || '';
   var sh = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEETS.MEMBRESIAS);
   if (!sh) return null;
   var data    = sh.getDataRange().getValues();
@@ -552,11 +614,31 @@ function _getActiveMem(userId, userDoc) {
     var rUid    = String(row[H['userId']]  || '').trim();
     var rUdoc   = String(row[H['userDoc']] || '').trim().replace(/\D/g, '');
     var estado  = String(row[H['estado']]  || '').trim();
-    var match   = (userId && rUid === userId) || (userDoc && rUdoc === userDoc.replace(/\D/g, ''));
+    // Match por ID interno, por cédula en userDoc, O por cédula guardada en userId
+    var cleanDoc  = (userDoc || '').replace(/\D/g, '');
+    var cleanRuid = rUid.replace(/\D/g, '');
+    var match = (userId  && rUid  === userId)           // ID interno exacto
+             || (cleanDoc && rUdoc === cleanDoc)         // cédula en userDoc
+             || (cleanDoc && cleanRuid === cleanDoc);    // cédula puesta en userId
     if (!match || estado !== 'activa') continue;
 
-    var vigVal   = row[H['vigenciaHasta']];
-    var vigHasta = (vigVal instanceof Date) ? vigVal : new Date(String(vigVal || ''));
+    // Parseo robusto de fecha: soporta Date nativa, YYYY-MM-DD y DD/MM/YYYY
+    var vigVal = row[H['vigenciaHasta']];
+    var vigHasta;
+    if (vigVal instanceof Date) {
+      vigHasta = vigVal;
+    } else {
+      var vs = String(vigVal || '').trim();
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(vs)) {
+        var vp = vs.split('/');
+        vigHasta = new Date(parseInt(vp[2]), parseInt(vp[1]) - 1, parseInt(vp[0]));
+      } else if (/^\d{4}-\d{2}-\d{2}$/.test(vs)) {
+        var vparts = vs.split('-');
+        vigHasta = new Date(parseInt(vparts[0]), parseInt(vparts[1]) - 1, parseInt(vparts[2]));
+      } else {
+        vigHasta = new Date(vs);
+      }
+    }
     if (isNaN(vigHasta) || vigHasta < now) continue;
 
     return {
@@ -677,7 +759,33 @@ function syncHeaders(sheet, name) {
 }
 
 // ── FUNCIONES DE PRUEBA ───────────────────────────────────────────────────────
-function testDiagnostico() {
+function testMembresia() {
+  // Cambia estos valores por los de Daniela u otro usuario a verificar
+  var userId  = '';             // ID interno de la hoja Usuarios (ej: 'usr_abc123')
+  var userDoc = '1004236226';   // Cédula sin puntos
+
+  Logger.log('🔍 Buscando membresía para userDoc=' + userDoc);
+  var sh = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEETS.MEMBRESIAS);
+  if (!sh) { Logger.log('❌ Hoja Membresias no existe'); return; }
+
+  var data    = sh.getDataRange().getValues();
+  var headers = data[0].map(function(h){ return String(h).trim(); });
+  Logger.log('Columnas en Membresias: ' + JSON.stringify(headers));
+  Logger.log('Total filas de datos: ' + (data.length - 1));
+
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var obj = {};
+    headers.forEach(function(h, j){ obj[h] = String(row[j] || ''); });
+    Logger.log('Fila ' + i + ': ' + JSON.stringify(obj));
+  }
+
+  var result = checkMembership({ userId: userId, userDoc: userDoc });
+  Logger.log('📋 checkMembership result: ' + JSON.stringify(result));
+}
+
+
+function testIngresos() {
   var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('Ingresos');
   if (!sheet) { Logger.log('Hoja Ingresos no encontrada'); return; }
   var data = sheet.getDataRange().getValues();
