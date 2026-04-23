@@ -1,53 +1,53 @@
 /**
  * ╔══════════════════════════════════════════════════════════════╗
- * ║   ANTOLOGÍA BOX23 — Google Apps Script Backend  v2          ║
+ * ║   ANTOLOGÍA BOX23 — Google Apps Script Backend  v3          ║
  * ║   Copia TODO este código en script.google.com               ║
  * ╚══════════════════════════════════════════════════════════════╝
  */
 
 // ── CONFIGURACIÓN ────────────────────────────────────────────────────────────
-// Pega aquí el ID de tu Google Spreadsheet (lo ves en la URL de la hoja)
 const SPREADSHEET_ID = '1Q3uao_brBssNkaASs3OBFvtW2J3Of9BflTBHFRqqnR4';
 
 const SHEETS = {
-  USERS:      'Usuarios',
-  ATTENDANCE: 'Asistencia',
-  INCOME:     'Ingresos',
-  EXPENSES:   'Gastos',
-  CLASSES:    'Clases'
+  USERS:              'Usuarios',
+  ATTENDANCE:         'Asistencia',
+  INCOME:             'Ingresos',
+  EXPENSES:           'Gastos',
+  CLASSES:            'Clases',
+  MEMBRESIAS:         'Membresias',
+  PROG_DIANA:         'ProgramacionDiana',
+  PROG_POLE:          'ProgramacionPole'
 };
 
 const COLUMNS = {
-  Usuarios:   ['id','name','document','birthdate','phone','eps','bloodType','pathology','emergencyContact','emergencyPhone','classTime','affiliationType','status','createdAt','updatedAt'],
-  Asistencia: ['id','userId','date','status','time','createdAt'],
-  Ingresos:   ['id','userId','paymentType','amount','paymentMethod','paymentDate','startDate','endDate','notes','createdAt'],
-  Gastos:     ['id','date','description','amount','category','account','createdAt'],
-  Clases:     ['id','date','hour','trainerId','classType','duration','payment','createdAt']
+  Usuarios:           ['id','name','document','birthdate','phone','eps','bloodType','pathology','emergencyContact','emergencyPhone','classTime','affiliationType','status','createdAt','updatedAt'],
+  Asistencia:         ['id','userId','date','status','time','createdAt'],
+  Ingresos:           ['id','userId','paymentType','amount','paymentMethod','paymentDate','startDate','endDate','notes','createdAt'],
+  Gastos:             ['id','date','description','amount','category','account','createdAt'],
+  Clases:             ['id','date','hour','trainerId','classType','duration','payment','createdAt'],
+  Membresias:         ['id','userId','userDoc','userName','tipo','vigenciaDesde','vigenciaHasta','estado','clasesTotal','clasesUsadas','createdAt'],
+  ProgramacionDiana:  ['id','userId','userName','userDoc','classType','day','time','classDate','instructor','status','cancelReason','createdAt'],
+  ProgramacionPole:   ['id','userId','userName','userDoc','classType','level','day','time','classDate','instructor','status','cancelReason','createdAt']
 };
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
-
-// CORRECCIÓN: En Apps Script TextOutput NO tiene .setHeader().
-// Los headers CORS se manejan devolviendo el output directamente.
-// Apps Script maneja CORS automáticamente cuando el acceso es "Cualquier usuario".
 function jsonResponse(data) {
   return ContentService
     .createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// ── ENTRY POINTS ─────────────────────────────────────────────────────────────
+function makeId() {
+  return 'id_' + new Date().getTime() + '_' + Math.random().toString(36).substr(2, 6);
+}
 
-// Responde a GET — la app envía todo por GET para evitar CORS preflight
+// ── ENTRY POINTS ─────────────────────────────────────────────────────────────
 function doGet(e) {
   try {
     if (!e || !e.parameter || !e.parameter.action) {
       return jsonResponse({ ok: true, message: 'Antología Box23 API activa ✓' });
     }
-
     const action = e.parameter.action;
-
-    // El payload viene en base64 para soportar caracteres especiales
     var payload = {};
     if (e.parameter.payload) {
       try {
@@ -56,21 +56,17 @@ function doGet(e) {
         ).getDataAsString();
         payload = JSON.parse(decoded);
       } catch (parseErr) {
-        // Si falla el decode, intentar leer directo
         try { payload = JSON.parse(decodeURIComponent(e.parameter.payload)); }
         catch (e2) { payload = {}; }
       }
     }
-
     var result = dispatch(action, payload);
     return jsonResponse({ data: result });
-
   } catch (err) {
     return jsonResponse({ error: err.message });
   }
 }
 
-// doPost se mantiene como fallback
 function doPost(e) {
   try {
     const action  = (e && e.parameter && e.parameter.action) ? e.parameter.action : '';
@@ -85,102 +81,258 @@ function doPost(e) {
 }
 
 // ── ROUTER ───────────────────────────────────────────────────────────────────
-
 function dispatch(action, payload) {
   switch (action) {
-    case 'getUsers':      return getAllRows(SHEETS.USERS);
-    case 'getAttendance': return getAllRows(SHEETS.ATTENDANCE);
-    case 'getIncome':     return getAllRows(SHEETS.INCOME);
-    case 'addRow':        return addRow(payload.sheet, payload.row);
-    case 'updateRow':     return updateRow(payload.sheet, payload.id, payload.data);
-    case 'deleteRow':     return deleteRow(payload.sheet, payload.id);
-    case 'deleteByField': return deleteByField(payload.sheet, payload.field, payload.value);
-    case 'importAll':     return importAll(payload);
-    case 'getExpenses':   return getAllRows(SHEETS.EXPENSES);
-    case 'getClasses':    return getAllRows(SHEETS.CLASSES);
-    case 'clearAll':      return clearAll();
+    // Genéricos
+    case 'getUsers':          return getAllRows(SHEETS.USERS);
+    case 'getAttendance':     return getAllRows(SHEETS.ATTENDANCE);
+    case 'getIncome':         return getAllRows(SHEETS.INCOME);
+    case 'getExpenses':       return getAllRows(SHEETS.EXPENSES);
+    case 'getClasses':        return getAllRows(SHEETS.CLASSES);
+    case 'addRow':            return addRow(payload.sheet, payload.row);
+    case 'updateRow':         return updateRow(payload.sheet, payload.id, payload.data);
+    case 'deleteRow':         return deleteRow(payload.sheet, payload.id);
+    case 'deleteByField':     return deleteByField(payload.sheet, payload.field, payload.value);
+    case 'importAll':         return importAll(payload);
+    case 'clearAll':          return clearAll();
+
+    // ── DIANA ──────────────────────────────────────────────────────────
+    case 'getProgramacionDiana':  return getProgramacion('ProgramacionDiana', payload);
+    case 'addClassDiana':         return addClassProg('ProgramacionDiana', payload);
+    case 'getUserClassesDiana':   return getUserClasses('ProgramacionDiana', payload);
+    case 'cancelClassDiana':      return cancelClass('ProgramacionDiana', payload);
+    case 'checkIncomeDiana':      return checkIncomeDiana(payload);
+
+    // ── POLE / ACROTELAS ───────────────────────────────────────────────
+    case 'getProgramacionPole':   return getProgramacion('ProgramacionPole', payload);
+    case 'addClassPole':          return addClassProg('ProgramacionPole', payload);
+    case 'getUserClassesPole':    return getUserClasses('ProgramacionPole', payload);
+    case 'cancelClassPole':       return cancelClass('ProgramacionPole', payload);
+    case 'checkMembership':       return checkMembership(payload);
+
+    // Compatibilidad legacy (pole usaba nombres genéricos)
+    case 'getProgramacion':       return getProgramacion('ProgramacionPole', payload);
+    case 'addClass':              return addClassProg('ProgramacionPole', payload);
+    case 'getUserClasses':        return getUserClasses('ProgramacionPole', payload);
+    case 'cancelClass':           return cancelClass('ProgramacionPole', payload);
+
     default: throw new Error('Acción desconocida: ' + action);
   }
 }
 
+// ── PROGRAMACIÓN GENÉRICA ────────────────────────────────────────────────────
+
+/**
+ * Devuelve todas las reservas de una hoja de programación.
+ * Filtro opcional por classType.
+ */
+function getProgramacion(sheetName, payload) {
+  var rows = getAllRows(sheetName);
+  if (payload && payload.classType) {
+    rows = rows.filter(function(r) { return r.classType === payload.classType; });
+  }
+  return rows;
+}
+
+/**
+ * Agrega una reserva a ProgramacionDiana o ProgramacionPole.
+ */
+function addClassProg(sheetName, booking) {
+  var id = makeId();
+  var now = new Date();
+  var nowStr = now.getFullYear() + '-' +
+    String(now.getMonth()+1).padStart(2,'0') + '-' +
+    String(now.getDate()).padStart(2,'0') + 'T' +
+    String(now.getHours()).padStart(2,'0') + ':' +
+    String(now.getMinutes()).padStart(2,'0');
+
+  var row = {};
+  var cols = COLUMNS[sheetName];
+  cols.forEach(function(c) { row[c] = booking[c] || ''; });
+  row.id        = id;
+  row.status    = row.status || 'programada';
+  row.createdAt = nowStr;
+
+  addRow(sheetName, row);
+  return { success: true, bookingId: id };
+}
+
+/**
+ * Devuelve las reservas de un usuario específico.
+ */
+function getUserClasses(sheetName, payload) {
+  var userId  = payload.userId  || '';
+  var userDoc = (payload.userDoc || '').replace(/\D/g,'');
+  var rows    = getAllRows(sheetName);
+  var classes = rows.filter(function(r) {
+    var byId  = userId  && String(r.userId)  === String(userId);
+    var byDoc = userDoc && (r.userDoc||'').replace(/\D/g,'') === userDoc;
+    return byId || byDoc;
+  });
+  return { classes: classes };
+}
+
+/**
+ * Cancela una reserva actualizando su status y cancelReason.
+ */
+function cancelClass(sheetName, payload) {
+  var bookingId = payload.bookingId || payload.id || '';
+  var reason    = payload.reason    || 'Cancelado';
+  var sheet     = getOrCreateSheet(sheetName);
+  var data      = sheet.getDataRange().getValues();
+  var headers   = data[0];
+  var idCol     = headers.indexOf('id');
+  var statusCol = headers.indexOf('status');
+  var reasonCol = headers.indexOf('cancelReason');
+  if (idCol === -1) throw new Error('Columna id no encontrada en ' + sheetName);
+
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][idCol]) === String(bookingId)) {
+      if (statusCol !== -1) sheet.getRange(i+1, statusCol+1).setValue('cancelada');
+      if (reasonCol !== -1) sheet.getRange(i+1, reasonCol+1).setValue(reason);
+      return { success: true };
+    }
+  }
+  throw new Error('Reserva ' + bookingId + ' no encontrada en ' + sheetName);
+}
+
+// ── VERIFICACIÓN MEMBRESÍA POLE ───────────────────────────────────────────────
+/**
+ * Verifica si el usuario tiene membresía activa en hoja Membresias.
+ */
+function checkMembership(payload) {
+  var userId  = payload.userId  || '';
+  var userDoc = (payload.userDoc || '').replace(/\D/g,'');
+
+  var rows = getAllRows(SHEETS.MEMBRESIAS);
+  var today = new Date(); today.setHours(0,0,0,0);
+
+  var found = rows.filter(function(r) {
+    var byId  = userId  && String(r.userId)  === String(userId);
+    var byDoc = userDoc && (r.userDoc||'').replace(/\D/g,'') === userDoc;
+    return (byId || byDoc) && r.estado === 'activa';
+  });
+
+  if (!found.length) {
+    return { success:true, canBook:false, reason:'Sin membresía activa. Contacta recepción.', membership:null };
+  }
+
+  // Buscar vigente
+  found.sort(function(a,b){ return new Date(b.vigenciaHasta||'2000-01-01')-new Date(a.vigenciaHasta||'2000-01-01'); });
+  var mem = found[0];
+  var fin = mem.vigenciaHasta ? new Date(mem.vigenciaHasta + 'T12:00:00') : null;
+  var vigente = fin && fin >= today;
+
+  if (!vigente) {
+    return { success:true, canBook:false, reason:'Membresía vencida el ' + (mem.vigenciaHasta||'?') + '. Renueva en recepción.', membership:mem };
+  }
+
+  return {
+    success:true, canBook:true,
+    reason:'Membresía activa hasta ' + mem.vigenciaHasta,
+    membership: mem
+  };
+}
+
+// ── VERIFICACIÓN INGRESOS DIANA ───────────────────────────────────────────────
+/**
+ * Busca el pago más reciente en Ingresos tipo Diana con clases disponibles.
+ */
+function checkIncomeDiana(payload) {
+  var userId  = payload.userId  || '';
+  var userDoc = (payload.userDoc || '').replace(/\D/g,'');
+  var DIANA_TYPES = ['semipersonalizado diana','personalizado diana','semipersonalizados diana','diana'];
+
+  var rows  = getAllRows(SHEETS.INCOME);
+  var today = new Date(); today.setHours(0,0,0,0);
+
+  var mios = rows.filter(function(p) {
+    var pUid  = String(p.userId || '');
+    var pDoc  = (p.userDoc || p.document || p.notes || '').replace(/\D/g,'');
+    var byId  = userId  && pUid === String(userId);
+    var byDoc = userDoc && (pDoc === userDoc || pUid.replace(/\D/g,'') === userDoc);
+    var tipoOk = DIANA_TYPES.some(function(t){
+      return (p.paymentType||'').toLowerCase().indexOf(t) !== -1;
+    });
+    return (byId || byDoc) && tipoOk;
+  });
+
+  if (!mios.length) {
+    return { success:true, canBook:false, reason:'Sin plan Diana activo. Contacta a tu instructora.', membership:null };
+  }
+
+  mios.sort(function(a,b){ return new Date(b.endDate||'2000-01-01')-new Date(a.endDate||'2000-01-01'); });
+  var ult    = mios[0];
+  var fin    = ult.endDate ? new Date(ult.endDate + 'T12:00:00') : null;
+  var vigente = fin && fin >= today;
+
+  if (!vigente) {
+    return { success:true, canBook:false, reason:'Plan Diana venció el ' + (ult.endDate||'?') + '. Renueva con Diana.', membership:null };
+  }
+
+  return {
+    success:true, canBook:true,
+    reason:'Plan Diana vigente hasta ' + ult.endDate,
+    membership:{
+      tipo: ult.paymentType, vigenciaDesde: ult.startDate||ult.paymentDate||'',
+      vigenciaHasta: ult.endDate, estado:'activa', fromIncome:true
+    }
+  };
+}
+
 // ── OPERACIONES CRUD ─────────────────────────────────────────────────────────
 
-// Columnas que contienen fechas en cada hoja
 var DATE_COLUMNS = {
-  Usuarios:   ['birthdate', 'createdAt', 'updatedAt'],
-  Asistencia: ['date', 'createdAt'],
-  Ingresos:   ['paymentDate', 'startDate', 'endDate', 'createdAt'],
-  Gastos:     ['date', 'createdAt'],
-  Clases:     ['date', 'createdAt']
+  Usuarios:           ['birthdate','createdAt','updatedAt'],
+  Asistencia:         ['date','createdAt'],
+  Ingresos:           ['paymentDate','startDate','endDate','createdAt'],
+  Gastos:             ['date','createdAt'],
+  Clases:             ['date','createdAt'],
+  Membresias:         ['vigenciaDesde','vigenciaHasta','createdAt'],
+  ProgramacionDiana:  ['classDate','createdAt'],
+  ProgramacionPole:   ['classDate','createdAt']
 };
 
-// Columnas que contienen valores numéricos (NO deben convertirse a fecha)
 var NUMERIC_COLUMNS = {
   Ingresos: ['amount'],
   Gastos:   ['amount'],
-  Clases:   ['duration', 'payment']
+  Clases:   ['duration','payment']
 };
 
-/**
- * Serializa una celda de Sheets al tipo correcto.
- * - Si la columna es de fecha → YYYY-MM-DD
- * - Si la columna es numérica → número como string (sin alterar)
- * - Lo demás → string normal
- */
 function serializeCell(value, columnName, sheetName) {
   if (value === '' || value === null || value === undefined) return null;
-
-  // ── Caso 1: objeto Date de Google Sheets ──────────────────────────────
-  // Sheets devuelve Date para celdas con formato fecha, sea cual sea la columna.
-  // Solo convertimos a YYYY-MM-DD si la columna realmente es una fecha.
   if (value instanceof Date) {
     var dateColumns = DATE_COLUMNS[sheetName] || [];
     if (dateColumns.indexOf(columnName) !== -1) {
       var y = value.getFullYear();
-      var m = String(value.getMonth() + 1).padStart(2, '0');
-      var d = String(value.getDate()).padStart(2, '0');
+      var m = String(value.getMonth()+1).padStart(2,'0');
+      var d = String(value.getDate()).padStart(2,'0');
       return y + '-' + m + '-' + d;
     }
-    // Si no es columna de fecha, devolver como número (timestamp) o string
     return String(value.getTime());
   }
-
-  // ── Caso 2: número ────────────────────────────────────────────────────
   if (typeof value === 'number') {
     var numericColumns = NUMERIC_COLUMNS[sheetName] || [];
     var dateColumns2   = DATE_COLUMNS[sheetName]    || [];
-
-    // Columna explícitamente numérica → devolver siempre número limpio
     if (numericColumns.indexOf(columnName) !== -1) {
-      // Sheets a veces devuelve el número con formato es-CO: 185.000
-      // parseFloat("185.000") = 185 (INCORRECTO) → necesitamos quitarlos
-      // Pero "185.5" = 185.5 (correcto, solo 2 decimales)
       var numStr = String(value).trim();
-      // Si tiene punto y la parte decimal tiene más de 2 dígitos → son separadores de miles
       var dotIdx = numStr.lastIndexOf('.');
       if (dotIdx !== -1 && numStr.length - dotIdx - 1 > 2) {
-        numStr = numStr.replace(/\./g, ''); // quitar puntos de miles
+        numStr = numStr.replace(/\./g, '');
       }
       var parsed = parseFloat(numStr);
       return isNaN(parsed) ? '0' : String(parsed);
     }
-
-    // Columna explícitamente de fecha con número serial de Sheets
-    // (rango de fechas válidas: 1900-01-01 = 1 a ~2100 = 73050)
     if (dateColumns2.indexOf(columnName) !== -1 && value > 0 && value < 73051) {
       var epoch = new Date(1899, 11, 30);
       var date  = new Date(epoch.getTime() + value * 86400000);
       var y2 = date.getFullYear();
-      var m2 = String(date.getMonth() + 1).padStart(2, '0');
-      var d2 = String(date.getDate()).padStart(2, '0');
+      var m2 = String(date.getMonth()+1).padStart(2,'0');
+      var d2 = String(date.getDate()).padStart(2,'0');
       return y2 + '-' + m2 + '-' + d2;
     }
-
-    // Cualquier otro número → string simple
     return String(value);
   }
-
-  // ── Caso 3: string u otro tipo ────────────────────────────────────────
   return String(value);
 }
 
@@ -198,36 +350,16 @@ function getAllRows(sheetName) {
   });
 }
 
-/**
- * Diagnóstico: devuelve los tipos reales de las primeras 3 filas de Ingresos.
- * Llama desde Apps Script: testDiagnostico()
- */
-function testDiagnostico() {
-  var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('Ingresos');
-  if (!sheet) { Logger.log('Hoja Ingresos no encontrada'); return; }
-  var data = sheet.getDataRange().getValues();
-  var headers = data[0];
-  Logger.log('Headers: ' + JSON.stringify(headers));
-  for (var i = 1; i <= Math.min(3, data.length - 1); i++) {
-    var row = data[i];
-    row.forEach(function(cell, j) {
-      Logger.log('Fila ' + i + ' | ' + headers[j] + ': [' + typeof cell + '] ' + JSON.stringify(String(cell)));
-    });
-    Logger.log('---');
-  }
-}
-
 function addRow(sheetName, rowData) {
   const sheet   = getOrCreateSheet(sheetName);
   const headers = COLUMNS[sheetName];
+  if (!headers) throw new Error('Hoja desconocida: ' + sheetName);
   const numericCols = (NUMERIC_COLUMNS[sheetName] || []);
   const row = headers.map(function(col) {
     var val = rowData[col];
     if (val === undefined || val === null || val === '') return '';
-    // Columnas numéricas: guardar siempre como número, nunca como string
     if (numericCols.indexOf(col) !== -1) {
       var n = parseFloat(String(val).replace(/[^0-9.,-]/g, '').replace(/\./g, function(m, o, s) {
-        // Si hay más de un punto, son separadores de miles en es-CO
         return (s.split('.').length - 1 > 1 || s.indexOf(',') === -1) ? '' : '.';
       }).replace(',', '.'));
       return isNaN(n) ? 0 : n;
@@ -244,13 +376,12 @@ function updateRow(sheetName, id, newData) {
   const headers = data[0];
   const idCol   = headers.indexOf('id');
   if (idCol === -1) throw new Error("Columna 'id' no encontrada en " + sheetName);
-
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][idCol]) === String(id)) {
       const updatedRow = headers.map(function(h) {
         return (newData[h] !== undefined && newData[h] !== null) ? newData[h] : data[i][headers.indexOf(h)];
       });
-      sheet.getRange(i + 1, 1, 1, updatedRow.length).setValues([updatedRow]);
+      sheet.getRange(i+1, 1, 1, updatedRow.length).setValues([updatedRow]);
       return newData;
     }
   }
@@ -263,10 +394,9 @@ function deleteRow(sheetName, id) {
   const headers = data[0];
   const idCol   = headers.indexOf('id');
   if (idCol === -1) return false;
-
   for (var i = data.length - 1; i >= 1; i--) {
     if (String(data[i][idCol]) === String(id)) {
-      sheet.deleteRow(i + 1);
+      sheet.deleteRow(i+1);
       return true;
     }
   }
@@ -279,10 +409,9 @@ function deleteByField(sheetName, field, value) {
   const headers = data[0];
   const col     = headers.indexOf(field);
   if (col === -1) return false;
-
   for (var i = data.length - 1; i >= 1; i--) {
     if (String(data[i][col]) === String(value)) {
-      sheet.deleteRow(i + 1);
+      sheet.deleteRow(i+1);
     }
   }
   return true;
@@ -292,11 +421,9 @@ function importAll(payload) {
   var users      = payload.users      || [];
   var attendance = payload.attendance || [];
   var income     = payload.income     || [];
-
   overwriteSheet(SHEETS.USERS,      users);
   overwriteSheet(SHEETS.ATTENDANCE, attendance);
   overwriteSheet(SHEETS.INCOME,     income);
-
   return { imported: { users: users.length, attendance: attendance.length, income: income.length } };
 }
 
@@ -318,41 +445,33 @@ function clearAll() {
 }
 
 // ── UTILIDADES ───────────────────────────────────────────────────────────────
-
 function getOrCreateSheet(name) {
   const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
   var   sheet = ss.getSheetByName(name);
   if (!sheet) {
     sheet = ss.insertSheet(name);
-    sheet.appendRow(COLUMNS[name]);
-    var headerRange = sheet.getRange(1, 1, 1, COLUMNS[name].length);
-    headerRange.setBackground('#273043');
-    headerRange.setFontColor('#27F9D4');
-    headerRange.setFontWeight('bold');
-    sheet.setFrozenRows(1);
+    if (COLUMNS[name]) {
+      sheet.appendRow(COLUMNS[name]);
+      var headerRange = sheet.getRange(1, 1, 1, COLUMNS[name].length);
+      headerRange.setBackground('#273043');
+      headerRange.setFontColor('#27F9D4');
+      headerRange.setFontWeight('bold');
+      sheet.setFrozenRows(1);
+    }
   } else {
-    // Si la hoja existe, verificar que las columnas estén actualizadas
-    syncHeaders(sheet, name);
+    if (COLUMNS[name]) syncHeaders(sheet, name);
   }
   return sheet;
 }
 
-/**
- * Agrega columnas nuevas al final si el esquema fue actualizado.
- * NUNCA elimina columnas existentes para no perder datos.
- */
 function syncHeaders(sheet, name) {
   if (!COLUMNS[name]) return;
   var existing = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
     .map(function(h) { return String(h).trim(); })
     .filter(function(h) { return h !== ''; });
-
   var expected = COLUMNS[name];
   var toAdd = expected.filter(function(col) { return existing.indexOf(col) === -1; });
-
-  if (toAdd.length === 0) return; // nada que agregar
-
-  // Agregar columnas nuevas al final
+  if (toAdd.length === 0) return;
   var startCol = existing.length + 1;
   toAdd.forEach(function(col, i) {
     var cell = sheet.getRange(1, startCol + i);
@@ -361,58 +480,20 @@ function syncHeaders(sheet, name) {
     cell.setFontColor('#27F9D4');
     cell.setFontWeight('bold');
   });
-  Logger.log('Columnas agregadas a ' + name + ': ' + toAdd.join(', '));
-}
-
-// ── FUNCIÓN DE PRUEBA ────────────────────────────────────────────────────────
-// Ejecútala manualmente desde el editor para verificar antes de desplegar.
-// No usa setCorsHeaders — es una prueba directa, no HTTP.
-/**
- * Prueba que el decode del payload funciona correctamente
- * Ejecútala antes de desplegar para verificar
- */
-function testPayloadDecode() {
-  // Simular lo que envía storage.js: btoa(JSON.stringify({sheet:'Usuarios', row:{name:'Test'}}))
-  var testPayload = { sheet: 'Usuarios', row: { name: 'Test', id: '123' } };
-  var encoded = Utilities.base64Encode(JSON.stringify(testPayload));
-  var decoded = Utilities.newBlob(Utilities.base64Decode(encoded)).getDataAsString();
-  var parsed  = JSON.parse(decoded);
-  Logger.log('✅ Decode OK: ' + JSON.stringify(parsed));
-  Logger.log('   sheet = ' + parsed.sheet);
-  Logger.log('   row.name = ' + parsed.row.name);
 }
 
 function testConnection() {
   try {
-    Logger.log('🔍 Verificando conexión con Spreadsheet...');
-    Logger.log('ID configurado: ' + SPREADSHEET_ID);
-
-    if (SPREADSHEET_ID === 'PEGA_AQUI_EL_ID_DE_TU_HOJA') {
-      Logger.log('⚠️  Debes reemplazar SPREADSHEET_ID con el ID real de tu hoja.');
-      return;
-    }
-
-    // Intentar abrir la hoja
+    Logger.log('ID: ' + SPREADSHEET_ID);
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    Logger.log('✅ Spreadsheet encontrado: ' + ss.getName());
-
-    // Crear/verificar las 3 pestañas
-    var users      = getOrCreateSheet(SHEETS.USERS);
-    var attendance = getOrCreateSheet(SHEETS.ATTENDANCE);
-    var income     = getOrCreateSheet(SHEETS.INCOME);
-
-    Logger.log('✅ Pestaña Usuarios: ' + (users.getLastRow() - 1) + ' registros');
-    Logger.log('✅ Pestaña Asistencia: ' + (attendance.getLastRow() - 1) + ' registros');
-    Logger.log('✅ Pestaña Ingresos: ' + (income.getLastRow() - 1) + ' registros');
-    var expenses = getOrCreateSheet(SHEETS.EXPENSES);
-    var classes  = getOrCreateSheet(SHEETS.CLASSES);
-    Logger.log('✅ Pestaña Gastos: ' + (expenses.getLastRow() - 1) + ' registros');
-    Logger.log('✅ Pestaña Clases: ' + (classes.getLastRow() - 1) + ' registros');
-    Logger.log('');
-    Logger.log('🎉 Todo OK. Ya puedes desplegar como Web App.');
-
-  } catch (err) {
+    Logger.log('✅ Spreadsheet: ' + ss.getName());
+    var sheetNames = ['Usuarios','Asistencia','Ingresos','Gastos','Clases','Membresias','ProgramacionDiana','ProgramacionPole'];
+    sheetNames.forEach(function(n) {
+      var s = getOrCreateSheet(n);
+      Logger.log('✅ ' + n + ': ' + (s.getLastRow()-1) + ' registros');
+    });
+    Logger.log('🎉 Todo OK.');
+  } catch(err) {
     Logger.log('❌ Error: ' + err.message);
-    Logger.log('→ Verifica que el SPREADSHEET_ID sea correcto y tengas acceso a esa hoja.');
   }
 }
