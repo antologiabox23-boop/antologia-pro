@@ -299,6 +299,20 @@
 
         /* ── CAPTION ── */
         .caption { font-size: .78rem; color: var(--color-muted); margin-top: .4rem; }
+
+        /* ── WEEK NAVIGATOR ── */
+        .week-nav-btn {
+            background: #1a2332;
+            border: 1.5px solid var(--color-border);
+            color: var(--color-muted);
+            border-radius: 8px;
+            width: 30px; height: 30px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all .2s; flex-shrink: 0;
+        }
+        .week-nav-btn:hover:not([disabled]) { border-color: var(--color-primary); color: var(--color-primary); }
+        .week-nav-btn[disabled] { opacity: .35; cursor: not-allowed; }
+        .week-nav-label { font-size: .8rem; font-weight: 600; color: var(--color-text); flex: 1; text-align: center; }
     </style>
 </head>
 <body>
@@ -359,6 +373,7 @@
 
             <!-- Día de la semana -->
             <label class="form-label">Día</label>
+            <div id="weekNav" style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;"></div>
             <div class="day-tabs" id="dayTabs"></div>
 
             <!-- Slots de horario -->
@@ -463,7 +478,7 @@ const SCHEDULE_CONFIG = {
 };
 const MAX_PER_SLOT = 4;
 const CLASS_TYPE   = 'semipersonalizado_diana';
-const SCRIPT_URL   = 'https://script.google.com/macros/s/AKfycbyPsidFtWJNyIac6G0jlrP_-pEA5f9usG6ijiJXqMB5nwBJMt2MrV6Y0XNlwMuehxHa/exec';
+const SCRIPT_URL   = 'https://script.google.com/macros/s/AKfycby6OvnevYk52Fv1JunrpmNlsvFJEuRL73QtDnYkOMuL4jJC11GOb3jY4OtIR-wZSv50/exec';
 const CANCEL_HOURS = 18;
 
 // ══════════════════════════════════════════
@@ -589,35 +604,68 @@ function showUserCard(u, mem, canBook) {
 //  DÍAS & SLOTS — con fechas reales de calendario
 // ══════════════════════════════════════════
 const DAY_NUM = {lunes:1,martes:2,'miércoles':3,jueves:4,viernes:5,'sábado':6,domingo:0};
+const MONTHS_SHORT = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 
-function getNextDate(dayName) {
+// weekOffset: 0 = próxima semana (desde hoy), 1 = semana siguiente, etc.
+let weekOffset = 0;
+
+function getDateForDay(dayName, offset) {
+    // offset en semanas (0 = la próxima ocurrencia desde hoy)
     const today = new Date();
     today.setHours(0,0,0,0);
     let diff = DAY_NUM[dayName] - today.getDay();
-    if (diff <= 0) diff += 7;
+    if (diff <= 0) diff += 7;          // próxima ocurrencia
+    diff += offset * 7;                // sumar semanas adicionales
     const d = new Date(today);
     d.setDate(today.getDate() + diff);
     return d;
+}
+
+function buildWeekNavigator() {
+    const nav = document.getElementById('weekNav');
+    if (!nav) return;
+    const firstDay = getDateForDay(Object.keys(SCHEDULE_CONFIG)[0], weekOffset);
+    const lastDay  = getDateForDay(Object.keys(SCHEDULE_CONFIG).slice(-1)[0], weekOffset);
+    const rangeStr = `${firstDay.getDate()} ${MONTHS_SHORT[firstDay.getMonth()]} — ${lastDay.getDate()} ${MONTHS_SHORT[lastDay.getMonth()]}`;
+    nav.innerHTML = `
+        <button class="week-nav-btn" onclick="changeWeek(-1)" ${weekOffset===0?'disabled':''}>
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <span class="week-nav-label">${weekOffset===0?'Esta semana':'Semana del '+rangeStr}</span>
+        <button class="week-nav-btn" onclick="changeWeek(1)">
+            <i class="fas fa-chevron-right"></i>
+        </button>`;
+}
+
+function changeWeek(delta) {
+    const newOffset = weekOffset + delta;
+    if (newOffset < 0) return;
+    weekOffset = newOffset;
+    state.selectedTime = null;
+    document.getElementById('btnConfirmSlot').disabled = true;
+    buildDayTabs();
 }
 
 function buildDayTabs() {
     const days = Object.keys(SCHEDULE_CONFIG);
     const cont = document.getElementById('dayTabs');
     cont.innerHTML = '';
-    const MONTHS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    buildWeekNavigator();
     days.forEach((d, i) => {
-        const fecha = getNextDate(d);
-        const label = `${d.charAt(0).toUpperCase()+d.slice(1)}&nbsp;<small style="font-weight:400;font-size:.68rem;opacity:.8">${fecha.getDate()} ${MONTHS[fecha.getMonth()]}</small>`;
+        const fecha = getDateForDay(d, weekOffset);
+        const label = `${d.charAt(0).toUpperCase()+d.slice(1)}&nbsp;<small style="font-weight:400;font-size:.68rem;opacity:.8">${fecha.getDate()} ${MONTHS_SHORT[fecha.getMonth()]}</small>`;
         const btn = document.createElement('button');
+        const dateStr = fecha.toISOString().split('T')[0];
         btn.className = 'day-tab'+(i===0?' active':'');
         btn.innerHTML = label;
         btn.dataset.day  = d;
-        btn.dataset.date = fecha.toISOString().split('T')[0];
-        btn.onclick = () => selectDay(d, fecha.toISOString().split('T')[0]);
+        btn.dataset.date = dateStr;
+        btn.onclick = () => selectDay(d, dateStr);
         cont.appendChild(btn);
     });
+    const firstDate = getDateForDay(days[0], weekOffset).toISOString().split('T')[0];
     state.selectedDay  = days[0];
-    state.selectedDate = getNextDate(days[0]).toISOString().split('T')[0];
+    state.selectedDate = firstDate;
     refreshSlots();
 }
 
@@ -632,8 +680,14 @@ function selectDay(day, dateStr) {
     refreshSlots();
 }
 
-function countBookings(day, time) {
-    return state.bookings.filter(b=>b.day===day&&b.time===time&&b.status!=='cancelada').length;
+function countBookings(day, time, dateStr) {
+    // dateStr optional: if given, filter by exact classDate (avoids cross-week false-positives)
+    return state.bookings.filter(b=>{
+        const dayMatch  = b.day===day && b.time===time && b.status!=='cancelada';
+        if (!dayMatch) return false;
+        if (dateStr) return (b.classDate||'') === dateStr;
+        return true;
+    }).length;
 }
 
 function refreshSlots() {
@@ -643,7 +697,7 @@ function refreshSlots() {
     grid.innerHTML = '';
     if (!times.length) { grid.innerHTML='<p style="color:var(--color-muted);font-size:.85rem;">No hay horarios para este día.</p>'; return; }
     times.forEach(t => {
-        const taken  = countBookings(state.selectedDay, t);
+        const taken  = countBookings(state.selectedDay, t, state.selectedDate);
         const avail  = MAX_PER_SLOT - taken;
         const isFull = avail <= 0;
         const isSel  = state.selectedTime === t;
@@ -688,7 +742,7 @@ function buildSummary() {
         <div class="summary-row"><span class="label">Tipo</span><span class="value">⭐ Semipersonalizados Diana</span></div>
         <div class="summary-row"><span class="label">Fecha</span><span class="value">${state.selectedDay?.charAt(0).toUpperCase()+(state.selectedDay?.slice(1)||'')} — ${fechaStr}</span></div>
         <div class="summary-row"><span class="label">Hora</span><span class="value">${state.selectedTime}</span></div>
-        <div class="summary-row"><span class="label">Cupos restantes</span><span class="value">${MAX_PER_SLOT-countBookings(state.selectedDay,state.selectedTime)} de ${MAX_PER_SLOT}</span></div>
+        <div class="summary-row"><span class="label">Cupos restantes</span><span class="value">${MAX_PER_SLOT-countBookings(state.selectedDay,state.selectedTime,state.selectedDate)} de ${MAX_PER_SLOT}</span></div>
         ${mem?.membership?.vigenciaHasta?`<div class="summary-row"><span class="label">Plan vigente hasta</span><span class="value">${mem.membership.vigenciaHasta}</span></div>`:''}
     `;
 }
@@ -702,7 +756,7 @@ async function bookClass() {
     const errEl   = document.getElementById('confirmError');
     errEl.classList.remove('show');
 
-    const avail = MAX_PER_SLOT-countBookings(state.selectedDay, state.selectedTime);
+    const avail = MAX_PER_SLOT-countBookings(state.selectedDay, state.selectedTime, state.selectedDate);
     if (avail<=0) { showErr(errEl,'Este horario ya se llenó.'); return; }
 
     btn.disabled = true;
@@ -796,10 +850,13 @@ function renderClaseCard(c) {
         fecha = `${c.day||''} ${fd.getDate()} ${MONTHS[fd.getMonth()]} ${fd.getFullYear()}`;
     }
     const now = new Date();
-    const cdDate = c.classDate ? new Date(c.classDate+'T'+c.time+':00') : null;
+    // time format is HH:MM — pad seconds explicitly
+    const timeStr = (c.time||'00:00').length === 5 ? c.time+':00' : (c.time||'00:00:00');
+    const cdDate = c.classDate ? new Date(c.classDate+'T'+timeStr) : null;
     const hoursLeft = cdDate ? (cdDate - now)/3600000 : 999;
+    // canCancel: true only when MORE than CANCEL_HOURS remain (faltan MÁS de 18h → se puede cancelar)
     const canCancel  = c.status==='programada' && hoursLeft > CANCEL_HOURS;
-    const cancelTip  = c.status==='programada' && !canCancel ? `Solo cancelas con +${CANCEL_HOURS}h de anticipación` : '';
+    const cancelTip  = c.status==='programada' && !canCancel ? `Cancelación solo con más de ${CANCEL_HOURS}h de anticipación` : '';
     const cancelBtn  = c.status!=='cancelada' ? `
         <button class="mc-cancel-btn" ${canCancel?'':'disabled'} title="${cancelTip}"
             onclick="cancelarClase('${c.id||c.ID}',this)">
@@ -846,6 +903,7 @@ async function cancelarClase(bookingId, btnEl) {
 function showErr(el, msg) { el.textContent=msg; el.classList.add('show'); }
 
 function resetFlow() {
+    weekOffset = 0;
     state = { currentStep:1, user:null, membership:null, selectedDay:null, selectedDate:null,
               selectedTime:null, bookings:state.bookings, misClases:[], mcFilter:'todas' };
     document.getElementById('loginDoc').value  = '';
