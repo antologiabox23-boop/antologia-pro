@@ -419,8 +419,8 @@
             <button class="btn-primary-custom" style="margin-bottom:.75rem" onclick="goMisClases()">
                 <i class="fas fa-list me-2"></i>Ver mis clases
             </button>
-            <button class="btn-secondary-custom" style="width:100%" onclick="resetFlow()">
-                <i class="fas fa-plus me-2"></i>Nueva reserva
+            <button class="btn-secondary-custom" style="width:100%" onclick="volverDeClases()">
+                <i class="fas fa-calendar-plus me-2"></i>Programar más clases
             </button>
         </div>
     </div>
@@ -435,8 +435,8 @@
             </div>
             <div id="misClasesLista"></div>
         </div>
-        <button class="btn-secondary-custom" style="width:100%;margin-top:.5rem" onclick="resetFlow()">
-            <i class="fas fa-arrow-left me-1"></i>Volver al inicio
+        <button class="btn-secondary-custom" style="width:100%;margin-top:.5rem" onclick="volverDeClases()">
+            <i class="fas fa-arrow-left me-1"></i>Volver a reservar
         </button>
     </div>
 
@@ -478,7 +478,7 @@ const SCHEDULE_CONFIG = {
 };
 const MAX_PER_SLOT = 4;
 const CLASS_TYPE   = 'semipersonalizado_diana';
-const SCRIPT_URL   = 'https://script.google.com/macros/s/AKfycbyPsidFtWJNyIac6G0jlrP_-pEA5f9usG6ijiJXqMB5nwBJMt2MrV6Y0XNlwMuehxHa/exec';
+const SCRIPT_URL   = 'https://script.google.com/macros/s/AKfycby6OvnevYk52Fv1JunrpmNlsvFJEuRL73QtDnYkOMuL4jJC11GOb3jY4OtIR-wZSv50/exec';
 const CANCEL_HOURS = 18;
 
 // ══════════════════════════════════════════
@@ -513,7 +513,8 @@ async function gasCall(action, payload={}) {
 async function loadBookings() {
     try {
         const json = await gasCall('getProgramacionDiana', { classType: CLASS_TYPE });
-        state.bookings = (json.data||[]).filter(b=>b.classType===CLASS_TYPE);
+        // Normalizar: solo programadas y cumplidas cuentan como cupo ocupado
+        state.bookings = (json.data||[]).filter(b=>b.classType===CLASS_TYPE && b.status!=='cancelada');
     } catch(e) { state.bookings=[]; }
     refreshSlots();
 }
@@ -681,10 +682,9 @@ function selectDay(day, dateStr) {
 }
 
 function countBookings(day, time, dateStr) {
-    // dateStr optional: if given, filter by exact classDate (avoids cross-week false-positives)
     return state.bookings.filter(b=>{
-        const dayMatch  = b.day===day && b.time===time && b.status!=='cancelada';
-        if (!dayMatch) return false;
+        if (b.status==='cancelada') return false;
+        if (b.day!==day || b.time!==time) return false;
         if (dateStr) return (b.classDate||'') === dateStr;
         return true;
     }).length;
@@ -777,12 +777,22 @@ async function bookClass() {
     try {
         const json = await gasCall('addClassDiana', booking);
         if (json.data?.success===false) throw new Error(json.data.message||'Error al guardar');
-        state.bookings.push({ ...booking, status:'programada', id:json.data?.bookingId||'' });
+        // Recargar bookings desde backend para tener cupos reales
+        try {
+            const fresh = await gasCall('getProgramacionDiana', { classType: CLASS_TYPE });
+            state.bookings = (fresh.data||[]).filter(b=>b.classType===CLASS_TYPE && b.status!=='cancelada');
+        } catch(e) {
+            // Fallback: agregar localmente
+            state.bookings.push({ ...booking, status:'programada', id:json.data?.bookingId||'' });
+        }
         const MONTHS_L=['enero','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
         const fd = new Date(state.selectedDate+'T12:00:00');
-        document.getElementById('successMsg').textContent =
-            `${state.user.name}, quedaste en Semipersonalizados Diana el ${state.selectedDay} ${fd.getDate()} de ${MONTHS_L[fd.getMonth()]} a las ${state.selectedTime}. ¡Hasta pronto!`;
-        goStep(4);
+        // Mostrar toast de éxito y volver al selector de horarios para programar más
+        showToast(`✅ Reservada: ${state.selectedDay} ${fd.getDate()} ${MONTHS_L[fd.getMonth()]} a las ${state.selectedTime}`);
+        state.selectedTime = null;
+        document.getElementById('btnConfirmSlot').disabled = true;
+        refreshSlots();
+        goStep(2);
     } catch(e) {
         showErr(errEl, e.message||'No se pudo guardar la reserva.');
         btn.disabled = false;
@@ -850,18 +860,25 @@ function renderClaseCard(c) {
         fecha = `${c.day||''} ${fd.getDate()} ${MONTHS[fd.getMonth()]} ${fd.getFullYear()}`;
     }
     const now = new Date();
-    // time format is HH:MM — pad seconds explicitly
     const timeStr = (c.time||'00:00').length === 5 ? c.time+':00' : (c.time||'00:00:00');
     const cdDate = c.classDate ? new Date(c.classDate+'T'+timeStr) : null;
-    const hoursLeft = cdDate ? (cdDate - now)/3600000 : 999;
-    // canCancel: true only when MORE than CANCEL_HOURS remain (faltan MÁS de 18h → se puede cancelar)
-    const canCancel  = c.status==='programada' && hoursLeft > CANCEL_HOURS;
-    const cancelTip  = c.status==='programada' && !canCancel ? `Cancelación solo con más de ${CANCEL_HOURS}h de anticipación` : '';
-    const cancelBtn  = c.status!=='cancelada' ? `
-        <button class="mc-cancel-btn" ${canCancel?'':'disabled'} title="${cancelTip}"
-            onclick="cancelarClase('${c.id||c.ID}',this)">
-            <i class="fas fa-times me-1"></i>${canCancel?'Cancelar':cancelTip||'No cancelable'}
-        </button>` : '';
+    const hoursLeft = cdDate ? (cdDate - now)/3600000 : Infinity;
+    const isPast    = hoursLeft < 0;
+    const tooClose  = hoursLeft >= 0 && hoursLeft <= CANCEL_HOURS;
+    const canCancel = c.status==='programada' && !isPast && !tooClose;
+    let cancelBtn = '';
+    if (c.status==='programada') {
+        if (isPast) {
+            cancelBtn = `<button class="mc-cancel-btn" disabled style="opacity:.4">
+                <i class="fas fa-clock me-1"></i>Clase pasada</button>`;
+        } else if (tooClose) {
+            cancelBtn = `<button class="mc-cancel-btn" disabled title="Solo se puede cancelar con más de ${CANCEL_HOURS}h de anticipación">
+                <i class="fas fa-exclamation-circle me-1"></i>Menos de ${CANCEL_HOURS}h para la clase</button>`;
+        } else {
+            cancelBtn = `<button class="mc-cancel-btn" onclick="cancelarClase('${c.id||c.ID}',this)">
+                <i class="fas fa-times me-1"></i>Cancelar</button>`;
+        }
+    }
     const createdStr = c.createdAt ? new Date(c.createdAt).toLocaleDateString('es-CO',{day:'numeric',month:'short',year:'numeric'}) : '';
     return `
     <div class="mc-card" id="mc_${c.id||c.ID}">
@@ -901,6 +918,29 @@ async function cancelarClase(bookingId, btnEl) {
 //  UTILS
 // ══════════════════════════════════════════
 function showErr(el, msg) { el.textContent=msg; el.classList.add('show'); }
+
+// Volver al selector de horarios manteniendo la sesión del usuario
+function volverDeClases() {
+    state.selectedTime = null;
+    state.misClases    = [];
+    state.mcFilter     = 'todas';
+    buildDayTabs();
+    goStep(2);
+}
+
+function showToast(msg) {
+    let t = document.getElementById('toastMsg');
+    if (!t) {
+        t = document.createElement('div');
+        t.id = 'toastMsg';
+        t.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1a2d25;border:1.5px solid var(--color-secondary);color:var(--color-secondary);padding:.75rem 1.25rem;border-radius:12px;font-size:.9rem;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.5);transition:opacity .4s;pointer-events:none;';
+        document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(()=>{ t.style.opacity='0'; }, 3500);
+}
 
 function resetFlow() {
     weekOffset = 0;
