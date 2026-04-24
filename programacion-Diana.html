@@ -570,9 +570,32 @@ async function gasCall(action, payload = {}) {
     const url  = `${SCRIPT_URL}?action=${action}&payload=${data}`;
     const res  = await fetch(url, { redirect: 'follow' });
     const text = await res.text();
-    const m    = text.match(/\{[\s\S]*\}/);
-    if (m) return JSON.parse(m[0]);
-    throw new Error('Respuesta inválida del servidor');
+    // Extraer el JSON más externo (ignora HTML de redirección de Google)
+    const m = text.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error('Respuesta inválida del servidor');
+    return JSON.parse(m[0]);
+}
+
+// Normaliza CUALQUIER formato de respuesta del backend de Google Apps Script
+// doGet siempre envuelve en {data: <resultado>}
+// Los resultados posibles son: array, {classes:[...]}, o cualquier objeto
+function extractRows(json) {
+    if (!json) return [];
+    // Caso: array directo
+    if (Array.isArray(json)) return json;
+    // Caso: {data: [...]}
+    if (Array.isArray(json.data)) return json.data;
+    // Caso: {data: {classes: [...]}}  ← getUserClasses
+    if (json.data && Array.isArray(json.data.classes)) return json.data.classes;
+    // Caso: {classes: [...]}
+    if (Array.isArray(json.classes)) return json.classes;
+    // Caso: {data: {rows: [...]}} u otros
+    if (json.data && typeof json.data === 'object') {
+        const vals = Object.values(json.data);
+        const arr  = vals.find(v => Array.isArray(v));
+        if (arr) return arr;
+    }
+    return [];
 }
 
 // ══════════════════════════════════════════
@@ -580,10 +603,21 @@ async function gasCall(action, payload = {}) {
 // ══════════════════════════════════════════
 async function loadBookings() {
     try {
-        const json = await gasCall('getProgramacionDiana', { classType: CLASS_TYPE });
-        // Incluimos 'espera' en state.bookings para contar lista de espera
-        state.bookings = (json.data || []).filter(b => b.classType === CLASS_TYPE && b.status !== 'cancelada');
-    } catch (e) { state.bookings = []; }
+        const json = await gasCall('getProgramacionDiana');
+        // Normalizar: aceptar cualquier estructura de respuesta
+        const rows = extractRows(json);
+        // Filtrar solo ProgramacionDiana activas (no canceladas)
+        // classType puede venir null/vacío en filas antiguas — incluirlas igual
+        state.bookings = rows.filter(b => {
+            if (b.status === 'cancelada') return false;
+            // Si classType está presente, debe coincidir; si no, incluir
+            if (b.classType && b.classType !== CLASS_TYPE) return false;
+            return true;
+        });
+    } catch (e) {
+        console.error('loadBookings error:', e);
+        state.bookings = [];
+    }
     refreshSlots();
 }
 
@@ -611,7 +645,7 @@ async function loadUserExtraData(userId, userDoc) {
         ]);
         const cleanDoc = (userDoc || '').replace(/\D/g, '');
 
-        state.ingresos = (ingJson.data || []).filter(p => {
+        state.ingresos = extractRows(ingJson).filter(p => {
             const pUid = String(p.userId || '');
             const pDoc = (p.userDoc || p.document || p.notes || '').replace(/\D/g, '');
             const byId  = userId  && pUid === String(userId);
@@ -620,7 +654,7 @@ async function loadUserExtraData(userId, userDoc) {
             return (byId || byDoc) && tipoOk;
         });
 
-        state.asistencia = (asistJson.data || []).filter(a => {
+        state.asistencia = extractRows(asistJson).filter(a => {
             return userId && String(a.userId) === String(userId);
         });
 
@@ -648,7 +682,7 @@ async function handleIdentify() {
 
     try {
         const json  = await gasCall('getUsers');
-        const users = json.data || json.users || [];
+        const users = extractRows(json);
         const found = users.find(u =>
             (u.document || '').replace(/\D/g, '') === doc &&
             (u.phone    || '').replace(/\D/g, '') === pass &&
@@ -856,8 +890,9 @@ function buildMonthlyData(userId, userDoc) {
         const byId  = userId  && String(b.userId)  === String(userId);
         const byDoc = userDoc && (b.userDoc || '').replace(/\D/g, '') === userDoc;
         if (!byId && !byDoc) return;
-        if (!b.classDate) return;
-        const d = new Date(b.classDate + 'T12:00:00');
+        const rawDate = normDate(b.classDate);
+        if (!rawDate) return;
+        const d = new Date(rawDate + 'T12:00:00');
         if (isNaN(d)) return;
         const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2,'0')}`;
         if (b.status === 'espera') {
@@ -970,21 +1005,40 @@ function selectDay(day, dateStr) {
     refreshSlots();
 }
 
+/* Normaliza strings para comparación segura */
+function norm(s) { return (s || '').toString().trim().toLowerCase(); }
+
+/* Normaliza una fecha a YYYY-MM-DD si viene en otro formato */
+function normDate(s) {
+    if (!s) return '';
+    s = s.toString().trim();
+    // Ya en formato YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
+    // Formato DD/MM/YYYY
+    const p = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (p) return `${p[3]}-${p[2].padStart(2,'0')}-${p[1].padStart(2,'0')}`;
+    return s;
+}
+
 /* Cupos confirmados (programada / cumplida) — no espera */
 function countConfirmed(day, time, dateStr) {
+    const nd = normDate(dateStr);
     return state.bookings.filter(b =>
         b.status !== 'cancelada' && b.status !== 'espera' &&
-        b.day === day && b.time === time &&
-        (!dateStr || (b.classDate || '') === dateStr)
+        norm(b.day) === norm(day) &&
+        norm(b.time) === norm(time) &&
+        (!nd || normDate(b.classDate) === nd)
     ).length;
 }
 
 /* Posiciones en lista de espera */
 function countWaiting(day, time, dateStr) {
+    const nd = normDate(dateStr);
     return state.bookings.filter(b =>
         b.status === 'espera' &&
-        b.day === day && b.time === time &&
-        (!dateStr || (b.classDate || '') === dateStr)
+        norm(b.day) === norm(day) &&
+        norm(b.time) === norm(time) &&
+        (!nd || normDate(b.classDate) === nd)
     ).length;
 }
 
@@ -1145,13 +1199,13 @@ async function bookClass() {
 
         // Recargar bookings
         try {
-            const fresh = await gasCall('getProgramacionDiana', { classType: CLASS_TYPE });
-            state.bookings = (fresh.data || []).filter(b => b.classType === CLASS_TYPE && b.status !== 'cancelada');
+            const fresh = await gasCall('getProgramacionDiana');
+            state.bookings = extractRows(fresh).filter(b => b.status !== 'cancelada' && (!b.classType || b.classType === CLASS_TYPE));
         } catch (_) {
             state.bookings.push({ ...booking, id: json.data?.bookingId || '' });
         }
 
-        const fd = new Date(state.selectedDate + 'T12:00:00');
+        const fd = new Date(normDate(state.selectedDate) + 'T12:00:00');
         const fechaCorta = `${state.selectedDay} ${fd.getDate()} ${MONTHS_SHORT[fd.getMonth()]}`;
 
         // Configurar pantalla resultado
@@ -1200,7 +1254,7 @@ async function goMisClases() {
     document.getElementById('misClasesLista').innerHTML = '';
     try {
         const json = await gasCall('getUserClassesDiana', { userId: state.user.id, userDoc: state.user.document });
-        state.misClases = (json.data?.classes || []).filter(c => c.classType === CLASS_TYPE);
+        state.misClases = extractRows(json).filter(c => !c.classType || c.classType === CLASS_TYPE);
     } catch (_) { state.misClases = []; }
 
     if (state.membership) {
@@ -1251,12 +1305,14 @@ function renderMisClases() {
 function renderClaseCard(c) {
     let fechaStr = c.classDate || c.day || '';
     if (c.classDate) {
-        const fd = new Date(c.classDate + 'T12:00:00');
+        const rawDate = normDate(c.classDate);
+        const fd = new Date(rawDate + 'T12:00:00');
         fechaStr = `${c.day || ''} ${fd.getDate()} ${MONTHS_SHORT[fd.getMonth()]} ${fd.getFullYear()}`;
     }
     const now      = new Date();
     const timeStr  = (c.time || '00:00').length === 5 ? c.time + ':00' : (c.time || '00:00:00');
-    const cdDate   = c.classDate ? new Date(c.classDate + 'T' + timeStr) : null;
+    const rawDate  = normDate(c.classDate);
+    const cdDate   = rawDate ? new Date(rawDate + 'T' + timeStr) : null;
     const hoursLeft = cdDate ? (cdDate - now) / 3600000 : Infinity;
     const isPast   = hoursLeft < 0;
     const tooClose = hoursLeft >= 0 && hoursLeft <= CANCEL_HOURS;
