@@ -934,7 +934,10 @@ const DAY_NUM = { lunes: 1, martes: 2, 'miércoles': 3, jueves: 4, viernes: 5, '
 function getDateForDay(dayName, offset) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     let diff = DAY_NUM[dayName] - today.getDay();
-    if (diff <= 0) diff += 7;
+    // CORRECCIÓN: usar < 0 en lugar de <= 0
+    // Con <= 0, el día de HOY (diff===0) saltaba a la semana siguiente,
+    // causando que las clases programadas para hoy no aparecieran.
+    if (diff < 0) diff += 7;
     diff += offset * 7;
     const d = new Date(today);
     d.setDate(today.getDate() + diff);
