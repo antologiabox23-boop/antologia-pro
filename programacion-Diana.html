@@ -614,9 +614,17 @@ async function loadBookings() {
             if (b.classType && b.classType !== CLASS_TYPE) return false;
             return true;
         });
+        // DEBUG — verifica cuántos bookings cargaron y su formato de fecha
+        console.log(`[loadBookings] Total bookings activos: ${state.bookings.length}`);
+        if (state.bookings.length > 0) {
+            console.log('[loadBookings] Ejemplo:', state.bookings[0]);
+        }
     } catch (e) {
         console.error('loadBookings error:', e);
         state.bookings = [];
+    }
+    refreshSlots();
+}
     }
     refreshSlots();
 }
@@ -627,8 +635,12 @@ async function loadBookings() {
 async function resolverMembresia(userId, userDoc) {
     try {
         const r = await gasCall('checkIncomeDiana', { userId, userDoc });
-        return r.data || r;
+        // doGet envuelve en { data: resultado }, así que r.data es el objeto real
+        const result = r.data || r;
+        console.log('[membresía] respuesta:', result);
+        return result;
     } catch (e) {
+        console.error('[membresía] error:', e);
         return { success: true, canBook: false, reason: 'Error al verificar plan.', membership: null };
     }
 }
@@ -1096,12 +1108,22 @@ function normDate(s) {
 /* Cupos confirmados (programada / cumplida) — no espera */
 function countConfirmed(day, time, dateStr) {
     const nd = normDate(dateStr);
-    return state.bookings.filter(b =>
-        b.status !== 'cancelada' && b.status !== 'espera' &&
-        norm(b.day)  === norm(day) &&
-        normTime(b.time) === normTime(time) &&
-        (!nd || normDate(b.classDate) === nd)
-    ).length;
+    const matches = state.bookings.filter(b => {
+        if (b.status === 'cancelada' || b.status === 'espera') return false;
+        if (norm(b.day) !== norm(day)) return false;
+        if (normTime(b.time) !== normTime(time)) return false;
+        // Si tenemos fecha seleccionada, comparar; si no, contar todos
+        if (nd && b.classDate) return normDate(b.classDate) === nd;
+        // Si el booking no tiene classDate, comparar solo por día/hora
+        return true;
+    });
+    // DEBUG temporal — muestra en consola para verificar el problema
+    console.log(`[cupos] ${day} ${time} fecha:${nd} → ${matches.length} confirmadas de ${state.bookings.length} bookings`);
+    if (state.bookings.length > 0 && matches.length === 0) {
+        console.log('[cupos] Muestra de bookings:', state.bookings.slice(0,3).map(b =>
+            ({day: b.day, time: b.time, classDate: b.classDate, status: b.status})));
+    }
+    return matches.length;
 }
 
 /* Posiciones en lista de espera */
@@ -1111,7 +1133,7 @@ function countWaiting(day, time, dateStr) {
         b.status === 'espera' &&
         norm(b.day)  === norm(day) &&
         normTime(b.time) === normTime(time) &&
-        (!nd || normDate(b.classDate) === nd)
+        (!nd || !b.classDate || normDate(b.classDate) === nd)
     ).length;
 }
 

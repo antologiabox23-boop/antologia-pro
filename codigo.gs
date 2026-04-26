@@ -22,7 +22,7 @@ const SHEETS = {
 const COLUMNS = {
   Usuarios:           ['id','name','document','birthdate','phone','eps','bloodType','pathology','emergencyContact','emergencyPhone','classTime','affiliationType','status','createdAt','updatedAt'],
   Asistencia:         ['id','userId','date','status','time','createdAt'],
-  Ingresos:           ['id','userId','paymentType','amount','paymentMethod','paymentDate','startDate','endDate','notes','createdAt'],
+  Ingresos:           ['id','userId','userDoc','paymentType','amount','paymentMethod','paymentDate','startDate','endDate','notes','createdAt'],
   Gastos:             ['id','date','description','amount','category','account','createdAt'],
   Clases:             ['id','date','hour','trainerId','classType','duration','payment','createdAt'],
   Membresias:         ['id','userId','userDoc','userName','tipo','vigenciaDesde','vigenciaHasta','estado','clasesTotal','clasesUsadas','createdAt'],
@@ -278,17 +278,24 @@ function checkIncomeDiana(payload) {
   var rows  = getAllRows(SHEETS.INCOME);
   var today = new Date(); today.setHours(0,0,0,0);
 
+  // Normaliza userId quitando decimales innecesarios ("1.0" → "1")
+  function normUid(v) { return String(v || '').trim().replace(/\.0+$/, ''); }
+
   var mios = rows.filter(function(p) {
-    var pUid = String(p.userId || '').trim();
+    var pUid = normUid(p.userId);
 
-    // Match por userId directo o por cualquier id candidato
-    var byId = candidateIds.some(function(cid) { return cid && pUid === cid; });
+    // Match por userId directo o por cualquier id candidato (normalizado)
+    var byId = candidateIds.some(function(cid) { return cid && normUid(cid) === pUid; });
 
-    // Fallback: el campo notes o description podría contener el doc
-    var pDoc = (p.notes || '').replace(/\D/g,'');
-    var byDoc = userDoc && pDoc.length >= 6 && pDoc === userDoc;
+    // Match por columna userDoc en Ingresos (si se guardó al registrar el pago)
+    var pDocCol  = (p.userDoc || '').replace(/\D/g,'');
+    var byDocCol = userDoc && pDocCol.length >= 4 && pDocCol === userDoc;
 
-    if (!byId && !byDoc) return false;
+    // Fallback: el campo notes podría contener el documento
+    var pDocNotes  = (p.notes || '').replace(/\D/g,'');
+    var byDocNotes = userDoc && pDocNotes.length >= 6 && pDocNotes === userDoc;
+
+    if (!byId && !byDocCol && !byDocNotes) return false;
 
     // Verificar que el paymentType corresponde a Diana
     var tipo = (p.paymentType || '').toLowerCase().trim();
