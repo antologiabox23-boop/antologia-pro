@@ -521,7 +521,7 @@ const SCHEDULE_CONFIG = {
 };
 const MAX_PER_SLOT = 4;
 const CLASS_TYPE   = 'semipersonalizado_diana';
-const SCRIPT_URL   = 'https://script.google.com/macros/s/AKfycbzmWNuqNTL-G6wS6wGsaVMySCnP7dBCDk8wJoMPjvTnu3iSJN2xUmcPhreLUfzDYlMD/exec';
+const SCRIPT_URL   = 'https://script.google.com/macros/s/AKfycby6OvnevYk52Fv1JunrpmNlsvFJEuRL73QtDnYkOMuL4jJC11GOb3jY4OtIR-wZSv50/exec';
 const CANCEL_HOURS = 18;
 const DIANA_TYPES  = ['semipersonalizado diana','personalizado diana','semipersonalizados diana','diana'];
 const MONTHS_SHORT = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
@@ -850,7 +850,7 @@ function renderPlanModal() {
         monthlyHtml = `<p style="color:var(--color-muted);font-size:.85rem;text-align:center;padding:1rem 0;">No hay clases registradas aún.</p>`;
     } else {
         monthlyHtml = `<div class="section-label" style="margin-bottom:.75rem;">Detalle mes a mes</div>`;
-        monthlyData.forEach(md => {
+        monthlyData.forEach((md, idx) => {
             const chips = [];
             if (md.vistas > 0)
                 chips.push(`<span class="m-chip vistas"><i class="fas fa-check-circle"></i>${md.vistas} asistida${md.vistas !== 1 ? 's' : ''}</span>`);
@@ -861,9 +861,39 @@ function renderPlanModal() {
             if (chips.length === 0)
                 chips.push(`<span style="font-size:.75rem;color:var(--color-muted);">Sin actividad</span>`);
 
-            monthlyHtml += `<div class="month-row">
-                <div class="m-label">${md.label}</div>
-                <div class="m-chips">${chips.join('')}</div>
+            // Fechas detalladas expandibles
+            let fechasHtml = '';
+            if (md.fechas && md.fechas.length > 0) {
+                const rows = md.fechas.map(f => {
+                    const icon = f.tipo === 'asistida'
+                        ? `<i class="fas fa-check-circle" style="color:var(--color-success)"></i>`
+                        : f.tipo === 'espera'
+                            ? `<i class="fas fa-hourglass-half" style="color:var(--color-espera,#f59e0b)"></i>`
+                            : `<i class="fas fa-calendar-plus" style="color:var(--color-secondary)"></i>`;
+                    const label = f.tipo === 'asistida' ? 'Asistida'
+                        : f.tipo === 'espera' ? 'En espera' : 'Programada';
+                    const hora = f.time ? ` · ${normTime(f.time)}` : '';
+                    return `<div style="display:flex;align-items:center;gap:.5rem;padding:.35rem 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:.8rem;">
+                        ${icon}
+                        <span style="flex:1;color:var(--color-text);">${f.fecha}${hora}</span>
+                        <span style="color:var(--color-muted);font-size:.74rem;">${label}</span>
+                    </div>`;
+                }).join('');
+                fechasHtml = `
+                <div id="fechas-mes-${idx}" style="display:none;margin-top:.6rem;padding:.5rem .75rem;background:rgba(255,255,255,.04);border-radius:8px;">
+                    ${rows}
+                </div>`;
+            }
+
+            const hasFechas = md.fechas && md.fechas.length > 0;
+            monthlyHtml += `<div class="month-row" style="flex-direction:column;align-items:flex-start;gap:.35rem;">
+                <div style="display:flex;align-items:center;width:100%;gap:.5rem;${hasFechas ? 'cursor:pointer;' : ''}"
+                     ${hasFechas ? `onclick="toggleFechasMes('fechas-mes-${idx}', this)"` : ''}>
+                    <div class="m-label" style="flex:1;">${md.label}</div>
+                    <div class="m-chips" style="flex:2;">${chips.join('')}</div>
+                    ${hasFechas ? `<i class="fas fa-chevron-down" style="color:var(--color-muted);font-size:.7rem;transition:transform .25s;"></i>` : ''}
+                </div>
+                ${fechasHtml}
             </div>`;
         });
     }
@@ -872,20 +902,38 @@ function renderPlanModal() {
         `<div>${monthlyHtml}</div>`;
 }
 
+function toggleFechasMes(id, header) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const icon = header.querySelector('.fa-chevron-down, .fa-chevron-up');
+    const open = el.style.display === 'none';
+    el.style.display = open ? 'block' : 'none';
+    if (icon) {
+        icon.classList.toggle('fa-chevron-down', !open);
+        icon.classList.toggle('fa-chevron-up', open);
+    }
+}
+
 function buildMonthlyData(userId, userDoc) {
-    // Mapa de asistencia por mes
-    const vistasMap = {};
+    const DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+
+    // Asistencias del usuario con fecha y hora
+    const vistasFechas = [];
     state.asistencia.forEach(a => {
         if (!a.date) return;
         const d = new Date(a.date + 'T12:00:00');
         if (isNaN(d)) return;
-        const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2,'0')}`;
-        vistasMap[key] = (vistasMap[key] || 0) + 1;
+        vistasFechas.push({
+            key:   `${d.getFullYear()}-${String(d.getMonth()).padStart(2,'0')}`,
+            iso:   a.date,
+            fecha: `${DIAS[d.getDay()]} ${d.getDate()} de ${MONTHS_FULL[d.getMonth()]}`,
+            time:  a.time || '',
+            tipo:  'asistida'
+        });
     });
 
-    // Mapa de clases programadas y en espera del usuario
-    const progMap   = {};
-    const esperaMap = {};
+    // Bookings del usuario con fecha y hora
+    const bookingFechas = [];
     state.bookings.forEach(b => {
         const byId  = userId  && String(b.userId)  === String(userId);
         const byDoc = userDoc && (b.userDoc || '').replace(/\D/g, '') === userDoc;
@@ -894,27 +942,43 @@ function buildMonthlyData(userId, userDoc) {
         if (!rawDate) return;
         const d = new Date(rawDate + 'T12:00:00');
         if (isNaN(d)) return;
-        const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2,'0')}`;
-        if (b.status === 'espera') {
-            esperaMap[key] = (esperaMap[key] || 0) + 1;
-        } else if (b.status === 'programada' || b.status === 'cumplida') {
-            progMap[key] = (progMap[key] || 0) + 1;
-        }
+        const tipo = b.status === 'espera' ? 'espera'
+            : (b.status === 'programada' || b.status === 'cumplida') ? 'programada' : null;
+        if (!tipo) return;
+        bookingFechas.push({
+            key:   `${d.getFullYear()}-${String(d.getMonth()).padStart(2,'0')}`,
+            iso:   rawDate,
+            fecha: `${DIAS[d.getDay()]} ${d.getDate()} de ${MONTHS_FULL[d.getMonth()]}`,
+            time:  b.time || '',
+            tipo
+        });
     });
 
-    const allKeys = [...new Set([...Object.keys(vistasMap), ...Object.keys(progMap), ...Object.keys(esperaMap)])];
-    if (!allKeys.length) return [];
+    // Agrupar por mes
+    const meses = {};
+    [...vistasFechas, ...bookingFechas].forEach(f => {
+        if (!meses[f.key]) meses[f.key] = { vistas: 0, prog: 0, espera: 0, fechas: [] };
+        if (f.tipo === 'asistida')        meses[f.key].vistas++;
+        else if (f.tipo === 'programada') meses[f.key].prog++;
+        else if (f.tipo === 'espera')     meses[f.key].espera++;
+        meses[f.key].fechas.push(f);
+    });
 
+    const allKeys = Object.keys(meses);
+    if (!allKeys.length) return [];
     allKeys.sort((a, b) => b.localeCompare(a)); // más reciente primero
 
     return allKeys.map(key => {
         const [year, monthStr] = key.split('-');
         const mIdx = parseInt(monthStr, 10);
+        // Ordenar fechas dentro del mes: más antigua primero
+        const fechas = meses[key].fechas.sort((a, b) => a.iso.localeCompare(b.iso));
         return {
             label:  `${MONTHS_LONG[mIdx]} ${year}`,
-            vistas: vistasMap[key]  || 0,
-            prog:   progMap[key]    || 0,
-            espera: esperaMap[key]  || 0
+            vistas: meses[key].vistas,
+            prog:   meses[key].prog,
+            espera: meses[key].espera,
+            fechas
         };
     });
 }
@@ -1011,13 +1075,19 @@ function selectDay(day, dateStr) {
 /* Normaliza strings para comparación segura */
 function norm(s) { return (s || '').toString().trim().toLowerCase(); }
 
+/* Normaliza hora eliminando cero inicial: "08:00" y "8:00" → "8:00"
+   Así la comparación entre SCHEDULE_CONFIG ("08:00") y Sheets ("8:00") funciona */
+function normTime(s) { return (s || '').toString().trim().replace(/^0(\d):/, '$1:'); }
+
+/* Normaliza hora eliminando cero inicial: "08:00" y "8:00" → "8:00"
+   Así la comparación entre SCHEDULE_CONFIG ("08:00") y Sheets ("8:00") funciona */
+function normTime(s) { return (s || '').toString().trim().replace(/^0(\d):/, '$1:'); }
+
 /* Normaliza una fecha a YYYY-MM-DD si viene en otro formato */
 function normDate(s) {
     if (!s) return '';
     s = s.toString().trim();
-    // Ya en formato YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
-    // Formato DD/MM/YYYY
     const p = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
     if (p) return `${p[3]}-${p[2].padStart(2,'0')}-${p[1].padStart(2,'0')}`;
     return s;
@@ -1028,8 +1098,8 @@ function countConfirmed(day, time, dateStr) {
     const nd = normDate(dateStr);
     return state.bookings.filter(b =>
         b.status !== 'cancelada' && b.status !== 'espera' &&
-        norm(b.day) === norm(day) &&
-        norm(b.time) === norm(time) &&
+        norm(b.day)  === norm(day) &&
+        normTime(b.time) === normTime(time) &&
         (!nd || normDate(b.classDate) === nd)
     ).length;
 }
@@ -1039,8 +1109,8 @@ function countWaiting(day, time, dateStr) {
     const nd = normDate(dateStr);
     return state.bookings.filter(b =>
         b.status === 'espera' &&
-        norm(b.day) === norm(day) &&
-        norm(b.time) === norm(time) &&
+        norm(b.day)  === norm(day) &&
+        normTime(b.time) === normTime(time) &&
         (!nd || normDate(b.classDate) === nd)
     ).length;
 }
