@@ -696,11 +696,25 @@ async function loadBookings() {
     // Normalizar: la hoja usa 'classDate' como fecha; copiar a 'date' para
     // que el resto del código funcione sin cambios adicionales.
     rows.forEach(b => {
+      // ── Fecha ──
       if (!b.date && b.classDate) b.date = String(b.classDate).substring(0, 10);
-      // Normalizar time también (puede venir como 'classTime')
-      if (!b.time && b.classTime) b.time = String(b.classTime).trim();
       if (b.date) b.date = String(b.date).substring(0, 10);
-      if (b.time) b.time = String(b.time).trim();
+
+      // ── Hora ──
+      // Puede llegar como 'HH:MM' (correcto), timestamp ms negativo (Date de Sheets),
+      // o número fraccionario (fracción de día de Sheets)
+      let t = b.time || b.classTime || '';
+      if (t && /^-?\d{6,}$/.test(String(t).trim())) {
+        // Timestamp en ms (ej: -2209079024000) = Date de Sheets para hora pura
+        // getHours() usa hora local del navegador (Colombia UTC-5) = correcto
+        const d = new Date(Number(t));
+        t = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+      } else if (t && /^0\.\d+$/.test(String(t).trim())) {
+        // Fracción de día (0.25 = 06:00)
+        const mins = Math.round(Number(t) * 24 * 60);
+        t = String(Math.floor(mins/60)).padStart(2,'0') + ':' + String(mins%60).padStart(2,'0');
+      }
+      b.time = String(t).trim();
     });
 
     state.bookings = rows.filter(b => b.status !== 'cancelada');

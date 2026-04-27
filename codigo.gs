@@ -470,6 +470,14 @@ var DATE_COLUMNS = {
   ProgramacionPole:   ['classDate','createdAt']
 };
 
+// Columnas que contienen hora (Date de Sheets → 'HH:MM')
+var TIME_COLUMNS = {
+  ProgramacionDiana: ['time'],
+  ProgramacionPole:  ['time'],
+  Asistencia:        ['time'],
+  Clases:            ['hour']
+};
+
 var NUMERIC_COLUMNS = {
   Ingresos: ['amount'],
   Gastos:   ['amount'],
@@ -480,11 +488,26 @@ function serializeCell(value, columnName, sheetName) {
   if (value === '' || value === null || value === undefined) return null;
   if (value instanceof Date) {
     var dateColumns = DATE_COLUMNS[sheetName] || [];
+    var timeColumns = (TIME_COLUMNS[sheetName] || []);
+    // Hora como HH:MM
+    if (timeColumns.indexOf(columnName) !== -1) {
+      var hh = String(value.getHours()).padStart(2,'0');
+      var mm = String(value.getMinutes()).padStart(2,'0');
+      return hh + ':' + mm;
+    }
+    // Fecha como YYYY-MM-DD
     if (dateColumns.indexOf(columnName) !== -1) {
       var y = value.getFullYear();
       var m = String(value.getMonth()+1).padStart(2,'0');
       var d = String(value.getDate()).padStart(2,'0');
       return y + '-' + m + '-' + d;
+    }
+    // Cualquier otro Date: intentar HH:MM si parece solo hora
+    // (epoch 1899-12-30 = fecha base de Sheets, hora pura tiene año 1899 o 1900)
+    if (value.getFullYear() <= 1900) {
+      var hh2 = String(value.getHours()).padStart(2,'0');
+      var mm2 = String(value.getMinutes()).padStart(2,'0');
+      return hh2 + ':' + mm2;
     }
     return String(value.getTime());
   }
