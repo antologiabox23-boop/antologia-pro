@@ -489,7 +489,7 @@ body::before{
 // ══════════════════════════════════════════
 //  CONFIG — ajusta según tu setup
 // ══════════════════════════════════════════
-const SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycby7Kl79W_0aNJ-Lf-R48GpCSD4PtWrXD8JTKTOolva_0MTimf71nSqwXTSrnea9TnY/exec';
+const SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbzJQ723ZeE0nhaprX4MHqP4QXQZwhGq3ZCILH5-oTsrV8z09raPKZ_OivmxpGsAA1XX/exec';
 const CLASS_TYPE  = 'semipersonalizado_diana';
 const MAX_CUPOS   = 4;
 const GYM_NAME    = 'Antología Box23';
@@ -698,29 +698,38 @@ async function loadBookings() {
 }
 
 // ══════════════════════════════════════════
-//  CONFIRM ATTENDANCE
+//  CONFIRM / MARK ATTENDANCE
 // ══════════════════════════════════════════
-async function confirmAttendance(bookingId, userId, userName, dateStr, timeStr) {
-  // Marcar asistencia confirmada en Google Sheets
+async function setAttendanceStatus(bookingId, userId, userName, dateStr, timeStr, newStatus) {
+  const btn = document.querySelector(`#sr-${bookingId || userId} .btn-attend.${newStatus === 'cumplida' ? 'present' : 'absent'}`);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-sm"></span>'; }
   try {
-    const payload = {
-      bookingId,
-      userId,
-      date: dateStr,
-      time: timeStr,
-      status: 'cumplida',
-      confirmedBy: 'diana'
-    };
-    await gasCall('updateBookingStatus', payload);
+    const payload = { bookingId, userId, date: dateStr, time: timeStr, status: newStatus, confirmedBy: 'diana' };
+    const res = await gasCall('updateBookingStatus', payload);
+    if (res && res.error) throw new Error(res.error);
     // Actualizar estado local
-    const b = state.bookings.find(x => x.id === bookingId || (x.userId === userId && x.date === dateStr && x.time === timeStr));
-    if (b) b.status = 'cumplida';
-    showToast(`✓ Asistencia confirmada: ${userName}`, 'success');
+    const b = state.bookings.find(x =>
+      (bookingId && x.id === bookingId) ||
+      (x.userId === userId && (x.date||'').substring(0,10) === dateStr && (x.time||x.classTime||'').trim() === timeStr)
+    );
+    if (b) b.status = newStatus;
+    const icon = newStatus === 'cumplida' ? '✓' : '✕';
+    const label = newStatus === 'cumplida' ? 'Asistencia confirmada' : 'Marcada como no cumplida';
+    showToast(`${icon} ${label}: ${userName}`, newStatus === 'cumplida' ? 'success' : 'info');
     renderSchedule();
   } catch (e) {
-    console.error('confirmAttendance:', e);
-    showToast('Error al confirmar asistencia', 'error');
+    console.error('setAttendanceStatus:', e);
+    showToast('Error al registrar asistencia: ' + (e.message || e), 'error');
+    renderSchedule(); // restaurar UI
   }
+}
+
+async function confirmAttendance(bookingId, userId, userName, dateStr, timeStr) {
+  await setAttendanceStatus(bookingId, userId, userName, dateStr, timeStr, 'cumplida');
+}
+
+async function markAbsent(bookingId, userId, userName, dateStr, timeStr) {
+  await setAttendanceStatus(bookingId, userId, userName, dateStr, timeStr, 'no cumplida');
 }
 
 async function confirmAllAttendance(dateStr, timeStr) {
@@ -729,8 +738,8 @@ async function confirmAllAttendance(dateStr, timeStr) {
   try {
     for (const b of slot) {
       const payload = { bookingId: b.id, userId: b.userId, date: dateStr, time: timeStr, status: 'cumplida', confirmedBy: 'diana' };
-      await gasCall('updateBookingStatus', payload);
-      b.status = 'cumplida';
+      const res = await gasCall('updateBookingStatus', payload);
+      if (res && !res.error) b.status = 'cumplida';
     }
     showToast(`✓ ${slot.length} asistencias confirmadas`, 'success');
     renderSchedule();
@@ -927,20 +936,36 @@ function renderSlotCard(dateStr, timeStr) {
   if (inscritos.length > 0) {
     studentsHtml = `<div class="students-list">` +
       inscritos.map(b => {
-        const name   = escHtml(b.userName || b.name || 'Sin nombre');
-        const doc    = b.userDoc || b.document || '';
-        const status = b.status || 'programada';
-        const isPres = status === 'cumplida';
+        const name    = escHtml(b.userName || b.name || 'Sin nombre');
+        const doc     = b.userDoc || b.document || '';
+        const status  = b.status || 'programada';
+        const isPres  = status === 'cumplida';
+        const isAbs   = status === 'no cumplida';
+        let statusBadge = '';
+        if (isPres) statusBadge = `<span style="font-size:.68rem;color:var(--success);font-weight:600;margin-left:.4rem"><i class="fas fa-check-circle me-1"></i>Cumplida</span>`;
+        else if (isAbs) statusBadge = `<span style="font-size:.68rem;color:var(--danger);font-weight:600;margin-left:.4rem"><i class="fas fa-times-circle me-1"></i>No cumplida</span>`;
+        const bid = (b.id||'').replace(/'/g,"\'");
+        const buid = (b.userId||'').replace(/'/g,"\'");
+        const safeName = name.replace(/'/g,"\'");
         return `<div class="student-row" id="sr-${b.id || b.userId}">
           <div class="student-info">
             <div class="student-name">${name}</div>
-            <div class="student-meta"><i class="fas fa-id-card me-1" style="opacity:.5"></i>${escHtml(doc)}</div>
+            <div class="student-meta">
+              <i class="fas fa-id-card me-1" style="opacity:.5"></i>${escHtml(doc)}${statusBadge}
+            </div>
           </div>
           <div class="student-status">
             <button class="btn-attend present ${isPres ? 'active' : ''}"
-                    title="Confirmar asistencia"
-                    onclick="confirmAttendance('${b.id||''}','${b.userId||''}','${name}','${dateStr}','${timeStr}')">
+                    title="Asistio (cumplida)"
+                    ${isPres ? 'disabled' : ''}
+                    onclick="confirmAttendance('${bid}','${buid}','${safeName}','${dateStr}','${timeStr}')">
               <i class="fas fa-check"></i>
+            </button>
+            <button class="btn-attend absent ${isAbs ? 'active' : ''}"
+                    title="No asistio (no cumplida)"
+                    ${isAbs ? 'disabled' : ''}
+                    onclick="markAbsent('${bid}','${buid}','${safeName}','${dateStr}','${timeStr}')">
+              <i class="fas fa-times"></i>
             </button>
           </div>
         </div>`;
