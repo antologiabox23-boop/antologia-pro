@@ -108,6 +108,7 @@ function dispatch(action, payload) {
     case 'addClassDiana':         return addClassProg('ProgramacionDiana', payload);
     case 'getUserClassesDiana':   return getUserClasses('ProgramacionDiana', payload);
     case 'cancelClassDiana':      return cancelClass('ProgramacionDiana', payload);
+    case 'updateBookingStatus':   return updateBookingStatus(payload);
     case 'checkIncomeDiana':      return checkIncomeDiana(payload);
 
     // ── POLE / ACROTELAS ───────────────────────────────────────────────
@@ -201,6 +202,114 @@ function cancelClass(sheetName, payload) {
     }
   }
   throw new Error('Reserva ' + bookingId + ' no encontrada en ' + sheetName);
+}
+
+
+// ── ACTUALIZAR ESTADO DE RESERVA + REGISTRAR ASISTENCIA ────────────────────────
+/**
+ * Actualiza el status de una reserva en ProgramacionDiana.
+ * Si el nuevo status es 'cumplida', registra ademas en la hoja Asistencia.
+ * Payload esperado: { bookingId, userId, date, time, status, confirmedBy }
+ */
+function updateBookingStatus(payload) {
+  var bookingId   = String(payload.bookingId   || '').trim();
+  var userId      = String(payload.userId      || '').trim();
+  var dateStr     = String(payload.date        || '').trim();
+  var timeStr     = String(payload.time        || '').trim();
+  var newStatus   = String(payload.status      || '').trim();
+  var confirmedBy = String(payload.confirmedBy || 'diana').trim();
+
+  if (!newStatus) throw new Error('updateBookingStatus: falta el campo status');
+  if (!bookingId && !userId)
+    throw new Error('updateBookingStatus: se requiere bookingId o userId');
+
+  // 1. Actualizar la hoja ProgramacionDiana
+  var sheet   = getOrCreateSheet('ProgramacionDiana');
+  var data    = sheet.getDataRange().getValues();
+  var headers = data[0];
+  var idCol      = headers.indexOf('id');
+  var userIdCol  = headers.indexOf('userId');
+  var dateCol    = headers.indexOf('classDate');
+  var timeCol    = headers.indexOf('time');
+  var statusCol  = headers.indexOf('status');
+
+  if (statusCol === -1)
+    throw new Error('Columna status no encontrada en ProgramacionDiana');
+
+  var rowUpdated  = false;
+  var bookingData = null;
+
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var matchById   = bookingId && idCol !== -1 && String(row[idCol]) === bookingId;
+    var matchByUser = !matchById && userId &&
+                      userIdCol !== -1 && String(row[userIdCol]) === userId &&
+                      dateCol   !== -1 && String(row[dateCol]).substring(0,10) === dateStr &&
+                      timeCol   !== -1 && String(row[timeCol]).trim() === timeStr;
+
+    if (matchById || matchByUser) {
+      sheet.getRange(i + 1, statusCol + 1).setValue(newStatus);
+      bookingData = {};
+      headers.forEach(function(h, idx) { bookingData[h] = row[idx]; });
+      rowUpdated = true;
+      break;
+    }
+  }
+
+  if (!rowUpdated) {
+    Logger.log('updateBookingStatus: reserva no encontrada, id=' + bookingId +
+               ' userId=' + userId + ' date=' + dateStr + ' time=' + timeStr);
+  }
+
+  // 2. Si es 'cumplida', registrar en Asistencia sin duplicar
+  if (newStatus === 'cumplida') {
+    var asistUserId = userId || (bookingData && (bookingData.userId || '')) || '';
+
+    var asistSheet   = getOrCreateSheet(SHEETS.ATTENDANCE);
+    var asistData    = asistSheet.getDataRange().getValues();
+    var aHeaders     = asistData[0];
+    var aUserIdCol   = aHeaders.indexOf('userId');
+    var aDateCol     = aHeaders.indexOf('date');
+    var aTimeCol     = aHeaders.indexOf('time');
+    var aStatusCol   = aHeaders.indexOf('status');
+
+    var alreadyExists = false;
+    for (var j = 1; j < asistData.length; j++) {
+      var aRow = asistData[j];
+      var sameUser = aUserIdCol !== -1 && String(aRow[aUserIdCol]) === String(asistUserId);
+      var sameDate = aDateCol   !== -1 && String(aRow[aDateCol]).substring(0,10) === dateStr;
+      var sameTime = aTimeCol   !== -1 && String(aRow[aTimeCol]).trim() === timeStr;
+      var sameStat = aStatusCol !== -1 && String(aRow[aStatusCol]) === 'cumplida';
+      if (sameUser && sameDate && sameTime && sameStat) {
+        alreadyExists = true;
+        break;
+      }
+    }
+
+    if (!alreadyExists) {
+      var now = new Date();
+      var nowStr = now.getFullYear() + '-' +
+        String(now.getMonth()+1).padStart(2,'0') + '-' +
+        String(now.getDate()).padStart(2,'0') + 'T' +
+        String(now.getHours()).padStart(2,'0') + ':' +
+        String(now.getMinutes()).padStart(2,'0');
+
+      var asistRow = {
+        id:        makeId(),
+        userId:    asistUserId,
+        date:      dateStr,
+        status:    'cumplida',
+        time:      timeStr,
+        createdAt: nowStr
+      };
+      addRow(SHEETS.ATTENDANCE, asistRow);
+      Logger.log('Asistencia registrada: userId=' + asistUserId + ' date=' + dateStr + ' time=' + timeStr);
+    } else {
+      Logger.log('Asistencia ya existia, no se duplica');
+    }
+  }
+
+  return { success: true, updated: rowUpdated, status: newStatus };
 }
 
 // ── VERIFICACIÓN MEMBRESÍA POLE ───────────────────────────────────────────────
