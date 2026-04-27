@@ -1096,43 +1096,51 @@ function selectDay(day, dateStr) {
 }
 
 /* Normaliza hora: "08:00" y "8:00" → "8:00"
-   También convierte timestamps numéricos de Google Sheets (ms desde epoch o fracción de día)
-   y timestamps ISO completos tipo "2026-04-20T06:00:00.000Z" */
+   Maneja 4 formatos posibles que envía Google Sheets:
+   1. String "HH:MM" o "H:MM"
+   2. ISO timestamp "2026-04-20T06:00:00.000Z"
+   3. Fracción de día < 2 (ej. 0.25 = 6:00 AM)
+   4. Timestamp en ms (positivo o negativo): Sheets codifica la hora en UTC base 30-dic-1899.
+      Colombia = UTC-5, se extrae la hora UTC, se restan 5h y se redondea al slot entero. */
 function normTime(s) {
     if (s === null || s === undefined || s === '') return '';
     const str = s.toString().trim();
-    // Si es un ISO timestamp completo (contiene 'T'), extraer solo la parte de hora local
+
+    // 1. ISO timestamp con 'T'
     if (str.includes('T')) {
-        // Parsear como Date y extraer hora/minuto en hora local
         const d = new Date(str);
         if (!isNaN(d)) {
             const h = d.getHours();
             const m = d.getMinutes();
             return `${h}:${m.toString().padStart(2, '0')}`;
         }
-        // Fallback: extraer HH:MM directamente del string
         const timePart = str.split('T')[1];
-        if (timePart) {
-            const hm = timePart.substring(0, 5);
-            return hm.replace(/^0(\d):/, '$1:');
-        }
+        if (timePart) return timePart.substring(0, 5).replace(/^0(\d):/, '$1:');
     }
-    // Si es número o string numérico (timestamp ms o fracción de día de Sheets)
+
     const n = Number(str);
     if (!isNaN(n) && str !== '') {
-        let ms = n;
-        // Sheets almacena horas como fracción de día (0.25 = 6:00 AM)
-        // Si el valor es pequeño (< 2), probablemente es fracción de día
+        // 2. Fracción de día (valor absoluto < 2)
         if (Math.abs(n) < 2) {
-            ms = n * 24 * 3600000;
+            const totalMin = Math.round(Math.abs(n) * 24 * 60);
+            const h = Math.floor(totalMin / 60) % 24;
+            const m = totalMin % 60;
+            return `${h}:${m.toString().padStart(2, '0')}`;
         }
-        // Calcular horas y minutos desde los milisegundos
-        // Usar módulo para ignorar días completos
-        let totalMin = Math.round(Math.abs(ms) / 60000) % (24 * 60);
-        const h = Math.floor(totalMin / 60);
-        const m = totalMin % 60;
+
+        // 3. Timestamp ms (positivo o negativo) — hora codificada en UTC, Colombia UTC-5
+        const d = new Date(n);
+        const utcMinutes = d.getUTCHours() * 60 + d.getUTCMinutes();
+        const localMinutes = (utcMinutes - 300 + 1440) % 1440; // -5h
+        const h = Math.floor(localMinutes / 60);
+        const m = localMinutes % 60;
+        // Redondear al slot entero si los minutos son residuos de conversión
+        if (m < 10) return `${h}:00`;
+        if (m > 50) return `${(h + 1) % 24}:00`;
         return `${h}:${m.toString().padStart(2, '0')}`;
     }
+
+    // 4. String "HH:MM"
     return str.replace(/^0(\d):/, '$1:');
 }
 
