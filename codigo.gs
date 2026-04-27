@@ -22,7 +22,7 @@ const SHEETS = {
 const COLUMNS = {
   Usuarios:           ['id','name','document','birthdate','phone','eps','bloodType','pathology','emergencyContact','emergencyPhone','classTime','affiliationType','status','createdAt','updatedAt'],
   Asistencia:         ['id','userId','date','status','time','createdAt'],
-  Ingresos:           ['id','userId','userDoc','paymentType','amount','paymentMethod','paymentDate','startDate','endDate','notes','createdAt'],
+  Ingresos:           ['id','userId','paymentType','amount','paymentMethod','paymentDate','startDate','endDate','notes','createdAt'],
   Gastos:             ['id','date','description','amount','category','account','createdAt'],
   Clases:             ['id','date','hour','trainerId','classType','duration','payment','createdAt'],
   Membresias:         ['id','userId','userDoc','userName','tipo','vigenciaDesde','vigenciaHasta','estado','clasesTotal','clasesUsadas','createdAt'],
