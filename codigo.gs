@@ -208,8 +208,8 @@ function cancelClass(sheetName, payload) {
  * Verifica si el usuario tiene membresía activa en hoja Membresias.
  */
 function checkMembership(payload) {
-  var userId  = payload.userId  || '';
-  var userDoc = (payload.userDoc || '').replace(/\D/g,'');
+  var userId  = String(payload.userId  || '').trim();
+  var userDoc = String(payload.userDoc || '').replace(/\D/g,'');
 
   var rows = getAllRows(SHEETS.MEMBRESIAS);
   var today = new Date(); today.setHours(0,0,0,0);
@@ -247,7 +247,7 @@ function checkMembership(payload) {
  */
 function checkIncomeDiana(payload) {
   var userId  = String(payload.userId  || '').trim();
-  var userDoc = (payload.userDoc || '').replace(/\D/g,'');
+  var userDoc = String(payload.userDoc || '').replace(/\D/g,'');
 
   // Palabras clave que identifican un plan Diana en paymentType
   var DIANA_TYPES = [
@@ -259,8 +259,11 @@ function checkIncomeDiana(payload) {
   // ── Resolver todos los userId candidatos para este usuario ──────────────
   // La hoja Ingresos solo tiene userId, no documento.
   // Cruzamos con Usuarios para obtener el id correcto si se pasó documento.
+  // Normaliza userId quitando decimales innecesarios ("1.0" → "1")
+  function normUid(v) { return String(v || '').trim().replace(/\.0+$/, ''); }
+
   var candidateIds = [];
-  if (userId) candidateIds.push(userId);
+  if (userId) candidateIds.push(normUid(userId));
 
   if (userDoc) {
     try {
@@ -268,7 +271,7 @@ function checkIncomeDiana(payload) {
       users.forEach(function(u) {
         var uDoc = (u.document || '').replace(/\D/g,'');
         if (uDoc && uDoc === userDoc) {
-          var uid = String(u.id || '').trim();
+          var uid = normUid(u.id);
           if (uid && candidateIds.indexOf(uid) === -1) candidateIds.push(uid);
         }
       });
@@ -278,18 +281,15 @@ function checkIncomeDiana(payload) {
   var rows  = getAllRows(SHEETS.INCOME);
   var today = new Date(); today.setHours(0,0,0,0);
 
-  // Normaliza userId quitando decimales innecesarios ("1.0" → "1")
-  function normUid(v) { return String(v || '').trim().replace(/\.0+$/, ''); }
-
   var mios = rows.filter(function(p) {
     var pUid = normUid(p.userId);
 
     // Match por userId directo o por cualquier id candidato (normalizado)
-    var byId = candidateIds.some(function(cid) { return cid && normUid(cid) === pUid; });
+    var byId = candidateIds.some(function(cid) { return cid && cid === pUid; });
 
     // Match por columna userDoc en Ingresos (si se guardó al registrar el pago)
     var pDocCol  = (p.userDoc || '').replace(/\D/g,'');
-    var byDocCol = userDoc && pDocCol.length >= 4 && pDocCol === userDoc;
+    var byDocCol = userDoc && pDocCol.length >= 3 && pDocCol === userDoc;
 
     // Fallback: el campo notes podría contener el documento
     var pDocNotes  = (p.notes || '').replace(/\D/g,'');
@@ -304,8 +304,9 @@ function checkIncomeDiana(payload) {
 
   // ── Debug log para revisar en Apps Script si sigue fallando ─────────────
   Logger.log('checkIncomeDiana — userId:' + userId + ' userDoc:' + userDoc +
-    ' candidateIds:' + JSON.stringify(candidateIds) +
-    ' totalIngresos:' + rows.length + ' coincidencias:' + mios.length);
+    ' candidateIds (normalizados):' + JSON.stringify(candidateIds) +
+    ' totalIngresos:' + rows.length + ' coincidencias:' + mios.length +
+    ' ejemploIngreso:' + (rows.length ? JSON.stringify({userId:rows[0].userId, userDoc:rows[0].userDoc, paymentType:rows[0].paymentType}) : 'ninguno'));
 
   if (!mios.length) {
     return { success:true, canBook:false,
@@ -320,10 +321,18 @@ function checkIncomeDiana(payload) {
   var fin     = ult.endDate ? new Date(ult.endDate + 'T12:00:00') : null;
   var vigente = fin && fin >= today;
 
+  if (!ult.endDate) {
+    return { success:true, canBook:false,
+      reason:'Plan Diana sin fecha de vencimiento. Contacta a Diana.',
+      membership:null,
+      debug:{ candidateIds:candidateIds, paymentType:ult.paymentType, endDate:ult.endDate, startDate:ult.startDate } };
+  }
+
   if (!vigente) {
     return { success:true, canBook:false,
-      reason:'Plan Diana venció el ' + (ult.endDate||'?') + '. Renueva con Diana.',
-      membership:null };
+      reason:'Plan Diana venció el ' + ult.endDate + '. Renueva con Diana.',
+      membership:null,
+      debug:{ candidateIds:candidateIds, paymentType:ult.paymentType, endDate:ult.endDate } };
   }
 
   return {
@@ -334,7 +343,8 @@ function checkIncomeDiana(payload) {
       vigenciaDesde: ult.startDate || ult.paymentDate || '',
       vigenciaHasta: ult.endDate,
       estado: 'activa', fromIncome: true
-    }
+    },
+    debug:{ candidateIds:candidateIds, paymentType:ult.paymentType, endDate:ult.endDate }
   };
 }
 

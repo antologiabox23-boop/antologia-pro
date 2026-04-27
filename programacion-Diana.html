@@ -632,9 +632,19 @@ async function loadBookings() {
 async function resolverMembresia(userId, userDoc) {
     try {
         const r = await gasCall('checkIncomeDiana', { userId, userDoc });
-        // doGet envuelve en { data: resultado }, así que r.data es el objeto real
-        const result = r.data || r;
-        console.log('[membresía] respuesta:', result);
+        console.log('[membresía] raw response:', JSON.stringify(r));
+        // doGet envuelve en { data: resultado }
+        // resultado es: { success, canBook, reason, membership, debug? }
+        let result = r;
+        if (result && result.data !== undefined) result = result.data;
+        // Si aún tiene doble wrapper
+        if (result && typeof result.canBook === 'undefined' && result.data !== undefined) {
+            result = result.data;
+        }
+        console.log('[membresía] resultado final:', result);
+        if (result && result.debug) {
+            console.log('[membresía] debug:', result.debug);
+        }
         return result;
     } catch (e) {
         console.error('[membresía] error:', e);
@@ -705,10 +715,14 @@ async function handleIdentify() {
         }
         state.user = found;
 
+        // Asegurar que document es string para evitar errores en el backend
+        const userIdStr  = String(found.id       || '');
+        const userDocStr = String(found.document || '').replace(/\D/g, '');
+
         // Cargar membresía y datos extra en paralelo
         const [memJson] = await Promise.all([
-            resolverMembresia(found.id, found.document),
-            loadUserExtraData(found.id, found.document)
+            resolverMembresia(userIdStr, userDocStr),
+            loadUserExtraData(userIdStr, userDocStr)
         ]);
         state.membership = memJson;
 
