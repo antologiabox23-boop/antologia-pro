@@ -1095,8 +1095,28 @@ function selectDay(day, dateStr) {
     refreshSlots();
 }
 
-/* Normaliza hora: "08:00" y "8:00" → "8:00" */
-function normTime(s) { return (s || '').toString().trim().replace(/^0(\d):/, '$1:'); }
+/* Normaliza hora: "08:00" y "8:00" → "8:00"
+   También convierte timestamps numéricos de Google Sheets (ms desde epoch o fracción de día) */
+function normTime(s) {
+    if (s === null || s === undefined || s === '') return '';
+    // Si es número o string numérico (timestamp ms o fracción de día de Sheets)
+    const n = Number(s);
+    if (!isNaN(n) && s.toString().trim() !== '') {
+        let ms = n;
+        // Sheets almacena horas como fracción de día (0.25 = 6:00 AM)
+        // Si el valor es pequeño (< 2), probablemente es fracción de día
+        if (Math.abs(n) < 2) {
+            ms = n * 24 * 3600000;
+        }
+        // Calcular horas y minutos desde los milisegundos
+        // Usar módulo para ignorar días completos
+        let totalMin = Math.round(Math.abs(ms) / 60000) % (24 * 60);
+        const h = Math.floor(totalMin / 60);
+        const m = totalMin % 60;
+        return `${h}:${m.toString().padStart(2, '0')}`;
+    }
+    return s.toString().trim().replace(/^0(\d):/, '$1:');
+}
 
 /* Normaliza fecha a YYYY-MM-DD */
 function normDate(s) {
@@ -1400,7 +1420,10 @@ function renderClaseCard(c) {
         fechaStr = `${c.day || ''} ${fd.getDate()} ${MONTHS_SHORT[fd.getMonth()]} ${fd.getFullYear()}`;
     }
     const now      = new Date();
-    const timeStr  = (c.time || '00:00').length === 5 ? c.time + ':00' : (c.time || '00:00:00');
+    const normalizedTime = normTime(c.time || '00:00');
+    const timeStr  = normalizedTime.length === 4 || normalizedTime.length === 5
+        ? normalizedTime.padStart(5, '0') + ':00'
+        : normalizedTime.padStart(8, '0');
     const rawDate  = normDate(c.classDate);
     const cdDate   = rawDate ? new Date(rawDate + 'T' + timeStr) : null;
     const hoursLeft = cdDate ? (cdDate - now) / 3600000 : Infinity;
@@ -1430,7 +1453,7 @@ function renderClaseCard(c) {
         <div class="mc-top">
             <div>
                 <div class="mc-title">⭐ Semipersonalizados Diana</div>
-                <div class="mc-detail"><i class="fas fa-calendar me-1"></i>${fechaStr} a las ${c.time}</div>
+                <div class="mc-detail"><i class="fas fa-calendar me-1"></i>${fechaStr} a las ${normTime(c.time)}</div>
                 ${createdStr ? `<div class="mc-detail" style="font-size:.72rem;margin-top:.25rem;"><i class="fas fa-clock me-1"></i>Reservado el ${createdStr}</div>` : ''}
                 ${c.cancelReason && c.status === 'cancelada' ? `<div class="mc-detail" style="color:#fca5a5;margin-top:.2rem;"><i class="fas fa-info-circle me-1"></i>${c.cancelReason}</div>` : ''}
             </div>
