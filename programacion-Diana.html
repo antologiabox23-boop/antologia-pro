@@ -1096,12 +1096,30 @@ function selectDay(day, dateStr) {
 }
 
 /* Normaliza hora: "08:00" y "8:00" → "8:00"
-   También convierte timestamps numéricos de Google Sheets (ms desde epoch o fracción de día) */
+   También convierte timestamps numéricos de Google Sheets (ms desde epoch o fracción de día)
+   y timestamps ISO completos tipo "2026-04-20T06:00:00.000Z" */
 function normTime(s) {
     if (s === null || s === undefined || s === '') return '';
+    const str = s.toString().trim();
+    // Si es un ISO timestamp completo (contiene 'T'), extraer solo la parte de hora local
+    if (str.includes('T')) {
+        // Parsear como Date y extraer hora/minuto en hora local
+        const d = new Date(str);
+        if (!isNaN(d)) {
+            const h = d.getHours();
+            const m = d.getMinutes();
+            return `${h}:${m.toString().padStart(2, '0')}`;
+        }
+        // Fallback: extraer HH:MM directamente del string
+        const timePart = str.split('T')[1];
+        if (timePart) {
+            const hm = timePart.substring(0, 5);
+            return hm.replace(/^0(\d):/, '$1:');
+        }
+    }
     // Si es número o string numérico (timestamp ms o fracción de día de Sheets)
-    const n = Number(s);
-    if (!isNaN(n) && s.toString().trim() !== '') {
+    const n = Number(str);
+    if (!isNaN(n) && str !== '') {
         let ms = n;
         // Sheets almacena horas como fracción de día (0.25 = 6:00 AM)
         // Si el valor es pequeño (< 2), probablemente es fracción de día
@@ -1115,7 +1133,7 @@ function normTime(s) {
         const m = totalMin % 60;
         return `${h}:${m.toString().padStart(2, '0')}`;
     }
-    return s.toString().trim().replace(/^0(\d):/, '$1:');
+    return str.replace(/^0(\d):/, '$1:');
 }
 
 /* Normaliza fecha a YYYY-MM-DD */
@@ -1423,7 +1441,9 @@ function renderClaseCard(c) {
     const normalizedTime = normTime(c.time || '00:00');
     const timeStr  = normalizedTime.length === 4 || normalizedTime.length === 5
         ? normalizedTime.padStart(5, '0') + ':00'
-        : normalizedTime.padStart(8, '0');
+        : normalizedTime.length > 0
+            ? normalizedTime.padStart(8, '0')
+            : '00:00:00';
     const rawDate  = normDate(c.classDate);
     const cdDate   = rawDate ? new Date(rawDate + 'T' + timeStr) : null;
     const hoursLeft = cdDate ? (cdDate - now) / 3600000 : Infinity;
