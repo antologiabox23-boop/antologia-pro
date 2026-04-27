@@ -521,9 +521,9 @@ const SCHEDULE_CONFIG = {
 };
 const MAX_PER_SLOT = 4;
 const CLASS_TYPE   = 'semipersonalizado_diana';
-const SCRIPT_URL   = 'https://script.google.com/macros/s/AKfycby7Kl79W_0aNJ-Lf-R48GpCSD4PtWrXD8JTKTOolva_0MTimf71nSqwXTSrnea9TnY/exec';
+const SCRIPT_URL   = 'https://script.google.com/macros/s/AKfycby6OvnevYk52Fv1JunrpmNlsvFJEuRL73QtDnYkOMuL4jJC11GOb3jY4OtIR-wZSv50/exec';
 const CANCEL_HOURS = 18;
-const DIANA_TYPES  = ['semipersonalizado Diana','personalizado diana','semipersonalizados diana','diana'];
+const DIANA_TYPES  = ['semipersonalizado diana','personalizado diana','semipersonalizados diana','diana'];
 const MONTHS_SHORT = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const MONTHS_LONG  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const MONTHS_FULL  = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -1095,18 +1095,10 @@ function selectDay(day, dateStr) {
     refreshSlots();
 }
 
-/* Normaliza strings para comparación segura */
-function norm(s) { return (s || '').toString().trim().toLowerCase(); }
-
-/* Normaliza hora eliminando cero inicial: "08:00" y "8:00" → "8:00"
-   Así la comparación entre SCHEDULE_CONFIG ("08:00") y Sheets ("8:00") funciona */
+/* Normaliza hora: "08:00" y "8:00" → "8:00" */
 function normTime(s) { return (s || '').toString().trim().replace(/^0(\d):/, '$1:'); }
 
-/* Normaliza hora eliminando cero inicial: "08:00" y "8:00" → "8:00"
-   Así la comparación entre SCHEDULE_CONFIG ("08:00") y Sheets ("8:00") funciona */
-function normTime(s) { return (s || '').toString().trim().replace(/^0(\d):/, '$1:'); }
-
-/* Normaliza una fecha a YYYY-MM-DD si viene en otro formato */
+/* Normaliza fecha a YYYY-MM-DD */
 function normDate(s) {
     if (!s) return '';
     s = s.toString().trim();
@@ -1116,35 +1108,26 @@ function normDate(s) {
     return s;
 }
 
-/* Cupos confirmados (programada / cumplida) — no espera */
-function countConfirmed(day, time, dateStr) {
+/* Cupos confirmados (programada / cumplida) — match por fecha + hora */
+function countConfirmed(time, dateStr) {
     const nd = normDate(dateStr);
-    const matches = state.bookings.filter(b => {
-        if (b.status === 'cancelada' || b.status === 'espera') return false;
-        if (norm(b.day) !== norm(day)) return false;
-        if (normTime(b.time) !== normTime(time)) return false;
-        // Si tenemos fecha seleccionada, comparar; si no, contar todos
-        if (nd && b.classDate) return normDate(b.classDate) === nd;
-        // Si el booking no tiene classDate, comparar solo por día/hora
-        return true;
-    });
-    // DEBUG temporal — muestra en consola para verificar el problema
-    console.log(`[cupos] ${day} ${time} fecha:${nd} → ${matches.length} confirmadas de ${state.bookings.length} bookings`);
-    if (state.bookings.length > 0 && matches.length === 0) {
-        console.log('[cupos] Muestra de bookings:', state.bookings.slice(0,3).map(b =>
-            ({day: b.day, time: b.time, classDate: b.classDate, status: b.status})));
-    }
-    return matches.length;
+    if (!nd) return 0;
+    return state.bookings.filter(b =>
+        b.status !== 'cancelada' &&
+        b.status !== 'espera' &&
+        normDate(b.classDate) === nd &&
+        normTime(b.time)      === normTime(time)
+    ).length;
 }
 
-/* Posiciones en lista de espera */
-function countWaiting(day, time, dateStr) {
+/* Posiciones en lista de espera — match por fecha + hora */
+function countWaiting(time, dateStr) {
     const nd = normDate(dateStr);
+    if (!nd) return 0;
     return state.bookings.filter(b =>
         b.status === 'espera' &&
-        norm(b.day)  === norm(day) &&
-        normTime(b.time) === normTime(time) &&
-        (!nd || !b.classDate || normDate(b.classDate) === nd)
+        normDate(b.classDate) === nd &&
+        normTime(b.time)      === normTime(time)
     ).length;
 }
 
@@ -1158,8 +1141,8 @@ function refreshSlots() {
         return;
     }
     times.forEach(t => {
-        const confirmed = countConfirmed(state.selectedDay, t, state.selectedDate);
-        const waiting   = countWaiting(state.selectedDay, t, state.selectedDate);
+        const confirmed = countConfirmed(t, state.selectedDate);
+        const waiting   = countWaiting(t, state.selectedDate);
         const avail  = MAX_PER_SLOT - confirmed;
         const isFull = avail <= 0;
         const isSel  = state.selectedTime === t;
@@ -1181,6 +1164,7 @@ function refreshSlots() {
         grid.appendChild(btn);
     });
 }
+
 
 function selectSlot(time, isFull) {
     state.selectedTime = time;
@@ -1225,9 +1209,9 @@ function buildSummary() {
         ? `${fecha.getDate()} de ${MONTHS_FULL[fecha.getMonth()]} de ${fecha.getFullYear()}`
         : state.selectedDay;
     const isWait    = state.selectedIsWaitlist;
-    const confirmed = countConfirmed(state.selectedDay, state.selectedTime, state.selectedDate);
+    const confirmed = countConfirmed(state.selectedTime, state.selectedDate);
     const avail     = MAX_PER_SLOT - confirmed;
-    const waiting   = countWaiting(state.selectedDay, state.selectedTime, state.selectedDate);
+    const waiting   = countWaiting(state.selectedTime, state.selectedDate);
     const mem       = state.membership;
 
     // Actualizar botón confirmar
@@ -1274,7 +1258,7 @@ async function bookClass() {
     errEl.classList.remove('show');
 
     // Verificar en tiempo real si cambió el cupo
-    const confirmed = countConfirmed(state.selectedDay, state.selectedTime, state.selectedDate);
+    const confirmed = countConfirmed(state.selectedTime, state.selectedDate);
     if (!state.selectedIsWaitlist && confirmed >= MAX_PER_SLOT) {
         if (!confirm('El cupo se acaba de llenar. ¿Deseas unirte a la lista de espera?')) return;
         state.selectedIsWaitlist = true;
