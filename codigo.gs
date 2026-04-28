@@ -419,7 +419,7 @@ function checkIncomeDiana(payload) {
 
   if (!mios.length) {
     return { success:true, canBook:false,
-      reason:'Sin plan Diana activo. Verifica con tu instructora.',
+      reason:'Sin plan semipersonalizado activo. Verifica con el administrador.',
       membership:null, debug:{ candidateIds:candidateIds, totalRows:rows.length } };
   }
 
