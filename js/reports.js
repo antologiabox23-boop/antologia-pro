@@ -7,6 +7,7 @@ const Reports = (() => {
 
     function setupEventListeners() {
         document.getElementById('generateAttendanceReport')?.addEventListener('click', generateAttendanceReport);
+        document.getElementById('attendanceSearchInput')?.addEventListener('input', filterAttendanceReport);
         document.getElementById('generateIncomeReport')?.addEventListener('click', generateIncomeReport);
         document.getElementById('exportAttendanceReportExcel')?.addEventListener('click', exportAttendanceExcel);
         document.getElementById('exportIncomeReportExcel')?.addEventListener('click', exportIncomeExcel);
@@ -25,6 +26,9 @@ const Reports = (() => {
         document.getElementById('exportAccountReportExcel')?.addEventListener('click', exportAccountReportExcel);
     }
 
+    // Almacena el reporte completo para búsqueda en tiempo real
+    let _attendanceReportData = [];
+
     function generateAttendanceReport() {
         const monthInput = document.getElementById('attendanceReportMonth').value;
         if (!monthInput) {
@@ -34,29 +38,66 @@ const Reports = (() => {
 
         const { start, end } = Utils.getMonthRange(monthInput);
         const users = Users.getActiveUsers();
-        const tbody = document.getElementById('attendanceReportList');
 
-        const report = users.map(user => {
+        _attendanceReportData = users.map(user => {
             const userAttendance = Storage.getAttendance().filter(a =>
-                a.userId === user.id && a.status === 'presente' && 
+                a.userId === user.id && a.status === 'presente' &&
                 a.date >= start && a.date <= end
             );
             const count = userAttendance.length;
             const daysInMonth = new Date(monthInput.split('-')[0], monthInput.split('-')[1], 0).getDate();
             const percentage = ((count / daysInMonth) * 100).toFixed(1);
-
             return { user, count, percentage };
         }).sort((a, b) => b.count - a.count);
 
-        tbody.innerHTML = report.map(r => `
+        // Mostrar campo de búsqueda y limpiar filtro anterior
+        const wrapper = document.getElementById('attendanceSearchWrapper');
+        if (wrapper) wrapper.style.removeProperty('display');
+        const searchInput = document.getElementById('attendanceSearchInput');
+        if (searchInput) searchInput.value = '';
+
+        renderAttendanceReport(_attendanceReportData);
+        UI.showSuccessToast('Reporte generado');
+    }
+
+    function renderAttendanceReport(data) {
+        const tbody = document.getElementById('attendanceReportList');
+        if (!data.length) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Sin resultados</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(r => `
             <tr>
                 <td>${Utils.escapeHtml(r.user.name)}</td>
                 <td><strong>${r.count}</strong></td>
                 <td>${r.percentage}%</td>
             </tr>
         `).join('');
+    }
 
-        UI.showSuccessToast('Reporte generado');
+    function filterAttendanceReport() {
+        const query = (document.getElementById('attendanceSearchInput')?.value || '').trim().toLowerCase();
+        const countEl = document.getElementById('attendanceSearchCount');
+
+        if (!query) {
+            renderAttendanceReport(_attendanceReportData);
+            if (countEl) countEl.textContent = '';
+            return;
+        }
+
+        // Búsqueda inteligente: divide la query en palabras y busca cada una en el nombre
+        const words = query.split(/\s+/).filter(Boolean);
+        const filtered = _attendanceReportData.filter(r => {
+            const name = r.user.name.toLowerCase();
+            return words.every(w => name.includes(w));
+        });
+
+        renderAttendanceReport(filtered);
+        if (countEl) {
+            countEl.textContent = filtered.length === _attendanceReportData.length
+                ? ''
+                : `${filtered.length} de ${_attendanceReportData.length} usuarios`;
+        }
     }
 
     function generateIncomeReport() {
