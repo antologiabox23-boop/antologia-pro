@@ -1089,6 +1089,14 @@
                                 <button class="btn btn-primary w-100 mb-3" id="generateAttendanceReport">
                                     <i class="fas fa-chart-line me-2"></i>Generar Reporte
                                 </button>
+                                <div class="mb-2 position-relative" id="attendanceSearchWrapper" style="display:none!important;">
+                                    <span class="position-absolute top-50 translate-middle-y ps-2" style="left:0;color:#6c757d;pointer-events:none;">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="text" class="form-control ps-4" id="attendanceSearchInput"
+                                        placeholder="Buscar usuario..." autocomplete="off">
+                                    <small class="text-muted mt-1 d-block" id="attendanceSearchCount"></small>
+                                </div>
                                 <div class="table-responsive">
                                     <table class="table table-sm">
                                         <thead>
