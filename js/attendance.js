@@ -161,7 +161,7 @@ const Attendance = (() => {
 
         const today = Utils.getCurrentDate();
         const todayDate = new Date(today + 'T00:00:00');
-        const users = Users.getActiveUsers().filter(u => u.affiliationType !== 'Entrenador(a)');
+        const users = Users.getActiveUsers().filter(u => u.affiliationType !== 'Entrenador(a)' && !u.name.toLowerCase().includes('clase'));
 
         const alerts = users.map(user => {
             const lastAttend = Storage.getAttendanceByUser(user.id)
