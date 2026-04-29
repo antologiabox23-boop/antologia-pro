@@ -215,7 +215,7 @@ const Attendance = (() => {
     function renderReport() {
         const dateFrom  = document.getElementById('reportDateFrom')?.value;
         const dateTo    = document.getElementById('reportDateTo')?.value;
-        const userFilter = document.getElementById('reportUser')?.value;
+        const userFilter = document.getElementById('reportUser')?.value.toLowerCase().trim();
         const tbody     = document.getElementById('reportList');
         if (!tbody) return;
 
@@ -228,7 +228,14 @@ const Attendance = (() => {
             .filter(a => a.date >= dateFrom && a.date <= dateTo && a.status === 'presente');
 
         let records = allAttendance;
-        if (userFilter) records = records.filter(a => a.userId === userFilter);
+        if (userFilter) {
+            const matchingIds = new Set(
+                Storage.getUsers()
+                    .filter(u => u.name.toLowerCase().includes(userFilter))
+                    .map(u => u.id)
+            );
+            records = records.filter(a => matchingIds.has(a.userId));
+        }
 
         records.sort((a, b) => b.date.localeCompare(a.date));
 
@@ -335,11 +342,7 @@ const Attendance = (() => {
         whatsappInasistencia,
         contactEmergency,
         populateReportUsers: () => {
-            const sel = document.getElementById('reportUser');
-            if (!sel) return;
-            const users = Users.getActiveUsers().filter(u => u.affiliationType !== 'Entrenador(a)');
-            sel.innerHTML = '<option value="">Todos los usuarios</option>' +
-                users.map(u => `<option value="${u.id}">${Utils.escapeHtml(u.name)}</option>`).join('');
+            // El campo de usuario ahora es un input de texto con búsqueda dinámica
         }
     };
 })();
