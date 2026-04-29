@@ -785,37 +785,17 @@ async function loadBookings() {
         '| ejemplo:', JSON.stringify(state.users[0]).substring(0, 150));
       console.log('[loadBookings] ingresos:', state.income.length,
         '| ejemplo:', JSON.stringify(state.income[0]).substring(0, 150));
-      // Diagnóstico adicional: ver qué usuarios pasan el filtro Diana
-      const hoy = new Date(); hoy.setHours(0,0,0,0);
-      const conPlan = state.users.filter(u => {
-        const st = (u.status||'').toLowerCase().trim();
-        if (st && st !== 'activo') return false;
-        const uid = String(u.id||'').trim().replace(/\.0+$/,'');
-        const uDoc = (u.document||'').replace(/\D/g,'');
-        const mios = state.income.filter(p => {
-          const pUid = String(p.userId||'').trim().replace(/\.0+$/,'');
-          const byId = uid && pUid === uid;
-          const pDoc = (p.userDoc||'').replace(/\D/g,'');
-          const byDoc = uDoc && pDoc.length >= 3 && pDoc === uDoc;
-          if (!byId && !byDoc) return false;
-          const tipo = (p.paymentType||'').toLowerCase().trim();
-          return ['semipersonalizado diana','semipersonalizados diana',
-                  'personalizado diana','personalizados diana','diana']
-                  .some(t => tipo.includes(t));
-        });
-        if (!mios.length) return false;
-        mios.sort((a,b) => new Date(b.endDate||'2000-01-01')-new Date(a.endDate||'2000-01-01'));
-        const fin = mios[0].endDate ? new Date(mios[0].endDate+'T12:00:00') : null;
-        return fin && fin >= hoy;
-      });
-      console.log('[DIANA FILTER] usuarios con plan activo:', conPlan.length,
-        conPlan.map(u => u.name + '|status:' + u.status).join(', '));
-      // Mostrar muestra de ingresos con paymentType para verificar keywords
+      // Diagnóstico: ingresos diana con endDate más reciente
       const dianaIncome = state.income.filter(p =>
         (p.paymentType||'').toLowerCase().includes('diana'));
-      console.log('[DIANA FILTER] ingresos tipo diana encontrados:', dianaIncome.length,
-        dianaIncome.slice(0,3).map(p =>
-          'userId:'+p.userId+'|type:'+p.paymentType+'|end:'+p.endDate).join(' // '));
+      dianaIncome.sort((a,b) => new Date(b.endDate||'2000-01-01')-new Date(a.endDate||'2000-01-01'));
+      console.log('[DIANA FILTER] ingresos tipo diana:', dianaIncome.length,
+        '| más recientes:', dianaIncome.slice(0,5).map(p =>
+          'userId:'+p.userId+'|type:'+p.paymentType+'|end:'+p.endDate+'|payDate:'+p.paymentDate).join(' // '));
+      const hoy = new Date(); hoy.setHours(0,0,0,0);
+      const conPlan = state.users.filter(u => userHasActiveDianaPlan(u));
+      console.log('[DIANA FILTER] usuarios con plan activo:', conPlan.length,
+        conPlan.slice(0,5).map(u => u.name+'|status:'+u.status).join(', '));
     } catch (ue) {
       console.warn('No se pudo cargar usuarios/ingresos:', ue);
       state.users  = [];
@@ -945,13 +925,13 @@ const DIANA_PAYMENT_TYPES = [
 ];
 
 function userHasActiveDianaPlan(user) {
-  // 1. Usuario debe estar activo
+  // 1. Usuario debe estar activo (campo vacío = activo por defecto)
   const userStatus = (user.status || '').toLowerCase().trim();
   if (userStatus && userStatus !== 'activo') return false;
 
-  // 2. Buscar pago Diana vigente en state.income
+  // 2. Buscar pago Diana en state.income
   const today = new Date(); today.setHours(0,0,0,0);
-  const uid   = String(user.id || '').trim();
+  const uid   = String(user.id || '').trim().replace(/\.0+$/, '');
   const uDoc  = (user.document || '').replace(/\D/g,'');
 
   const mios = state.income.filter(p => {
@@ -969,7 +949,10 @@ function userHasActiveDianaPlan(user) {
   // Tomar el pago con endDate más reciente
   mios.sort((a,b) => new Date(b.endDate||'2000-01-01') - new Date(a.endDate||'2000-01-01'));
   const ult = mios[0];
-  if (!ult.endDate) return false;
+
+  // Si no tiene endDate → vigente (igual que el backend checkIncomeDiana)
+  if (!ult.endDate) return true;
+
   const fin = new Date(ult.endDate + 'T12:00:00');
   return fin >= today;
 }
