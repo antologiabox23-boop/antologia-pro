@@ -285,6 +285,42 @@ body::before{
 .btn-promote:hover{background:rgba(167,139,250,.25)}
 .btn-promote:disabled{opacity:.4;cursor:not-allowed}
 
+/* ─── ADD UNSCHEDULED USER ─── */
+.btn-add-unscheduled{
+  background:rgba(39,249,212,.1);color:var(--teal);
+  border:1.5px solid rgba(39,249,212,.3);
+}
+.btn-add-unscheduled:hover{background:rgba(39,249,212,.2)}
+
+/* ─── ADD USER MODAL ─── */
+.add-user-search{
+  width:100%;padding:.6rem .85rem;border-radius:10px;
+  border:1.5px solid var(--border);background:var(--card);color:var(--text);
+  font-size:.9rem;font-family:'DM Sans',sans-serif;
+  outline:none;transition:border-color .2s;box-sizing:border-box;
+}
+.add-user-search:focus{border-color:var(--teal);}
+.add-user-search::placeholder{color:var(--muted);}
+.user-search-results{
+  margin-top:.6rem;max-height:220px;overflow-y:auto;
+  display:flex;flex-direction:column;gap:.4rem;
+}
+.user-result-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.55rem .75rem;border-radius:9px;background:rgba(255,255,255,.04);
+  border:1px solid var(--border);cursor:pointer;transition:background .15s;
+}
+.user-result-item:hover{background:rgba(39,249,212,.08);border-color:rgba(39,249,212,.3);}
+.uri-name{font-size:.85rem;font-weight:600;color:var(--text);}
+.uri-doc{font-size:.72rem;color:var(--muted);margin-top:.05rem;}
+.btn-uri-add{
+  background:var(--teal);color:#0f1117;border:none;border-radius:7px;
+  padding:.3rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;
+  white-space:nowrap;transition:opacity .2s;
+}
+.btn-uri-add:hover{opacity:.85}
+.no-results-msg{text-align:center;color:var(--muted);font-size:.82rem;padding:.5rem 0;}
+
 /* ─── EMPTY ─── */
 .empty-day{
   text-align:center;padding:3rem 1rem;color:var(--muted);
@@ -482,6 +518,22 @@ body::before{
   </div>
 </div>
 
+<!-- ══════ MODAL AGREGAR USUARIO NO PROGRAMADO ══════ -->
+<div class="modal-backdrop-custom" id="addUserModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Agregar asistencia</div>
+    <div class="modal-sub" id="addUserModalSub"></div>
+    <input class="add-user-search" id="addUserSearch"
+           type="text" placeholder="Buscar por nombre o documento…"
+           oninput="filterUserResults()" autocomplete="off">
+    <div class="user-search-results" id="userSearchResults"></div>
+    <div class="modal-btns" style="margin-top:.75rem">
+      <button class="btn-modal-cancel" onclick="closeAddUserModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast-box" id="toast"></div>
 
@@ -512,7 +564,8 @@ let state = {
   users: [],
   currentDate: todayStr(),
   view: 'day',
-  waPayload: null
+  waPayload: null,
+  addUserContext: null   // { dateStr, timeStr }
 };
 
 let toastTimer;
@@ -828,6 +881,111 @@ function closeWaModal() {
   state.waPayload = null;
 }
 
+// ══════════════════════════════════════════
+//  ADD UNSCHEDULED USER ATTENDANCE
+// ══════════════════════════════════════════
+function openAddUserModal(dateStr, timeStr) {
+  state.addUserContext = { dateStr, timeStr };
+  document.getElementById('addUserModalSub').textContent =
+    `Clase del ${formatDateFull(dateStr)} · ${timeStr}`;
+  document.getElementById('addUserSearch').value = '';
+  filterUserResults();
+  document.getElementById('addUserModal').classList.add('open');
+  setTimeout(() => document.getElementById('addUserSearch').focus(), 200);
+}
+
+function closeAddUserModal() {
+  document.getElementById('addUserModal').classList.remove('open');
+  state.addUserContext = null;
+}
+
+function filterUserResults() {
+  const q = (document.getElementById('addUserSearch').value || '').toLowerCase().trim();
+  const container = document.getElementById('userSearchResults');
+
+  if (!state.users.length) {
+    container.innerHTML = '<div class="no-results-msg">No hay usuarios cargados</div>';
+    return;
+  }
+
+  // Filtrar: excluir ya inscritos en ese slot
+  const ctx = state.addUserContext;
+  const alreadyIn = ctx
+    ? new Set(getSlotBookings(ctx.dateStr, ctx.timeStr)
+        .filter(b => b.status !== 'cancelada')
+        .map(b => String(b.userId)))
+    : new Set();
+
+  const filtered = state.users.filter(u => {
+    if (alreadyIn.has(String(u.id))) return false;
+    if (!q) return true;
+    const name = (u.name || '').toLowerCase();
+    const doc  = (u.document || '').replace(/\D/g,'');
+    return name.includes(q) || doc.includes(q);
+  }).slice(0, 20);
+
+  if (!filtered.length) {
+    container.innerHTML = '<div class="no-results-msg">Sin resultados</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(u => {
+    const safeU = JSON.stringify(u).replace(/'/g, "\'");
+    return `<div class="user-result-item">
+      <div>
+        <div class="uri-name">${escHtml(u.name || 'Sin nombre')}</div>
+        <div class="uri-doc"><i class="fas fa-id-card me-1" style="opacity:.5"></i>${escHtml(u.document || '—')}</div>
+      </div>
+      <button class="btn-uri-add" onclick="addUnscheduledAttendance('${u.id}')">
+        <i class="fas fa-plus me-1"></i>Agregar
+      </button>
+    </div>`;
+  }).join('');
+}
+
+async function addUnscheduledAttendance(userId) {
+  const ctx = state.addUserContext;
+  if (!ctx) return;
+
+  const user = state.users.find(u => String(u.id) === String(userId));
+  if (!user) { showToast('Usuario no encontrado', 'error'); return; }
+
+  const btn = document.querySelector(`.btn-uri-add[onclick*="${userId}"]`);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-sm"></span>'; }
+
+  try {
+    // 1. Crear booking con status 'cumplida' directamente
+    const bookingId = 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2,6);
+    const booking = {
+      id:         bookingId,
+      userId:     String(user.id),
+      userName:   user.name || '',
+      userDoc:    user.document || '',
+      classType:  CLASS_TYPE,
+      day:        '',
+      time:       ctx.timeStr,
+      classDate:  ctx.dateStr,
+      instructor: state.trainer?.name || 'diana',
+      status:     'cumplida',
+      cancelReason: ''
+    };
+    const res = await gasCall('addClassDiana', booking);
+    if (res && res.error) throw new Error(res.error);
+
+    // 2. Actualizar estado local
+    const localBooking = { ...booking, date: ctx.dateStr, userPhone: user.phone || '' };
+    state.bookings.push(localBooking);
+
+    showToast(`✓ Asistencia registrada: ${user.name}`, 'success');
+    closeAddUserModal();
+    renderSchedule();
+  } catch (e) {
+    console.error('addUnscheduledAttendance:', e);
+    showToast('Error al registrar: ' + (e.message || e), 'error');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus me-1"></i>Agregar'; }
+  }
+}
+
 function sendWaMessage() {
   if (!state.waPayload) return;
   const { phone, msg, waitUser, dateStr, timeStr } = state.waPayload;
@@ -1068,6 +1226,10 @@ function renderSlotCard(dateStr, timeStr) {
             onclick="confirmAllAttendance('${dateStr}','${timeStr}')">
       <i class="fas fa-check-double"></i> Confirmar todos
     </button>
+    <button class="btn-class-action btn-add-unscheduled"
+            onclick="openAddUserModal('${dateStr}','${timeStr}')">
+      <i class="fas fa-user-plus"></i> Agregar
+    </button>
   </div>`;
 
   return `<div class="class-card ${cardClass}">
@@ -1077,7 +1239,7 @@ function renderSlotCard(dateStr, timeStr) {
     </div>
     ${studentsHtml}
     ${waitHtml}
-    ${inscritos.length > 0 ? actionsHtml : ''}
+    ${actionsHtml}
   </div>`;
 }
 
