@@ -551,8 +551,7 @@ const DIANA_CREDENTIALS = [
   // { user: '3028514211', pass: '1057588479', name: 'Diana' }
   // Ejemplo: { user: '3001234567', pass: '12345678', name: 'Diana' }
   // PUEDES AGREGAR MÁS ENTRENADORAS AQUÍ
-  { user: '3028514211', pass: '1057588479', name: 'Diana' },
-  { user: '3208009736', pass: '74189928', name: 'Carlos' }  // ← Cambia por los datos reales
+  { user: '3028514211', pass: '1057588479', name: 'Diana' }  // ← Cambia por los datos reales
 ];
 
 // ══════════════════════════════════════════
@@ -779,10 +778,44 @@ async function loadBookings() {
         gasCall('getUsers'),
         gasCall('getIncome')
       ]);
-      state.users  = Array.isArray(usersJson?.data) ? usersJson.data
-                   : Array.isArray(usersJson)        ? usersJson : [];
-      state.income = Array.isArray(incomeJson?.data) ? incomeJson.data
-                   : Array.isArray(incomeJson)        ? incomeJson : [];
+      state.users  = extractRows(usersJson);
+      state.income = extractRows(incomeJson);
+      // Diagnóstico: ver estructura real de la respuesta y muestra de datos
+      console.log('[loadBookings] usuarios:', state.users.length,
+        '| ejemplo:', JSON.stringify(state.users[0]).substring(0, 150));
+      console.log('[loadBookings] ingresos:', state.income.length,
+        '| ejemplo:', JSON.stringify(state.income[0]).substring(0, 150));
+      // Diagnóstico adicional: ver qué usuarios pasan el filtro Diana
+      const hoy = new Date(); hoy.setHours(0,0,0,0);
+      const conPlan = state.users.filter(u => {
+        const st = (u.status||'').toLowerCase().trim();
+        if (st && st !== 'activo') return false;
+        const uid = String(u.id||'').trim().replace(/\.0+$/,'');
+        const uDoc = (u.document||'').replace(/\D/g,'');
+        const mios = state.income.filter(p => {
+          const pUid = String(p.userId||'').trim().replace(/\.0+$/,'');
+          const byId = uid && pUid === uid;
+          const pDoc = (p.userDoc||'').replace(/\D/g,'');
+          const byDoc = uDoc && pDoc.length >= 3 && pDoc === uDoc;
+          if (!byId && !byDoc) return false;
+          const tipo = (p.paymentType||'').toLowerCase().trim();
+          return ['semipersonalizado diana','semipersonalizados diana',
+                  'personalizado diana','personalizados diana','diana']
+                  .some(t => tipo.includes(t));
+        });
+        if (!mios.length) return false;
+        mios.sort((a,b) => new Date(b.endDate||'2000-01-01')-new Date(a.endDate||'2000-01-01'));
+        const fin = mios[0].endDate ? new Date(mios[0].endDate+'T12:00:00') : null;
+        return fin && fin >= hoy;
+      });
+      console.log('[DIANA FILTER] usuarios con plan activo:', conPlan.length,
+        conPlan.map(u => u.name + '|status:' + u.status).join(', '));
+      // Mostrar muestra de ingresos con paymentType para verificar keywords
+      const dianaIncome = state.income.filter(p =>
+        (p.paymentType||'').toLowerCase().includes('diana'));
+      console.log('[DIANA FILTER] ingresos tipo diana encontrados:', dianaIncome.length,
+        dianaIncome.slice(0,3).map(p =>
+          'userId:'+p.userId+'|type:'+p.paymentType+'|end:'+p.endDate).join(' // '));
     } catch (ue) {
       console.warn('No se pudo cargar usuarios/ingresos:', ue);
       state.users  = [];
