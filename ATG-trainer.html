@@ -562,6 +562,7 @@ let state = {
   trainer: null,
   bookings: [],
   users: [],
+  income: [],
   currentDate: todayStr(),
   view: 'day',
   waPayload: null,
@@ -772,15 +773,20 @@ async function loadBookings() {
       b.time = String(t).trim();
     });
 
-    // Cargar usuarios para cruzar el teléfono
+    // Cargar usuarios e ingresos en paralelo
     try {
-      const usersJson = await gasCall('getUsers');
-      state.users = Array.isArray(usersJson?.data) ? usersJson.data
-                  : Array.isArray(usersJson)        ? usersJson
-                  : [];
+      const [usersJson, incomeJson] = await Promise.all([
+        gasCall('getUsers'),
+        gasCall('getIncome')
+      ]);
+      state.users  = Array.isArray(usersJson?.data) ? usersJson.data
+                   : Array.isArray(usersJson)        ? usersJson : [];
+      state.income = Array.isArray(incomeJson?.data) ? incomeJson.data
+                   : Array.isArray(incomeJson)        ? incomeJson : [];
     } catch (ue) {
-      console.warn('No se pudo cargar usuarios:', ue);
-      state.users = [];
+      console.warn('No se pudo cargar usuarios/ingresos:', ue);
+      state.users  = [];
+      state.income = [];
     }
 
     // Cruzar teléfono de la hoja Usuarios en cada booking
@@ -899,6 +905,42 @@ function closeAddUserModal() {
   state.addUserContext = null;
 }
 
+// Palabras clave que identifican un plan Diana en paymentType
+const DIANA_PAYMENT_TYPES = [
+  'semipersonalizado diana','semipersonalizados diana',
+  'personalizado diana','personalizados diana','diana'
+];
+
+function userHasActiveDianaPlan(user) {
+  // 1. Usuario debe estar activo
+  const userStatus = (user.status || '').toLowerCase().trim();
+  if (userStatus && userStatus !== 'activo') return false;
+
+  // 2. Buscar pago Diana vigente en state.income
+  const today = new Date(); today.setHours(0,0,0,0);
+  const uid   = String(user.id || '').trim();
+  const uDoc  = (user.document || '').replace(/\D/g,'');
+
+  const mios = state.income.filter(p => {
+    const pUid = String(p.userId || '').trim().replace(/\.0+$/,'');
+    const byId  = uid  && pUid === uid;
+    const pDoc  = (p.userDoc || '').replace(/\D/g,'');
+    const byDoc = uDoc && pDoc.length >= 3 && pDoc === uDoc;
+    if (!byId && !byDoc) return false;
+    const tipo = (p.paymentType || '').toLowerCase().trim();
+    return DIANA_PAYMENT_TYPES.some(t => tipo.includes(t));
+  });
+
+  if (!mios.length) return false;
+
+  // Tomar el pago con endDate más reciente
+  mios.sort((a,b) => new Date(b.endDate||'2000-01-01') - new Date(a.endDate||'2000-01-01'));
+  const ult = mios[0];
+  if (!ult.endDate) return false;
+  const fin = new Date(ult.endDate + 'T12:00:00');
+  return fin >= today;
+}
+
 function filterUserResults() {
   const q = (document.getElementById('addUserSearch').value || '').toLowerCase().trim();
   const container = document.getElementById('userSearchResults');
@@ -908,7 +950,7 @@ function filterUserResults() {
     return;
   }
 
-  // Filtrar: excluir ya inscritos en ese slot
+  // Excluir ya inscritos en ese slot
   const ctx = state.addUserContext;
   const alreadyIn = ctx
     ? new Set(getSlotBookings(ctx.dateStr, ctx.timeStr)
@@ -918,6 +960,7 @@ function filterUserResults() {
 
   const filtered = state.users.filter(u => {
     if (alreadyIn.has(String(u.id))) return false;
+    if (!userHasActiveDianaPlan(u)) return false;
     if (!q) return true;
     const name = (u.name || '').toLowerCase();
     const doc  = (u.document || '').replace(/\D/g,'');
@@ -925,12 +968,13 @@ function filterUserResults() {
   }).slice(0, 20);
 
   if (!filtered.length) {
-    container.innerHTML = '<div class="no-results-msg">Sin resultados</div>';
+    const msg = q ? 'Sin resultados para "' + q + '"'
+                  : 'No hay usuarios con plan Diana activo disponibles';
+    container.innerHTML = `<div class="no-results-msg">${msg}</div>`;
     return;
   }
 
   container.innerHTML = filtered.map(u => {
-    const safeU = JSON.stringify(u).replace(/'/g, "\'");
     return `<div class="user-result-item">
       <div>
         <div class="uri-name">${escHtml(u.name || 'Sin nombre')}</div>
