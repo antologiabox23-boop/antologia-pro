@@ -499,7 +499,7 @@ const DIANA_CREDENTIALS = [
   // { user: '3028514211', pass: '1057588479', name: 'Diana' }
   // Ejemplo: { user: '3001234567', pass: '12345678', name: 'Diana' }
   // PUEDES AGREGAR MÁS ENTRENADORAS AQUÍ
-  { user: '3028514211', pass: '1057588479', name: 'Diana' },  // ← Cambia por los datos reales
+  { user: '3028514211', pass: '1057588479', name: 'Diana' },
   { user: '3208009736', pass: '74189928', name: 'Carlos' }  // ← Cambia por los datos reales
 ];
 
@@ -509,6 +509,7 @@ const DIANA_CREDENTIALS = [
 let state = {
   trainer: null,
   bookings: [],
+  users: [],
   currentDate: todayStr(),
   view: 'day',
   waPayload: null
@@ -718,8 +719,32 @@ async function loadBookings() {
       b.time = String(t).trim();
     });
 
-    state.bookings = rows.filter(b => b.status !== 'cancelada');
-    console.log('[loadBookings] bookings loaded:', state.bookings.length);
+    // Cargar usuarios para cruzar el teléfono
+    try {
+      const usersJson = await gasCall('getUsers');
+      state.users = Array.isArray(usersJson?.data) ? usersJson.data
+                  : Array.isArray(usersJson)        ? usersJson
+                  : [];
+    } catch (ue) {
+      console.warn('No se pudo cargar usuarios:', ue);
+      state.users = [];
+    }
+
+    // Cruzar teléfono de la hoja Usuarios en cada booking
+    const userMap = {};
+    state.users.forEach(u => { if (u.id) userMap[String(u.id)] = u; });
+
+    const bookings = rows.filter(b => b.status !== 'cancelada');
+    bookings.forEach(b => {
+      if (!b.userPhone && !b.phone) {
+        const u = userMap[String(b.userId)];
+        if (u && u.phone) b.userPhone = u.phone;
+      }
+    });
+
+    state.bookings = bookings;
+    console.log('[loadBookings] bookings loaded:', state.bookings.length,
+                '| usuarios cargados:', state.users.length);
   } catch (e) {
     console.error('loadBookings:', e);
     state.bookings = [];
