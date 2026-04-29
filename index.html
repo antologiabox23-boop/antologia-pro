@@ -447,24 +447,8 @@
                     </div>
                 </div>
 
-                <!-- Alertas de inasistencia -->
-                <div class="card mb-4 border-warning">
-                    <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 text-warning"><i class="fas fa-exclamation-triangle me-2"></i>Alertas de Inasistencia <span class="badge bg-warning text-dark" id="alertsCount">0</span></h5>
-                        <small class="text-muted">Usuarios activos sin asistir más de 6 días</small>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-sm mb-0">
-                                <thead><tr><th>#</th><th>Usuario</th><th>Estado</th><th>Última asistencia</th><th>WhatsApp</th></tr></thead>
-                                <tbody id="alertsList"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Informe de asistencia por período -->
-                <div class="card">
+                <div class="card mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Informe de Asistencia</h5>
                         <span class="badge bg-primary" id="reportSummary">0 asistencias</span>
@@ -498,6 +482,22 @@
                                 <tbody id="reportList">
                                     <tr><td colspan="4" class="text-center py-3 text-muted">Selecciona un rango de fechas</td></tr>
                                 </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alertas de inasistencia -->
+                <div class="card mb-4 border-warning">
+                    <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 text-warning"><i class="fas fa-exclamation-triangle me-2"></i>Alertas de Inasistencia <span class="badge bg-warning text-dark" id="alertsCount">0</span></h5>
+                        <small class="text-muted">Usuarios activos sin asistir más de 6 días</small>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0">
+                                <thead><tr><th>#</th><th>Usuario</th><th>Estado</th><th>Última asistencia</th><th>WhatsApp</th></tr></thead>
+                                <tbody id="alertsList"></tbody>
                             </table>
                         </div>
                     </div>
