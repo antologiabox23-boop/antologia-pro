@@ -568,6 +568,11 @@ Hemos registrado tu pago correctamente. ✅
 📌 Tipo: *${tipo}*
 🗓️ Fecha: *${fecha}*${vigencia}
 
+📢 Aviso sobre membresías
+Política de Membresías – Antología Box 23
+- La membresía adquirida es personal e intransferible.
+- No se permite la modificación de titularidad ni el aplazamiento de la vigencia.
+
 ¡Gracias por confiar en *Antología Box23*! 🥊💪`;
 
         const phone = user.phone.replace(/\D/g, '');
