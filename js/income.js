@@ -9,7 +9,8 @@ const Income = (() => {
     // Tipos que tienen vigencia de un solo día
     const SINGLE_DAY_TYPES    = ['Clase suelta', 'Movimientos caja'];
     // Tipos en los que la nueva vigencia continúa donde terminó la anterior
-    const CONTINUOUS_TYPES    = ['Mensualidad', 'Paquete 10 clases', 'Personalizado Diana'];
+    const CONTINUOUS_TYPES    = ['Mensualidad', 'Paquete clases', 'Semipersonalizado Diana'];
+    const PACKAGE_TYPE        = 'Paquete clases';
 
     function initialize() {
         setupEventListeners();
@@ -42,6 +43,10 @@ const Income = (() => {
             document.getElementById('incomeStartDate').value = Utils.normalizeDate(p.startDate)   || '';
             document.getElementById('incomeEndDate').value   = Utils.normalizeDate(p.endDate)     || '';
             document.getElementById('incomeNotes').value     = p.notes || '';
+            // Número de clases del paquete
+            const classCountEl = document.getElementById('incomeClassCount');
+            if (classCountEl) classCountEl.value = p.classCount || '';
+            _toggleClassCountField();
             // Mostrar nombre del usuario en el buscador
             const user = Storage.getUserById(p.userId);
             if (user) {
@@ -116,6 +121,7 @@ const Income = (() => {
 
         // Recalcular vigencia cuando cambia el tipo de pago
         document.getElementById('incomeType')?.addEventListener('change', () => {
+            _toggleClassCountField();
             const userId = document.getElementById('incomeUser')?.value;
             if (userId) {
                 // Re-aplicar sugerencia según el tipo elegido
@@ -200,6 +206,20 @@ const Income = (() => {
             info.textContent  = `✓ Vigencia: ${Utils.formatDate(start)} → ${Utils.formatDate(end)}`;
         }
         info.style.display = 'block';
+    }
+
+    // Mostrar/ocultar campo de número de clases según el tipo seleccionado
+    function _toggleClassCountField() {
+        const tipo    = document.getElementById('incomeType')?.value;
+        const wrapper = document.getElementById('classCountWrapper');
+        if (!wrapper) return;
+        if (tipo === PACKAGE_TYPE) {
+            wrapper.style.display = 'block';
+        } else {
+            wrapper.style.display = 'none';
+            const inp = document.getElementById('incomeClassCount');
+            if (inp) inp.value = '';
+        }
     }
 
     // Convierte un objeto Date a string YYYY-MM-DD para input[type=date]
@@ -386,7 +406,10 @@ const Income = (() => {
             paymentDate:   document.getElementById('incomeDate').value,
             startDate,
             endDate,
-            notes:         Validation.sanitizeInput(document.getElementById('incomeNotes').value)
+            notes:         Validation.sanitizeInput(document.getElementById('incomeNotes').value),
+            classCount:    document.getElementById('incomeType').value === PACKAGE_TYPE
+                               ? (parseInt(document.getElementById('incomeClassCount')?.value, 10) || null)
+                               : null
         };
 
         const customVal = Validation.validatePaymentData(incomeData);
@@ -497,7 +520,7 @@ const Income = (() => {
                 <td>${(currentPage - 1) * itemsPerPage + i + 1}</td>
                 <td>${Utils.formatDate(p.paymentDate)}</td>
                 <td>${user ? Utils.escapeHtml(user.name) : '<span class="text-muted">Eliminado</span>'}</td>
-                <td><span class="badge bg-info">${p.paymentType}</span></td>
+                <td><span class="badge bg-info">${p.paymentType}${p.paymentType === PACKAGE_TYPE && p.classCount ? ` (${p.classCount} clases)` : ''}</span></td>
                 <td><strong>${Utils.formatCurrency(Utils.parseAmount(p.amount))}</strong></td>
                 <td>${p.paymentMethod}</td>
                 <td><small>${vigencia}</small></td>
@@ -554,6 +577,9 @@ const Income = (() => {
         const nombre   = user.name.split(' ')[0];
         const monto    = Utils.formatCurrency(Utils.parseAmount(p.amount));
         const tipo     = p.paymentType  || 'Membresía';
+        const tipoLabel = (p.paymentType === PACKAGE_TYPE && p.classCount)
+            ? `${tipo} (${p.classCount} clases)`
+            : tipo;
         const metodo   = p.paymentMethod || '';
         const fecha    = p.paymentDate   ? Utils.formatDate(p.paymentDate) : '';
         const vigencia = p.startDate && p.endDate
@@ -565,7 +591,7 @@ const Income = (() => {
 Hemos registrado tu pago correctamente. ✅
 
 💰 Monto: *${monto}*
-📌 Tipo: *${tipo}*
+📌 Tipo: *${tipoLabel}*
 🗓️ Fecha: *${fecha}*${vigencia}
 
 📢 Aviso sobre membresías
