@@ -9,8 +9,9 @@ const Income = (() => {
     // Tipos que tienen vigencia de un solo día
     const SINGLE_DAY_TYPES    = ['Clase suelta', 'Movimientos caja'];
     // Tipos en los que la nueva vigencia continúa donde terminó la anterior
-    const CONTINUOUS_TYPES    = ['Mensualidad', 'Paquete clases', 'Semipersonalizado Diana'];
-    const PACKAGE_TYPE        = 'Paquete clases';
+    const CONTINUOUS_TYPES    = ['Mensualidad', 'Paquete clases', 'Semipersonalizado Diana', 'Personalizado Diana'];
+    // Tipos que manejan número de clases definible
+    const CLASS_PACK_TYPES    = ['Paquete clases', 'Semipersonalizado Diana'];
 
     function initialize() {
         setupEventListeners();
@@ -213,8 +214,14 @@ const Income = (() => {
         const tipo    = document.getElementById('incomeType')?.value;
         const wrapper = document.getElementById('classCountWrapper');
         if (!wrapper) return;
-        if (tipo === PACKAGE_TYPE) {
+        if (CLASS_PACK_TYPES.includes(tipo)) {
             wrapper.style.display = 'block';
+            const hint = document.getElementById('classCountHint');
+            if (hint) {
+                hint.textContent = tipo === 'Semipersonalizado Diana'
+                    ? 'Número de sesiones semipersonalizadas con Diana.'
+                    : 'Número de clases incluidas en el paquete.';
+            }
         } else {
             wrapper.style.display = 'none';
             const inp = document.getElementById('incomeClassCount');
@@ -407,7 +414,7 @@ const Income = (() => {
             startDate,
             endDate,
             notes:         Validation.sanitizeInput(document.getElementById('incomeNotes').value),
-            classCount:    document.getElementById('incomeType').value === PACKAGE_TYPE
+            classCount:    CLASS_PACK_TYPES.includes(document.getElementById('incomeType').value)
                                ? (parseInt(document.getElementById('incomeClassCount')?.value, 10) || null)
                                : null
         };
@@ -520,7 +527,7 @@ const Income = (() => {
                 <td>${(currentPage - 1) * itemsPerPage + i + 1}</td>
                 <td>${Utils.formatDate(p.paymentDate)}</td>
                 <td>${user ? Utils.escapeHtml(user.name) : '<span class="text-muted">Eliminado</span>'}</td>
-                <td><span class="badge bg-info">${p.paymentType}${p.paymentType === PACKAGE_TYPE && p.classCount ? ` (${p.classCount} clases)` : ''}</span></td>
+                <td><span class="badge bg-info">${CLASS_PACK_TYPES.includes(p.paymentType) && p.classCount ? `${p.paymentType} · ${p.classCount} clases` : p.paymentType}</span></td>
                 <td><strong>${Utils.formatCurrency(Utils.parseAmount(p.amount))}</strong></td>
                 <td>${p.paymentMethod}</td>
                 <td><small>${vigencia}</small></td>
@@ -577,8 +584,8 @@ const Income = (() => {
         const nombre   = user.name.split(' ')[0];
         const monto    = Utils.formatCurrency(Utils.parseAmount(p.amount));
         const tipo     = p.paymentType  || 'Membresía';
-        const tipoLabel = (p.paymentType === PACKAGE_TYPE && p.classCount)
-            ? `${tipo} (${p.classCount} clases)`
+        const tipoLabel = (CLASS_PACK_TYPES.includes(p.paymentType) && p.classCount)
+            ? `${tipo} · ${p.classCount} clases`
             : tipo;
         const metodo   = p.paymentMethod || '';
         const fecha    = p.paymentDate   ? Utils.formatDate(p.paymentDate) : '';
