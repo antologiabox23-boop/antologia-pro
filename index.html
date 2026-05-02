@@ -361,7 +361,7 @@
                                 <select class="form-select" id="affiliationFilter">
                                     <option value="">Todas las afiliaciones</option>
                                     <option value="Mensualidad">Mensualidad</option>
-                                    <option value="Paquete 10 clases">Paquete 10 clases</option>
+                                    <option value="Paquete clases">Paquete clases</option>
                                     <option value="Semipersonalizado Diana">Semipersonalizado Diana</option>
                                     <option value="Clase suelta">Clase suelta</option>
                                     <option value="GAP">GAP</option>
@@ -534,7 +534,7 @@
                                 <select class="form-select" id="paymentTypeFilter">
                                     <option value="">Todos los tipos</option>
                                     <option value="Mensualidad">Mensualidad</option>
-                                    <option value="Paquete 10 clases">Paquete 10 clases</option>
+                                    <option value="Paquete clases">Paquete clases</option>
                                     <option value="Semipersonalizado Diana">Semipersonalizado Diana</option>
                                     <option value="Clase suelta">Clase suelta</option>
                                     <option value="Movimientos caja">Movimientos caja</option>
@@ -1628,7 +1628,7 @@
                                 <select class="form-select" id="userAffiliation" required>
                                     <option value="">Seleccionar...</option>
                                     <option value="Mensualidad">Mensualidad</option>
-                                    <option value="Paquete 10 clases">Paquete 10 clases</option>
+                                    <option value="Paquete clases">Paquete clases</option>
                                     <option value="Semipersonalizado Diana">Semipersonalizado Diana</option>
                                     <option value="Clase suelta">Clase suelta</option>
                                     <option value="GAP">GAP</option>
@@ -1711,12 +1711,20 @@
                             <select class="form-select" id="incomeType" required>
                                 <option value="">Seleccionar...</option>
                                 <option value="Mensualidad">Mensualidad</option>
-                                <option value="Paquete 10 clases">Paquete 10 clases</option>
+                                <option value="Paquete clases">Paquete clases</option>
                                 <option value="Semipersonalizado Diana">Semipersonalizado Diana</option>
                                 <option value="Clase suelta">Clase suelta</option>
                                 <option value="Movimientos caja">Movimientos caja</option>
                             </select>
                             <div class="invalid-feedback">Por favor selecciona un tipo de pago.</div>
+                        </div>
+                        <div class="mb-3" id="classCountWrapper" style="display:none">
+                            <label for="incomeClassCount" class="form-label">
+                                <i class="fas fa-layer-group me-1 text-info"></i>Número de clases del paquete *
+                            </label>
+                            <input type="number" class="form-control" id="incomeClassCount"
+                                   min="1" max="999" placeholder="Ej: 10, 20, 5...">
+                            <div class="form-text text-muted">Define cuántas clases incluye este paquete.</div>
                         </div>
                         <div class="mb-3">
                             <label for="incomeAmount" class="form-label">Monto *</label>
