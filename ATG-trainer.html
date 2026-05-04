@@ -546,13 +546,12 @@ const CLASS_TYPE  = 'semipersonalizado_diana';
 const MAX_CUPOS   = 4;
 const GYM_NAME    = 'Antología Box23';
 
-// Credenciales de Entrenador (celular = usuario, documento = contraseña)
+// Credenciales de Diana (celular = usuario, documento = contraseña)
 const DIANA_CREDENTIALS = [
   // { user: '3028514211', pass: '1057588479', name: 'Diana' }
   // Ejemplo: { user: '3001234567', pass: '12345678', name: 'Diana' }
   // PUEDES AGREGAR MÁS ENTRENADORAS AQUÍ
-  { user: '3028514211', pass: '1057588479', name: 'Diana' },
-  { user: '3208009736', pass: '74189928', name: 'Carlos' }// ← Cambia por los datos reales
+  { user: '3028514211', pass: '1057588479', name: 'Diana' }  // ← Cambia por los datos reales
 ];
 
 // ══════════════════════════════════════════
@@ -794,6 +793,20 @@ async function loadBookings() {
         '| más recientes:', dianaIncome.slice(0,5).map(p =>
           'userId:'+p.userId+'|type:'+p.paymentType+'|end:'+p.endDate+'|payDate:'+p.paymentDate).join(' // '));
       const hoy = new Date(); hoy.setHours(0,0,0,0);
+      _incomeUserIdByDoc = null; _incomeUserIdByName = null; // forzar reconstrucción
+      buildIncomeBridgeMaps();
+      // Test con la primera usuaria con ingreso diana vigente
+      const testIncome = state.income.find(p =>
+        DIANA_PAYMENT_TYPES.some(t => (p.paymentType||'').toLowerCase().includes(t)) &&
+        p.endDate && new Date(p.endDate+'T12:00:00') >= new Date()
+      );
+      if (testIncome) {
+        const testUid = normUid(testIncome.userId);
+        const matchUser = state.users.find(u => getIncomeUserIdForUser(u) === testUid);
+        console.log('[BRIDGE TEST] ingreso diana vigente userId:', testUid,
+          '| usuario encontrado:', matchUser ? matchUser.name : 'NINGUNO',
+          '| endDate:', testIncome.endDate);
+      }
       const conPlan = state.users.filter(u => userHasActiveDianaPlan(u));
       console.log('[DIANA FILTER] usuarios con plan activo:', conPlan.length,
         conPlan.slice(0,5).map(u => u.name+'|status:'+u.status).join(', '));
@@ -815,6 +828,7 @@ async function loadBookings() {
       }
     });
 
+    _incomeUserIdByDoc = null; _incomeUserIdByName = null; // invalidar caché bridge
     state.bookings = bookings;
     console.log('[loadBookings] bookings loaded:', state.bookings.length,
                 '| usuarios cargados:', state.users.length);
@@ -925,37 +939,78 @@ const DIANA_PAYMENT_TYPES = [
   'personalizado diana','personalizados diana','diana'
 ];
 
+// ── Mapas de cruce Ingresos ↔ Usuarios ────────────────────────────────────
+// Los userId en Ingresos y los id en Usuarios son DISTINTOS.
+// Puente: bookings de ProgramacionDiana tienen userId (=Ingresos) y userDoc (=Usuarios.document)
+// Adicionalmente: Usuarios puede tener userName que coincide con bookings.userName
+let _incomeUserIdByDoc = null;   // document → userId-de-ingresos
+let _incomeUserIdByName = null;  // normalizedName → userId-de-ingresos
+
+function normUid(v) { return String(v || '').trim().replace(/\.0+$/, ''); }
+function normName(v) { return (v || '').toLowerCase().trim().replace(/\s+/g,' '); }
+
+function buildIncomeBridgeMaps() {
+  if (_incomeUserIdByDoc) return;
+  _incomeUserIdByDoc  = {};
+  _incomeUserIdByName = {};
+  // Fuente 1: bookings de programación (más confiable)
+  state.bookings.forEach(b => {
+    const doc  = (b.userDoc  || '').replace(/\D/g,'');
+    const name = normName(b.userName);
+    const uid  = normUid(b.userId);
+    if (!uid) return;
+    if (doc)  _incomeUserIdByDoc[doc]   = uid;
+    if (name) _incomeUserIdByName[name] = uid;
+  });
+  // Fuente 2: ingresos diana — cruzar por userName si el ingreso tiene userName
+  // (algunos sistemas guardan el nombre en notes)
+  state.income.forEach(p => {
+    const tipo = (p.paymentType || '').toLowerCase();
+    if (!DIANA_PAYMENT_TYPES.some(t => tipo.includes(t))) return;
+    const uid  = normUid(p.userId);
+    if (!uid) return;
+    const name = normName(p.userName || p.notes || '');
+    if (name.length > 4 && !_incomeUserIdByName[name]) _incomeUserIdByName[name] = uid;
+  });
+  console.log('[BRIDGE] doc entries:', Object.keys(_incomeUserIdByDoc).length,
+              '| name entries:', Object.keys(_incomeUserIdByName).length);
+}
+
+function getIncomeUserIdForUser(user) {
+  buildIncomeBridgeMaps();
+  const doc  = (user.document || '').replace(/\D/g,'');
+  const name = normName(user.name);
+  return _incomeUserIdByDoc[doc] || _incomeUserIdByName[name] || null;
+}
+
 function userHasActiveDianaPlan(user) {
   // 1. Usuario debe estar activo (campo vacío = activo por defecto)
   const userStatus = (user.status || '').toLowerCase().trim();
   if (userStatus && userStatus !== 'activo') return false;
 
-  // 2. Buscar pago Diana en state.income
-  const today = new Date(); today.setHours(0,0,0,0);
-  const uid   = String(user.id || '').trim().replace(/\.0+$/, '');
-  const uDoc  = (user.document || '').replace(/\D/g,'');
+  // 2. Resolver el userId que usa la hoja Ingresos para este usuario
+  const incomeUid = getIncomeUserIdForUser(user);
+  const directUid = normUid(user.id);
+  const uDoc      = (user.document || '').replace(/\D/g,'');
+  const today     = new Date(); today.setHours(0,0,0,0);
 
   const mios = state.income.filter(p => {
-    const pUid = String(p.userId || '').trim().replace(/\.0+$/,'');
-    const byId  = uid  && pUid === uid;
+    const pUid = normUid(p.userId);
+    const byIncomeUid = incomeUid && pUid === incomeUid;
+    const byDirectUid = directUid && pUid === directUid;
     const pDoc  = (p.userDoc || '').replace(/\D/g,'');
     const byDoc = uDoc && pDoc.length >= 3 && pDoc === uDoc;
-    if (!byId && !byDoc) return false;
+    if (!byIncomeUid && !byDirectUid && !byDoc) return false;
     const tipo = (p.paymentType || '').toLowerCase().trim();
     return DIANA_PAYMENT_TYPES.some(t => tipo.includes(t));
   });
 
   if (!mios.length) return false;
 
-  // Tomar el pago con endDate más reciente
   mios.sort((a,b) => new Date(b.endDate||'2000-01-01') - new Date(a.endDate||'2000-01-01'));
   const ult = mios[0];
-
-  // Si no tiene endDate → vigente (igual que el backend checkIncomeDiana)
-  if (!ult.endDate) return true;
-
-  const fin = new Date(ult.endDate + 'T12:00:00');
-  return fin >= today;
+  if (!ult.endDate) return true;   // sin endDate → vigente
+  return new Date(ult.endDate + 'T12:00:00') >= today;
 }
 
 function filterUserResults() {
