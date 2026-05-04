@@ -401,10 +401,10 @@ body::before{
       <div class="logo-icon">A</div>
       <div>
         <h2>Antología Box23</h2>
-        <small>Panel de Entrenadores</small>
+        <small>Panel de Entrenadora</small>
       </div>
     </div>
-    <div class="login-title">Bienvenidos 👋</div>
+    <div class="login-title">Bienvenida 👋</div>
     <p class="login-sub">Ingresa tus credenciales para continuar</p>
 
     <div class="mb-3">
@@ -541,7 +541,7 @@ body::before{
 // ══════════════════════════════════════════
 //  CONFIG — ajusta según tu setup
 // ══════════════════════════════════════════
-const SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbx5oUQnZ2JTyMv7vU8OFItUnYss6lcPXo85EJAwdQNHUVc7typYjxTSvhPQEl_2K1yl/exec';
+const SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbwl5MzotCrhDfwYZlgLOWZtO2L0xagoBIgBcTC9uM8fym0oCmmJn0IrQJHS6XEHLF1r/exec';
 const CLASS_TYPE  = 'semipersonalizado_diana';
 const MAX_CUPOS   = 4;
 const GYM_NAME    = 'Antología Box23';
@@ -551,8 +551,8 @@ const DIANA_CREDENTIALS = [
   // { user: '3028514211', pass: '1057588479', name: 'Diana' }
   // Ejemplo: { user: '3001234567', pass: '12345678', name: 'Diana' }
   // PUEDES AGREGAR MÁS ENTRENADORAS AQUÍ
-  { user: '3028514211', pass: '1057588479', name: 'Diana' },
-  { user: '3208009736', pass: '74189928', name: 'Carlos' }// ← Cambia por los datos reales
+  { user: '3028514211', pass: '1057588479', name: 'Diana' } ,
+  { user: '3208009736', pass: '74189928', name: 'Carlos' } // ← Cambia por los datos reales
 ];
 
 // ══════════════════════════════════════════
@@ -947,7 +947,18 @@ const DIANA_PAYMENT_TYPES = [
 let _incomeUserIdByDoc = null;   // document → userId-de-ingresos
 let _incomeUserIdByName = null;  // normalizedName → userId-de-ingresos
 
-function normUid(v) { return String(v || '').trim().replace(/\.0+$/, ''); }
+// Normaliza un userId/id para cruce entre hojas.
+// En este sistema los UUIDs tienen el número de fila concatenado al último bloque:
+//   Usuarios fila 15:   ebf5bcb6-47b3-47c1-ae7b-8fbfa9dc3c + 15  (12 chars total)
+//   Ingresos fila 105:  ebf5bcb6-47b3-47c1-ae7b-8fbfa9dc3c + 105 (13 chars total)
+// El último bloque base tiene 10 chars hex. Truncando a 10 se obtiene la raíz común.
+function normUid(v) {
+  const s = String(v || '').trim().replace(/\.0+$/, '').toLowerCase();
+  // Si tiene formato UUID (4 grupos separados por guión + último grupo de 10+ hex)
+  const m = s.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-)([0-9a-f]{10,})$/);
+  if (m) return m[1] + m[2].substring(0, 10);
+  return s;
+}
 function normName(v) { return (v || '').toLowerCase().trim().replace(/\s+/g,' '); }
 
 function buildIncomeBridgeMaps() {
