@@ -22,7 +22,7 @@ const SHEETS = {
 const COLUMNS = {
   Usuarios:           ['id','name','document','birthdate','phone','eps','bloodType','pathology','emergencyContact','emergencyPhone','classTime','affiliationType','status','createdAt','updatedAt'],
   Asistencia:         ['id','userId','date','status','time','createdAt'],
-  Ingresos:           ['id','userId','paymentType','amount','paymentMethod','paymentDate','startDate','endDate','notes','classCount','createdAt'],
+  Ingresos:           ['id','userId','paymentType','amount','paymentMethod','paymentDate','startDate','endDate','notes','createdAt'],
   Gastos:             ['id','date','description','amount','category','account','createdAt'],
   Clases:             ['id','date','hour','trainerId','classType','duration','payment','createdAt'],
   Membresias:         ['id','userId','userDoc','userName','tipo','vigenciaDesde','vigenciaHasta','estado','clasesTotal','clasesUsadas','createdAt'],
@@ -93,7 +93,7 @@ function dispatch(action, payload) {
     // Genéricos
     case 'getUsers':          return getAllRows(SHEETS.USERS);
     case 'getAttendance':     return getAllRows(SHEETS.ATTENDANCE);
-    case 'getIncome':         return getAllRows(SHEETS.INCOME);
+    case 'getIncome':         return getIncomeEnriched();
     case 'getExpenses':       return getAllRows(SHEETS.EXPENSES);
     case 'getClasses':        return getAllRows(SHEETS.CLASSES);
     case 'addRow':            return addRow(payload.sheet, payload.row);
@@ -369,7 +369,11 @@ function checkIncomeDiana(payload) {
   // La hoja Ingresos solo tiene userId, no documento.
   // Cruzamos con Usuarios para obtener el id correcto si se pasó documento.
   // Normaliza userId quitando decimales innecesarios ("1.0" → "1")
-  function normUid(v) { return String(v || '').trim().replace(/\.0+$/, ''); }
+  function normUid(v) {
+    var s = String(v || '').trim().replace(/\.0+$/, '').toLowerCase();
+    var m = s.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-)([0-9a-f]{10,})$/);
+    return m ? m[1] + m[2].substring(0, 10) : s;
+  }
 
   var candidateIds = [];
   if (userId) candidateIds.push(normUid(userId));
@@ -479,7 +483,7 @@ var TIME_COLUMNS = {
 };
 
 var NUMERIC_COLUMNS = {
-  Ingresos: ['amount', 'classCount'],
+  Ingresos: ['amount'],
   Gastos:   ['amount'],
   Clases:   ['duration','payment']
 };
@@ -534,6 +538,39 @@ function serializeCell(value, columnName, sheetName) {
     return String(value);
   }
   return String(value);
+}
+
+/**
+ * Devuelve todos los ingresos enriquecidos con userDoc y userName del usuario,
+ * cruzando por userId con la hoja Usuarios. Esto permite que el frontend pueda
+ * identificar el plan Diana activo de un usuario aunque no tenga bookings previos.
+ */
+function getIncomeEnriched() {
+  var income = getAllRows(SHEETS.INCOME);
+  var users  = getAllRows(SHEETS.USERS);
+
+  function normUid(v) {
+    var s = String(v || '').trim().replace(/\.0+$/, '').toLowerCase();
+    var m = s.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-)([0-9a-f]{10,})$/);
+    return m ? m[1] + m[2].substring(0, 10) : s;
+  }
+
+  // Construir mapa userId → { document, name }
+  var userMap = {};
+  users.forEach(function(u) {
+    var uid = normUid(u.id);
+    if (uid) userMap[uid] = { document: u.document || '', name: u.name || '' };
+  });
+
+  income.forEach(function(p) {
+    var uid = normUid(p.userId);
+    var u   = userMap[uid];
+    if (u) {
+      p.userDoc  = p.userDoc  || u.document;
+      p.userName = p.userName || u.name;
+    }
+  });
+  return income;
 }
 
 function getAllRows(sheetName) {
