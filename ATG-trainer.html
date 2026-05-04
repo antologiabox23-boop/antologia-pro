@@ -541,7 +541,7 @@ body::before{
 // ══════════════════════════════════════════
 //  CONFIG — ajusta según tu setup
 // ══════════════════════════════════════════
-const SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbx-F1QHaEpduCL_b15-ol1fqVb_pJtYRIgg_aL4RGVSMbVJ0c8LxmUG0gvx5gsXX2dS/exec';
+const SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbx5oUQnZ2JTyMv7vU8OFItUnYss6lcPXo85EJAwdQNHUVc7typYjxTSvhPQEl_2K1yl/exec';
 const CLASS_TYPE  = 'semipersonalizado_diana';
 const MAX_CUPOS   = 4;
 const GYM_NAME    = 'Antología Box23';
@@ -992,15 +992,20 @@ function userHasActiveDianaPlan(user) {
   const incomeUid = getIncomeUserIdForUser(user);
   const directUid = normUid(user.id);
   const uDoc      = (user.document || '').replace(/\D/g,'');
+  const uName     = normName(user.name);
   const today     = new Date(); today.setHours(0,0,0,0);
 
   const mios = state.income.filter(p => {
     const pUid = normUid(p.userId);
     const byIncomeUid = incomeUid && pUid === incomeUid;
     const byDirectUid = directUid && pUid === directUid;
+    // p.userDoc es enriquecido por el backend (getIncomeEnriched)
     const pDoc  = (p.userDoc || '').replace(/\D/g,'');
     const byDoc = uDoc && pDoc.length >= 3 && pDoc === uDoc;
-    if (!byIncomeUid && !byDirectUid && !byDoc) return false;
+    // Fallback por nombre (backend también enriquece p.userName)
+    const pName = normName(p.userName || p.notes || '');
+    const byName = uName.length > 3 && pName.length > 3 && pName === uName;
+    if (!byIncomeUid && !byDirectUid && !byDoc && !byName) return false;
     const tipo = (p.paymentType || '').toLowerCase().trim();
     return DIANA_PAYMENT_TYPES.some(t => tipo.includes(t));
   });
