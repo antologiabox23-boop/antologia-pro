@@ -369,13 +369,11 @@ function checkIncomeDiana(payload) {
   // La hoja Ingresos solo tiene userId, no documento.
   // Cruzamos con Usuarios para obtener el id correcto si se pasó documento.
   // Normaliza userId quitando decimales innecesarios ("1.0" → "1")
+  // Normaliza userId solo quitando decimales ("1.0" → "1"). NO truncar UUIDs —
+  // en este sistema userId en Ingresos === id en Usuarios de forma exacta.
   function normUid(v) {
-    var s = String(v || '').trim().replace(/\.0+$/, '').toLowerCase();
-    var m = s.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-)([0-9a-f]{10,})$/);
-    return m ? m[1] + m[2].substring(0, 10) : s;
+    return String(v || '').trim().replace(/\.0+$/, '');
   }
-
-  var candidateIds = [];
   if (userId) candidateIds.push(normUid(userId));
 
   if (userDoc) {
@@ -550,9 +548,7 @@ function getIncomeEnriched() {
   var users  = getAllRows(SHEETS.USERS);
 
   function normUid(v) {
-    var s = String(v || '').trim().replace(/\.0+$/, '').toLowerCase();
-    var m = s.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-)([0-9a-f]{10,})$/);
-    return m ? m[1] + m[2].substring(0, 10) : s;
+    return String(v || '').trim().replace(/\.0+$/, '');
   }
 
   // Construir mapa userId → { document, name }
