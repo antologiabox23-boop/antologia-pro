@@ -1034,12 +1034,27 @@ function getDateForDay(dayName, offset) {
 function buildWeekNavigator() {
     const nav = document.getElementById('weekNav');
     if (!nav) return;
-    const days    = Object.keys(SCHEDULE_CONFIG);
-    const first   = getDateForDay(days[0], weekOffset);
-    const last    = getDateForDay(days[days.length - 1], weekOffset);
+    const allDays  = Object.keys(SCHEDULE_CONFIG);
+    const days     = weekOffset === 0
+        ? allDays.filter(d => { const today = new Date(); today.setHours(0,0,0,0); return getDateForDay(d, 0) >= today; })
+        : allDays;
+    const first   = days.length ? getDateForDay(days[0], weekOffset) : getDateForDay(allDays[0], weekOffset);
+    const last    = days.length ? getDateForDay(days[days.length - 1], weekOffset) : getDateForDay(allDays[allDays.length - 1], weekOffset);
     const range   = `${first.getDate()} ${MONTHS_SHORT[first.getMonth()]} — ${last.getDate()} ${MONTHS_SHORT[last.getMonth()]}`;
+
+    // Calcular si hay días disponibles en la semana anterior (offset - 1)
+    let canGoBack = false;
+    if (weekOffset > 0) {
+        if (weekOffset - 1 === 0) {
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            canGoBack = allDays.some(d => getDateForDay(d, 0) >= today);
+        } else {
+            canGoBack = true;
+        }
+    }
+
     nav.innerHTML = `
-        <button class="week-nav-btn" onclick="changeWeek(-1)" ${weekOffset === 0 ? 'disabled' : ''}>
+        <button class="week-nav-btn" onclick="changeWeek(-1)" ${!canGoBack ? 'disabled' : ''}>
             <i class="fas fa-chevron-left"></i>
         </button>
         <span class="week-nav-label">${weekOffset === 0 ? 'Esta semana' : 'Semana del ' + range}</span>
@@ -1051,6 +1066,13 @@ function buildWeekNavigator() {
 function changeWeek(delta) {
     const next = weekOffset + delta;
     if (next < 0) return;
+    // Si estamos en semana 1 y queremos ir a 0, verificar que haya días disponibles hoy
+    if (next === 0) {
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const allDays = Object.keys(SCHEDULE_CONFIG);
+        const availableToday = allDays.filter(d => getDateForDay(d, 0) >= today);
+        if (availableToday.length === 0) return; // no hay días esta semana, no regresar
+    }
     weekOffset = next;
     state.selectedTime = null;
     state.selectedIsWaitlist = false;
@@ -1060,11 +1082,25 @@ function changeWeek(delta) {
 }
 
 function buildDayTabs() {
-    const days = Object.keys(SCHEDULE_CONFIG);
+    const allDays = Object.keys(SCHEDULE_CONFIG);
     const cont = document.getElementById('dayTabs');
     if (!cont) return;
     cont.innerHTML = '';
     buildWeekNavigator();
+
+    // En la semana actual, filtrar los días que ya pasaron (antes de hoy)
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const days = weekOffset === 0
+        ? allDays.filter(d => getDateForDay(d, 0) >= today)
+        : allDays;
+
+    // Si todos los días de la semana actual ya pasaron, avanzar automáticamente a la siguiente
+    if (days.length === 0) {
+        weekOffset = 1;
+        buildDayTabs();
+        return;
+    }
+
     days.forEach((d, i) => {
         const fecha   = getDateForDay(d, weekOffset);
         const dateStr = fecha.toISOString().split('T')[0];
