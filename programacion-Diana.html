@@ -1035,8 +1035,9 @@ function buildWeekNavigator() {
     const nav = document.getElementById('weekNav');
     if (!nav) return;
     const allDays  = Object.keys(SCHEDULE_CONFIG);
+    const todayDayNum = new Date().getDay();
     const days     = weekOffset === 0
-        ? allDays.filter(d => { const today = new Date(); today.setHours(0,0,0,0); return getDateForDay(d, 0) >= today; })
+        ? allDays.filter(d => DAY_NUM[d] >= todayDayNum)
         : allDays;
     const first   = days.length ? getDateForDay(days[0], weekOffset) : getDateForDay(allDays[0], weekOffset);
     const last    = days.length ? getDateForDay(days[days.length - 1], weekOffset) : getDateForDay(allDays[allDays.length - 1], weekOffset);
@@ -1046,8 +1047,8 @@ function buildWeekNavigator() {
     let canGoBack = false;
     if (weekOffset > 0) {
         if (weekOffset - 1 === 0) {
-            const today = new Date(); today.setHours(0, 0, 0, 0);
-            canGoBack = allDays.some(d => getDateForDay(d, 0) >= today);
+            const todayDayNum = new Date().getDay();
+            canGoBack = allDays.some(d => DAY_NUM[d] >= todayDayNum);
         } else {
             canGoBack = true;
         }
@@ -1068,9 +1069,9 @@ function changeWeek(delta) {
     if (next < 0) return;
     // Si estamos en semana 1 y queremos ir a 0, verificar que haya días disponibles hoy
     if (next === 0) {
-        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const todayDayNum = new Date().getDay();
         const allDays = Object.keys(SCHEDULE_CONFIG);
-        const availableToday = allDays.filter(d => getDateForDay(d, 0) >= today);
+        const availableToday = allDays.filter(d => DAY_NUM[d] >= todayDayNum);
         if (availableToday.length === 0) return; // no hay días esta semana, no regresar
     }
     weekOffset = next;
@@ -1088,10 +1089,10 @@ function buildDayTabs() {
     cont.innerHTML = '';
     buildWeekNavigator();
 
-    // En la semana actual, filtrar los días que ya pasaron (antes de hoy)
-    const today = new Date(); today.setHours(0, 0, 0, 0);
+    // En la semana actual, filtrar los días cuyo número de día es menor al día de hoy
+    const todayDayNum = new Date().getDay(); // 0=dom, 1=lun, 2=mar...
     const days = weekOffset === 0
-        ? allDays.filter(d => getDateForDay(d, 0) >= today)
+        ? allDays.filter(d => DAY_NUM[d] >= todayDayNum)
         : allDays;
 
     // Si todos los días de la semana actual ya pasaron, avanzar automáticamente a la siguiente
