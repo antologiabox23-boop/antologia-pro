@@ -1020,14 +1020,14 @@ const DAY_NUM = { lunes: 1, martes: 2, 'miércoles': 3, jueves: 4, viernes: 5, '
 
 function getDateForDay(dayName, offset) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    let diff = DAY_NUM[dayName] - today.getDay();
-    // CORRECCIÓN: usar < 0 en lugar de <= 0
-    // Con <= 0, el día de HOY (diff===0) saltaba a la semana siguiente,
-    // causando que las clases programadas para hoy no aparecieran.
-    if (diff < 0) diff += 7;
-    diff += offset * 7;
-    const d = new Date(today);
-    d.setDate(today.getDate() + diff);
+    // Calcular el lunes de la semana actual
+    const todayNum = today.getDay() === 0 ? 7 : today.getDay(); // dom=7
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (todayNum - 1));
+    // Desde el lunes, sumar el día pedido + offset de semanas
+    const dayOffset = DAY_NUM[dayName] - 1; // lunes=0, martes=1, ...sábado=5
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + dayOffset + offset * 7);
     return d;
 }
 
