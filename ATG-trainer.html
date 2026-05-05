@@ -552,7 +552,7 @@ const DIANA_CREDENTIALS = [
   // Ejemplo: { user: '3001234567', pass: '12345678', name: 'Diana' }
   // PUEDES AGREGAR MÁS ENTRENADORAS AQUÍ
   { user: '3028514211', pass: '1057588479', name: 'Diana' },
-  { user: '3208009736', pass: '74189928', name: 'Carlos'} // ← Cambia por los datos reales
+  { user: '3208009736', pass: '74189928', name: 'Carlos' }  // ← Cambia por los datos reales
 ];
 
 // ══════════════════════════════════════════
@@ -1231,34 +1231,41 @@ function renderSchedule() {
   }
 }
 
+// Horarios canónicos del sistema por día de la semana
+const SCHEDULE_SLOTS = {
+  lunes:     ['05:00','06:00','07:00','08:00','09:00','17:00','18:00','19:00'],
+  martes:    ['05:00','06:00','07:00','08:00','09:00','17:00','18:00','19:00'],
+  miércoles: ['05:00','06:00','07:00','08:00','09:00','17:00','18:00','19:00'],
+  jueves:    ['05:00','06:00','07:00','08:00','09:00','17:00','18:00','19:00'],
+  viernes:   ['05:00','06:00','07:00','08:00','09:00','17:00','18:00','19:00'],
+  sábado:    ['07:00','08:00','09:00','10:00'],
+  domingo:   [],
+};
+const DOW_NAMES = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+
 function getTimesForDate(dateStr) {
-  // Primero intentar derivar horarios reales de las reservas cargadas
-  const realTimes = [...new Set(
-    state.bookings
-      .filter(b => (b.date || '').substring(0, 10) === dateStr)
-      .map(b => (b.time || '').trim())
-      .filter(Boolean)
-  )].sort();
-
-  if (realTimes.length > 0) return realTimes;
-
-  // Fallback: horarios por defecto según día de la semana
   const d = parseLocalDate(dateStr);
-  const dow = d.getDay(); // 0=dom, 6=sab
-  if (dow === 0) return [];
-  if (dow === 6) return ['08:00','09:00','10:00'];
-  return ['05:00','06:00','07:00','08:00','09:00','16:00','17:00','18:00','19:00'];
+  const dayName = DOW_NAMES[d.getDay()];
+  const canonical = SCHEDULE_SLOTS[dayName] || [];
+
+  // Incluir también cualquier hora extra que exista en reservas reales (clases especiales)
+  const fromBookings = state.bookings
+    .filter(b => (b.date || '').substring(0, 10) === dateStr)
+    .map(b => (b.time || '').trim())
+    .filter(Boolean);
+
+  const all = [...new Set([...canonical, ...fromBookings])].sort();
+  return all;
 }
 
 function renderDayView(dateStr) {
   const times = getTimesForDate(dateStr);
 
-  // Stats
-  let totalClases = 0, totalInscritos = 0, totalEspera = 0;
+  // Stats — totalClases = slots canónicos del día (tengan o no inscritos)
+  let totalClases = times.length, totalInscritos = 0, totalEspera = 0;
   times.forEach(t => {
     const all = getSlotBookings(dateStr, t);
     const active = all.filter(b => b.status !== 'cancelada');
-    if (active.length > 0) totalClases++;
     totalInscritos += active.filter(b => b.status !== 'espera').length;
     totalEspera    += active.filter(b => b.status === 'espera').length;
   });
@@ -1409,18 +1416,14 @@ function renderWeekView() {
     if (times.length === 0) return;
 
     const dayBookings = state.bookings.filter(b => (b.date||'').substring(0,10) === dateStr);
-    if (dayBookings.length === 0) return;
-
     const inscs  = dayBookings.filter(b => b.status !== 'espera' && b.status !== 'cancelada');
     const waits  = dayBookings.filter(b => b.status === 'espera');
-    const slots  = new Set(inscs.map(b => b.time || b.classTime)).size;
 
-    totalClases    += slots;
+    totalClases    += times.length;
     totalInscritos += inscs.length;
     totalEspera    += waits.length;
 
     const slotCards = times
-      .filter(t => getSlotBookings(dateStr,t).length > 0)
       .map(t => renderSlotCard(dateStr, t))
       .join('');
 
