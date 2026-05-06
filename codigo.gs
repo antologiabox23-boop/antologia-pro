@@ -162,6 +162,52 @@ function addClassProg(sheetName, booking) {
   row.createdAt = nowStr;
 
   addRow(sheetName, row);
+
+  // Si se registra directamente como 'cumplida' (asistencia no programada),
+  // también crear la fila en la hoja Asistencia para que aparezca en reportes.
+  if (row.status === 'cumplida') {
+    var dateStr = String(booking.classDate || '').substring(0, 10);
+    var timeStr = String(booking.time || '').trim();
+    var userId  = String(booking.userId || '').trim();
+
+    if (userId && dateStr) {
+      var asistSheet  = getOrCreateSheet(SHEETS.ATTENDANCE);
+      var asistData   = asistSheet.getDataRange().getValues();
+      var aHeaders    = asistData[0];
+      var aUserIdCol  = aHeaders.indexOf('userId');
+      var aDateCol    = aHeaders.indexOf('date');
+      var aTimeCol    = aHeaders.indexOf('time');
+      var aStatusCol  = aHeaders.indexOf('status');
+
+      // Evitar duplicados
+      var alreadyExists = false;
+      for (var j = 1; j < asistData.length; j++) {
+        var aRow = asistData[j];
+        var sameUser = aUserIdCol !== -1 && String(aRow[aUserIdCol]) === userId;
+        var sameDate = aDateCol   !== -1 && String(aRow[aDateCol]).substring(0,10) === dateStr;
+        var sameTime = aTimeCol   !== -1 && String(aRow[aTimeCol]).trim() === timeStr;
+        var sameStat = aStatusCol !== -1 && String(aRow[aStatusCol]) === 'cumplida';
+        if (sameUser && sameDate && sameTime && sameStat) {
+          alreadyExists = true;
+          break;
+        }
+      }
+
+      if (!alreadyExists) {
+        var asistRow = {
+          id:        makeId(),
+          userId:    userId,
+          date:      dateStr,
+          status:    'cumplida',
+          time:      timeStr,
+          createdAt: nowStr
+        };
+        addRow(SHEETS.ATTENDANCE, asistRow);
+        Logger.log('Asistencia (no programada) registrada: userId=' + userId + ' date=' + dateStr + ' time=' + timeStr);
+      }
+    }
+  }
+
   return { success: true, bookingId: id };
 }
 
@@ -279,7 +325,7 @@ function updateBookingStatus(payload) {
       var sameUser = aUserIdCol !== -1 && String(aRow[aUserIdCol]) === String(asistUserId);
       var sameDate = aDateCol   !== -1 && String(aRow[aDateCol]).substring(0,10) === dateStr;
       var sameTime = aTimeCol   !== -1 && String(aRow[aTimeCol]).trim() === timeStr;
-      var sameStat = aStatusCol !== -1 && String(aRow[aStatusCol]) === 'presente';
+      var sameStat = aStatusCol !== -1 && String(aRow[aStatusCol]) === 'cumplida';
       if (sameUser && sameDate && sameTime && sameStat) {
         alreadyExists = true;
         break;
