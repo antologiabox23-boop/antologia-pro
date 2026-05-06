@@ -117,7 +117,15 @@ ${FORM_LINK}`;
         const vigencia = payment.startDate && payment.endDate
             ? `\n\uD83D\uDCC5 Vigencia: ${Utils.formatDate(payment.startDate)} al ${Utils.formatDate(payment.endDate)}`
             : '';
-        const msg = `\u00A1Hola ${nombre}! \uD83D\uDC4B\nHemos recibido tu pago correctamente. \u2705\n\n\uD83D\uDCB0 Monto: *${Utils.formatCurrency(payment.amount)}*\n\uD83D\uDCCC Tipo: *${payment.paymentType}*\n\uD83D\uDCB3 M\u00E9todo: *${payment.paymentMethod}*${vigencia}\n\n\u00A1Gracias por confiar en *${GYM_NAME}*! \uD83C\uDFCB\uFE0F`;
+        // Paquetes de clases: incluir número de clases en el mensaje
+        const CLASS_PACK_TYPES_WA = ['Paquete clases', 'Semipersonalizado Diana'];
+        const clasesInfo = CLASS_PACK_TYPES_WA.includes(payment.paymentType) && payment.classCount
+            ? `\n\uD83C\uDFAF Clases incluidas: *${payment.classCount} clases*`
+            : '';
+        const tipoLabel = CLASS_PACK_TYPES_WA.includes(payment.paymentType) && payment.classCount
+            ? `${payment.paymentType} \u00B7 ${payment.classCount} clases`
+            : payment.paymentType;
+        const msg = `\u00A1Hola ${nombre}! \uD83D\uDC4B\nHemos recibido tu pago correctamente. \u2705\n\n\uD83D\uDCB0 Monto: *${Utils.formatCurrency(payment.amount)}*\n\uD83D\uDCCC Tipo: *${tipoLabel}*\n\uD83D\uDCB3 M\u00E9todo: *${payment.paymentMethod}*${vigencia}${clasesInfo}\n\n\u00A1Gracias por confiar en *${GYM_NAME}*! \uD83C\uDFCB\uFE0F`;
         openWA(user.phone, msg);
     }
 

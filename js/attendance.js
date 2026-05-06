@@ -33,20 +33,52 @@ const Attendance = (() => {
         return payments[0] || null; // el pago más reciente
     }
 
+    const CLASS_PACK_TYPES = ['Paquete clases', 'Semipersonalizado Diana'];
+
     function vigenciaBadge(userId) {
         const today   = Utils.getCurrentDate();
         const payment = getActivePayment(userId);
         if (!payment) return `<span class="badge bg-secondary">Sin pago</span>`;
 
-        const start = payment.startDate;
-        const end   = payment.endDate;
-        const tipo  = payment.paymentType || '';
+        const start      = payment.startDate;
+        const end        = payment.endDate;
+        const tipo       = payment.paymentType || '';
+        const classCount = payment.classCount ? parseInt(payment.classCount, 10) : null;
+        const esPaquete  = CLASS_PACK_TYPES.includes(tipo) && classCount;
 
         // Contar asistencias en el período
         const attendsInPeriod = Storage.getAttendance()
             .filter(a => a.userId === userId && a.status === 'presente' && a.date >= start && a.date <= end).length;
 
-        // Días vencido / activo
+        // ── Lógica especial para paquetes de clases ──────────────────────
+        if (esPaquete) {
+            // Total de clases asistidas desde el inicio del paquete (incluyendo tras vencimiento)
+            const totalClases = Storage.getAttendance()
+                .filter(a => a.userId === userId && a.status === 'presente' && a.date >= start).length;
+
+            const clasesRestantes  = classCount - totalClases;
+            const clasesExcedidas  = totalClases - classCount;
+            const tipoLabel        = `${tipo} · ${classCount} clases`;
+
+            let vigTag, extraInfo = '';
+            if (clasesRestantes > 0) {
+                vigTag = `<span class="badge bg-success">✔ ${clasesRestantes} clase${clasesRestantes !== 1 ? 's' : ''} restante${clasesRestantes !== 1 ? 's' : ''}</span>`;
+            } else if (clasesRestantes === 0) {
+                vigTag = `<span class="badge bg-warning text-dark">⚠ Paquete agotado (${classCount} clases)</span>`;
+            } else {
+                vigTag = `<span class="badge bg-danger">🚫 Paquete vencido</span>`;
+                extraInfo = `<div class="text-danger small mt-1 fw-semibold">${clasesExcedidas} clase${clasesExcedidas !== 1 ? 's' : ''} tras vencimiento del paquete</div>`;
+            }
+
+            return `<div class="small lh-sm">
+                ${vigTag}
+                <div class="text-muted mt-1">${Utils.formatDate(start)} → ${Utils.formatDate(end)} ·
+                <em>${tipoLabel}</em> · <strong>${totalClases}</strong> / ${classCount} clase${classCount !== 1 ? 's' : ''} usadas</div>
+                ${extraInfo}
+            </div>`;
+        }
+
+        // ── Lógica estándar por fechas ────────────────────────────────────
         const endDate   = new Date(end   + 'T00:00:00');
         const todayDate = new Date(today + 'T00:00:00');
         const diffDays  = Math.floor((todayDate - endDate) / 86400000);

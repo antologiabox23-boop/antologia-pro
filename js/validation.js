@@ -155,6 +155,13 @@ const Validation = (() => {
         else if (!Storage.getUserById(data.userId)) errors.push('Usuario no encontrado');
         if (isNaN(data.amount) || data.amount <= 0) errors.push('El monto debe ser mayor a 0');
         if (data.amount > 50000000) errors.push('El monto supera $50.000.000. Verifica el valor ingresado.');
+        // Validar número de clases para paquetes
+        const CLASS_PACK_TYPES_VAL = ['Paquete clases', 'Semipersonalizado Diana'];
+        if (CLASS_PACK_TYPES_VAL.includes(data.paymentType)) {
+            if (!data.classCount || isNaN(data.classCount) || data.classCount < 1) {
+                errors.push('Ingresa el número de clases para este paquete (mínimo 1)');
+            }
+        }
         return { isValid: errors.length === 0, errors };
     }
 
