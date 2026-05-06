@@ -279,7 +279,7 @@ function updateBookingStatus(payload) {
       var sameUser = aUserIdCol !== -1 && String(aRow[aUserIdCol]) === String(asistUserId);
       var sameDate = aDateCol   !== -1 && String(aRow[aDateCol]).substring(0,10) === dateStr;
       var sameTime = aTimeCol   !== -1 && String(aRow[aTimeCol]).trim() === timeStr;
-      var sameStat = aStatusCol !== -1 && String(aRow[aStatusCol]) === 'cumplida';
+      var sameStat = aStatusCol !== -1 && String(aRow[aStatusCol]) === 'presente';
       if (sameUser && sameDate && sameTime && sameStat) {
         alreadyExists = true;
         break;
