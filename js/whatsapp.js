@@ -29,16 +29,98 @@ const WhatsApp = (() => {
         });
     }
 
+    // ── Detección de dispositivo ──────────────────────────────────────────
+    function isMobile() {
+        return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent)
+            || (navigator.maxTouchPoints > 1 && /MacIntel/.test(navigator.platform));
+    }
+
     function buildUrl(phone, message) {
         const clean = (phone || '').replace(/\D/g, '');
-        // encodeURIComponent codifica todo incluyendo emojis correctamente como UTF-8
-        // WhatsApp requiere que los espacios sean %20 (no +)
         const encoded = encodeURIComponent(message);
         return `https://wa.me/57${clean}?text=${encoded}`;
     }
 
+    /**
+     * openWA — comportamiento adaptado al dispositivo:
+     *  • Móvil  → abre WhatsApp directamente (flujo original)
+     *  • PC/Mac → copia el mensaje al portapapeles y muestra un toast
+     *             con un botón opcional para abrir WhatsApp Web como fallback
+     */
     function openWA(phone, message) {
-        window.open(buildUrl(phone, message), '_blank');
+        if (isMobile()) {
+            window.open(buildUrl(phone, message), '_blank');
+            return;
+        }
+
+        // ── Escritorio: copiar al portapapeles ──
+        if (!navigator.clipboard) {
+            // Fallback para navegadores sin API clipboard (http o muy antiguos)
+            const ta = document.createElement('textarea');
+            ta.value = message;
+            ta.style.cssText = 'position:fixed;opacity:0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            _mostrarToastPC(phone, message);
+            return;
+        }
+
+        navigator.clipboard.writeText(message)
+            .then(() => _mostrarToastPC(phone, message))
+            .catch(() => {
+                // Si el usuario negó permisos, abrir WhatsApp Web como fallback
+                window.open(buildUrl(phone, message), '_blank');
+            });
+    }
+
+    /** Toast de escritorio con botón de WhatsApp Web como respaldo */
+    function _mostrarToastPC(phone, message) {
+        // Reutiliza el sistema de toasts de la app si existe
+        if (typeof UI !== 'undefined' && UI.showSuccessToast) {
+            UI.showSuccessToast('💬 Mensaje copiado. Pégalo en WhatsApp.');
+        }
+
+        // Toast enriquecido con botón de WhatsApp Web
+        const id = 'wa-pc-toast-' + Date.now();
+        const waWebUrl = buildUrl(phone, message);
+        const toast = document.createElement('div');
+        toast.id = id;
+        toast.style.cssText = `
+            position:fixed; bottom:24px; right:24px; z-index:9999;
+            background:#25D366; color:#fff; border-radius:12px;
+            padding:14px 18px; box-shadow:0 4px 16px rgba(0,0,0,.25);
+            font-size:14px; max-width:320px; display:flex;
+            flex-direction:column; gap:10px; animation:fadeInUp .3s ease;
+        `;
+        toast.innerHTML = `
+            <style>
+                @keyframes fadeInUp {
+                    from { opacity:0; transform:translateY(16px); }
+                    to   { opacity:1; transform:translateY(0); }
+                }
+            </style>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:20px;">📋</span>
+                <span><strong>Mensaje copiado al portapapeles.</strong><br>
+                Abre WhatsApp y pégalo con <kbd style="background:rgba(0,0,0,.2);padding:1px 5px;border-radius:4px;">Ctrl+V</kbd></span>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <a href="${waWebUrl}" target="_blank"
+                   style="background:#fff;color:#25D366;border-radius:8px;padding:6px 12px;
+                          font-weight:600;text-decoration:none;font-size:13px;">
+                   Abrir WhatsApp Web
+                </a>
+                <button onclick="document.getElementById('${id}').remove()"
+                        style="background:rgba(0,0,0,.15);border:none;color:#fff;
+                               border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;">
+                   Cerrar
+                </button>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => document.getElementById(id)?.remove(), 8000);
     }
 
     function sendBirthday(userId) {
