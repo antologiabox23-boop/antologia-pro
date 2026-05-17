@@ -7,6 +7,40 @@ const WhatsApp = (() => {
     const WA_GROUP   = 'https://chat.whatsapp.com/DSJzYAb6h58FQDA8yEAzwN';
     const FORM_LINK  = 'https://forms.gle/ZHUj1Q7YiDhE5P498';
 
+    // ── Detección de PC y utilidad de copiado ──────────────────────────────
+    function isDesktop() {
+        return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    }
+
+    function copyToClipboard(text, btn) {
+        navigator.clipboard.writeText(text).then(() => {
+            const original = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check me-1"></i>¡Copiado!';
+            btn.classList.replace('btn-outline-secondary', 'btn-success');
+            setTimeout(() => {
+                btn.innerHTML = original;
+                btn.classList.replace('btn-success', 'btn-outline-secondary');
+            }, 2000);
+        }).catch(() => {
+            // Fallback para navegadores sin API clipboard
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            const original = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check me-1"></i>¡Copiado!';
+            btn.classList.replace('btn-outline-secondary', 'btn-success');
+            setTimeout(() => {
+                btn.innerHTML = original;
+                btn.classList.replace('btn-success', 'btn-outline-secondary');
+            }, 2000);
+        });
+    }
+
     function initialize() {
         setupEventListeners();
         checkBirthdays('proximos');
@@ -38,7 +72,53 @@ const WhatsApp = (() => {
     }
 
     function openWA(phone, message) {
-        window.open(buildUrl(phone, message), '_blank');
+        if (isDesktop()) {
+            showCopyToast(message, () => window.open(buildUrl(phone, message), '_blank'));
+        } else {
+            window.open(buildUrl(phone, message), '_blank');
+        }
+    }
+
+    // Toast con botón de copiar que aparece brevemente antes de abrir WA (solo PC)
+    function showCopyToast(message, onOpen) {
+        // Eliminar toast previo si existe
+        document.getElementById('waCopyToast')?.remove();
+
+        const toast = document.createElement('div');
+        toast.id = 'waCopyToast';
+        toast.style.cssText = `
+            position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+            background: #fff; border: 1px solid #dee2e6; border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15); padding: 14px 18px;
+            display: flex; align-items: center; gap: 10px;
+            font-size: 14px; max-width: 340px; animation: slideInRight .25s ease;
+        `;
+        toast.innerHTML = `
+            <style>
+                @keyframes slideInRight {
+                    from { transform: translateX(120%); opacity: 0; }
+                    to   { transform: translateX(0);    opacity: 1; }
+                }
+            </style>
+            <i class="fab fa-whatsapp" style="color:#25D366;font-size:20px;flex-shrink:0"></i>
+            <span style="flex:1;color:#333">Abriendo WhatsApp…</span>
+            <button id="waCopyBtn" class="btn btn-sm btn-outline-secondary" style="flex-shrink:0">
+                <i class="fas fa-copy me-1"></i>Copiar
+            </button>
+            <button id="waCopyClose" style="background:none;border:none;font-size:18px;color:#999;cursor:pointer;padding:0 2px;line-height:1">&times;</button>
+        `;
+        document.body.appendChild(toast);
+
+        toast.querySelector('#waCopyBtn').addEventListener('click', () => {
+            copyToClipboard(message, toast.querySelector('#waCopyBtn'));
+        });
+        toast.querySelector('#waCopyClose').addEventListener('click', () => toast.remove());
+
+        // Abrir WA
+        onOpen();
+
+        // Auto-cerrar después de 6 s
+        setTimeout(() => toast.remove(), 6000);
     }
 
     function sendBirthday(userId) {
@@ -87,6 +167,23 @@ ${FORM_LINK}`;
         const incluirGrupo = document.getElementById('incluirGrupo')?.checked ?? true;
         const preview     = document.getElementById('previewMensaje');
         if (preview) preview.textContent = buildMensajeIngreso(nombre, incluirGrupo);
+
+        // Botón copiar en el preview (solo PC)
+        const existingBtn = document.getElementById('previewCopyBtn');
+        if (isDesktop()) {
+            if (!existingBtn && preview) {
+                const btn = document.createElement('button');
+                btn.id = 'previewCopyBtn';
+                btn.className = 'btn btn-sm btn-outline-secondary mt-2';
+                btn.innerHTML = '<i class="fas fa-copy me-1"></i>Copiar mensaje';
+                btn.addEventListener('click', () => {
+                    copyToClipboard(preview.textContent, btn);
+                });
+                preview.parentNode?.insertBefore(btn, preview.nextSibling);
+            }
+        } else {
+            existingBtn?.remove();
+        }
     }
 
     function enviarNuevoIngreso() {
