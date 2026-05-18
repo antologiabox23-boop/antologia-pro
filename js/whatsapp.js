@@ -79,19 +79,23 @@ const WhatsApp = (() => {
         }
     }
 
-    // Toast con botón de copiar que aparece brevemente antes de abrir WA (solo PC)
+    // Toast con cuenta regresiva — WhatsApp abre después de 4 s (solo PC)
     function showCopyToast(message, onOpen) {
-        // Eliminar toast previo si existe
         document.getElementById('waCopyToast')?.remove();
+
+        const DELAY = 4;
+        let secondsLeft = DELAY;
+        let opened = false;
+        let countdownInterval;
 
         const toast = document.createElement('div');
         toast.id = 'waCopyToast';
         toast.style.cssText = `
             position: fixed; bottom: 24px; right: 24px; z-index: 9999;
             background: #fff; border: 1px solid #dee2e6; border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15); padding: 14px 18px;
-            display: flex; align-items: center; gap: 10px;
-            font-size: 14px; max-width: 340px; animation: slideInRight .25s ease;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.18); padding: 14px 18px;
+            display: flex; flex-direction: column; gap: 10px;
+            font-size: 14px; width: 320px; animation: slideInRight .25s ease;
         `;
         toast.innerHTML = `
             <style>
@@ -99,26 +103,64 @@ const WhatsApp = (() => {
                     from { transform: translateX(120%); opacity: 0; }
                     to   { transform: translateX(0);    opacity: 1; }
                 }
+                #waCopyProgress { height:4px; border-radius:2px; background:#e9ecef; overflow:hidden; }
+                #waCopyProgressBar { height:100%; width:100%; background:#25D366; transition:width ${DELAY}s linear; }
             </style>
-            <i class="fab fa-whatsapp" style="color:#25D366;font-size:20px;flex-shrink:0"></i>
-            <span style="flex:1;color:#333">Abriendo WhatsApp…</span>
-            <button id="waCopyBtn" class="btn btn-sm btn-outline-secondary" style="flex-shrink:0">
-                <i class="fas fa-copy me-1"></i>Copiar
-            </button>
-            <button id="waCopyClose" style="background:none;border:none;font-size:18px;color:#999;cursor:pointer;padding:0 2px;line-height:1">&times;</button>
+            <div style="display:flex;align-items:center;gap:10px">
+                <i class="fab fa-whatsapp" style="color:#25D366;font-size:22px;flex-shrink:0"></i>
+                <span id="waToastLabel" style="flex:1;color:#333;font-weight:500">
+                    Abriendo en <span id="waCountdown">${DELAY}</span>s…
+                </span>
+                <button id="waCopyClose" style="background:none;border:none;font-size:20px;color:#aaa;cursor:pointer;padding:0;line-height:1" title="Cerrar">&times;</button>
+            </div>
+            <div id="waCopyProgress"><div id="waCopyProgressBar"></div></div>
+            <div style="display:flex;gap:8px">
+                <button id="waCopyBtn" class="btn btn-sm btn-outline-secondary" style="flex:1">
+                    <i class="fas fa-copy me-1"></i>Copiar mensaje
+                </button>
+                <button id="waOpenNow" class="btn btn-sm btn-success" style="flex:1">
+                    <i class="fab fa-whatsapp me-1"></i>Abrir ya
+                </button>
+            </div>
         `;
         document.body.appendChild(toast);
+
+        // Disparar la transición de la barra en el siguiente frame
+        requestAnimationFrame(() => {
+            const bar = document.getElementById('waCopyProgressBar');
+            if (bar) bar.style.width = '0%';
+        });
+
+        function openWhatsApp() {
+            if (opened) return;
+            opened = true;
+            clearInterval(countdownInterval);
+            onOpen();
+            const label = document.getElementById('waToastLabel');
+            if (label) label.innerHTML = 'WhatsApp abierto <i class="fas fa-check text-success ms-1"></i>';
+            const openBtn = document.getElementById('waOpenNow');
+            if (openBtn) openBtn.disabled = true;
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        countdownInterval = setInterval(() => {
+            secondsLeft--;
+            const el = document.getElementById('waCountdown');
+            if (el) el.textContent = secondsLeft;
+            if (secondsLeft <= 0) {
+                clearInterval(countdownInterval);
+                openWhatsApp();
+            }
+        }, 1000);
 
         toast.querySelector('#waCopyBtn').addEventListener('click', () => {
             copyToClipboard(message, toast.querySelector('#waCopyBtn'));
         });
-        toast.querySelector('#waCopyClose').addEventListener('click', () => toast.remove());
-
-        // Abrir WA
-        onOpen();
-
-        // Auto-cerrar después de 6 s
-        setTimeout(() => toast.remove(), 6000);
+        toast.querySelector('#waOpenNow').addEventListener('click', openWhatsApp);
+        toast.querySelector('#waCopyClose').addEventListener('click', () => {
+            clearInterval(countdownInterval);
+            toast.remove();
+        });
     }
 
     function sendBirthday(userId) {
