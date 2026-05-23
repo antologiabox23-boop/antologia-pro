@@ -161,22 +161,27 @@ const Attendance = (() => {
                     : '<span class="badge bg-secondary">Sin registro</span>';
 
             return `<tr>
-                <td>${i+1}</td>
+                <td class="d-none d-md-table-cell">${i+1}</td>
                 <td>
                     <strong>${Utils.escapeHtml(user.name)}</strong>
                     <div class="text-muted small">${user.classTime || '-'}</div>
                 </td>
                 <td>${statusBadge}<div class="text-muted small mt-1">${time !== '-' ? 'Hora: '+time : ''}</div></td>
-                <td>${vigenciaBadge(user.id)}</td>
+                <td class="d-none d-sm-table-cell">${vigenciaBadge(user.id)}</td>
                 <td>
-                    <button class="btn btn-sm btn-success me-1" onclick="Attendance.mark('${user.id}','presente')" title="Presente">
-                        <i class="fas fa-check"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="Attendance.mark('${user.id}','ausente')" title="Ausente">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    <div class="d-flex gap-1 flex-wrap">
+                        <button class="btn btn-sm btn-success" onclick="Attendance.mark('${user.id}','presente')" title="Presente">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="Attendance.mark('${user.id}','ausente')" title="Ausente">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-success d-sm-none" onclick="Attendance.contactEmergency('${user.id}')" title="WhatsApp Emergencia">
+                            <i class="fab fa-whatsapp"></i>
+                        </button>
+                    </div>
                 </td>
-                <td>
+                <td class="d-none d-md-table-cell">
                     <button class="btn btn-sm btn-outline-success" onclick="Attendance.contactEmergency('${user.id}')" title="WhatsApp Emergencia">
                         <i class="fab fa-whatsapp"></i>
                     </button>
@@ -224,19 +229,15 @@ const Attendance = (() => {
                 : `<span class="badge bg-warning text-dark">${a.daysSince} días sin asistir</span>`;
             const lastStr = a.lastDate ? Utils.formatDate(a.lastDate) : '-';
             return `<tr>
-                <td>${i+1}</td>
-                <td><strong>${Utils.escapeHtml(a.user.name)}</strong></td>
+                <td class="d-none d-md-table-cell">${i+1}</td>
+                <td><strong>${Utils.escapeHtml(a.user.name)}</strong><div class="text-muted small d-sm-none">${lastStr}</div></td>
                 <td>${info}</td>
-                <td>${lastStr}</td>
-                <td class="d-flex gap-1">
-                    <button class="btn btn-sm btn-outline-success" 
-                        onclick="Attendance.whatsappInasistencia('${a.user.id}')" title="Enviar mensaje WhatsApp">
-                        <i class="fab fa-whatsapp"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-warning" 
-                        onclick="Attendance.inactivarUsuario('${a.user.id}')" title="Inactivar usuario">
-                        <i class="fas fa-user-slash"></i>
-                    </button>
+                <td class="d-none d-sm-table-cell">${lastStr}</td>
+                <td>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-sm btn-outline-success" onclick="Attendance.whatsappInasistencia('${a.user.id}')" title="WhatsApp"><i class="fab fa-whatsapp"></i></button>
+                        <button class="btn btn-sm btn-outline-warning" onclick="Attendance.inactivarUsuario('${a.user.id}')" title="Inactivar"><i class="fas fa-user-slash"></i></button>
+                    </div>
                 </td>
             </tr>`;
         }).join('');
