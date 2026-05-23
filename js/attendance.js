@@ -167,7 +167,7 @@ const Attendance = (() => {
                     <div class="text-muted small">${user.classTime || '-'}</div>
                 </td>
                 <td>${statusBadge}<div class="text-muted small mt-1">${time !== '-' ? 'Hora: '+time : ''}</div></td>
-                <td class="d-none d-sm-table-cell">${vigenciaBadge(user.id)}</td>
+                <td>${vigenciaBadge(user.id)}</td>
                 <td>
                     <div class="d-flex gap-1 flex-wrap">
                         <button class="btn btn-sm btn-success" onclick="Attendance.mark('${user.id}','presente')" title="Presente">
