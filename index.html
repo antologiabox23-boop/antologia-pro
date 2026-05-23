@@ -455,26 +455,26 @@
                 <div class="card mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Asistencia del Día</h5>
-                        <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <span id="attendanceDaySummary"></span>
-                            <input type="date" class="form-control form-control-sm" id="attendanceDate" style="width:160px">
-                            <input type="text" class="form-control form-control-sm" id="attendanceSearch" placeholder="Buscar usuario..." style="width:180px">
+                        <div class="attendance-controls d-flex align-items-center gap-2 flex-wrap w-100 w-md-auto">
+                            <span id="attendanceDaySummary" class="me-auto me-md-0"></span>
+                            <input type="date" class="form-control form-control-sm attendance-date-input" id="attendanceDate" style="width:160px">
+                            <input type="text" class="form-control form-control-sm attendance-search-input" id="attendanceSearch" placeholder="Buscar usuario...">
                             <button class="btn btn-sm btn-success" id="markAllPresent">
-                                <i class="fas fa-check-double me-1"></i>Marcar todos presentes
+                                <i class="fas fa-check-double me-1"></i><span class="d-none d-sm-inline">Marcar todos presentes</span><span class="d-sm-none">✓ Todos</span>
                             </button>
                         </div>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-hover mb-0">
+                            <table class="table table-hover mb-0 attendance-table">
                                 <thead>
                                     <tr>
-                                        <th>#</th>
+                                        <th class="d-none d-md-table-cell">#</th>
                                         <th>Usuario</th>
                                         <th>Estado</th>
-                                        <th>Vigencia del Pago</th>
-                                        <th>Asistencia</th>
-                                        <th>Emergencia</th>
+                                        <th class="d-none d-sm-table-cell">Vigencia</th>
+                                        <th>Acción</th>
+                                        <th class="d-none d-md-table-cell">Emergencia</th>
                                     </tr>
                                 </thead>
                                 <tbody id="attendanceList">
@@ -534,7 +534,7 @@
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-sm mb-0">
-                                <thead><tr><th>#</th><th>Usuario</th><th>Estado</th><th>Última asistencia</th><th>WhatsApp</th></tr></thead>
+                                <thead><tr><th class="d-none d-md-table-cell">#</th><th>Usuario</th><th>Estado</th><th class="d-none d-sm-table-cell">Última asistencia</th><th>WhatsApp</th></tr></thead>
                                 <tbody id="alertsList"></tbody>
                             </table>
                         </div>
@@ -1562,7 +1562,7 @@
 
     <!-- User Modal -->
     <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-fullscreen-md-down">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="userModalLabel">
@@ -1702,7 +1702,7 @@
 
     <!-- Income Modal -->
     <div class="modal fade" id="incomeModal" tabindex="-1" aria-labelledby="incomeModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-fullscreen-sm-down">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="incomeModalLabel">
