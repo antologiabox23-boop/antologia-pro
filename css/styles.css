@@ -1106,3 +1106,37 @@ textarea {
         font-size: 0.9rem;
     }
 }
+/* Scroll horizontal forzado para tablas de asistencia y alertas en móvil */
+@media (max-width: 768px) {
+    #attendanceTableContainer,
+    #alertsTableContainer {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        width: 100%;
+        border-radius: 0.5rem;
+    }
+
+    #attendanceTableContainer .table,
+    #alertsTableContainer .table {
+        min-width: 700px;
+        white-space: nowrap;
+    }
+
+    #alertsTableContainer .table {
+        min-width: 550px;
+    }
+
+    /* Opcional: mejora visual del scroll */
+    #attendanceTableContainer::-webkit-scrollbar,
+    #alertsTableContainer::-webkit-scrollbar {
+        height: 6px;
+    }
+    #attendanceTableContainer::-webkit-scrollbar-track {
+        background: #2d3748;
+        border-radius: 10px;
+    }
+    #attendanceTableContainer::-webkit-scrollbar-thumb {
+        background: #4a5568;
+        border-radius: 10px;
+    }
+}
