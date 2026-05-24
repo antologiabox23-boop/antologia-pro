@@ -106,8 +106,22 @@
             #alertsTableContainer .table > thead > tr > th:nth-child(1),
             #alertsTableContainer .table > tbody > tr > td:nth-child(1) { display: table-cell; }
         }
-        #alertsTableContainer .table td,
-        #alertsTableContainer .table th { white-space: nowrap; }
+        /* En móvil: permitir wrap en Estado para que quepan las 3 columnas */
+        @media (max-width: 575px) {
+            #alertsTableContainer .table td,
+            #alertsTableContainer .table th { white-space: normal; }
+            #alertsTableContainer .table > thead > tr > th:nth-child(2),
+            #alertsTableContainer .table > tbody > tr > td:nth-child(2) { width: 40%; }
+            #alertsTableContainer .table > thead > tr > th:nth-child(3),
+            #alertsTableContainer .table > tbody > tr > td:nth-child(3) { width: 35%; }
+            #alertsTableContainer .table > thead > tr > th:nth-child(5),
+            #alertsTableContainer .table > tbody > tr > td:nth-child(5) { width: 25%; }
+            #alertsTableContainer .badge { font-size: 0.7rem; padding: 0.3em 0.4em; }
+        }
+        @media (min-width: 576px) {
+            #alertsTableContainer .table td,
+            #alertsTableContainer .table th { white-space: nowrap; }
+        }
     </style>
 </head>
 <body>
