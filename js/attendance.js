@@ -177,9 +177,6 @@ const Attendance = (() => {
                         <button class="btn btn-sm btn-outline-danger" onclick="Attendance.mark('${user.id}','ausente')" title="Ausente">
                             <i class="fas fa-times"></i>
                         </button>
-                        <button class="btn btn-sm btn-outline-success d-sm-none" onclick="Attendance.contactEmergency('${user.id}')" title="WhatsApp Emergencia">
-                            <i class="fab fa-whatsapp"></i>
-                        </button>
                     </div>
                 </td>
                 <td>
@@ -230,10 +227,10 @@ const Attendance = (() => {
                 : `<span class="badge bg-warning text-dark">${a.daysSince} días sin asistir</span>`;
             const lastStr = a.lastDate ? Utils.formatDate(a.lastDate) : '-';
             return `<tr>
-                <td class="d-none d-md-table-cell">${i+1}</td>
-                <td><strong>${Utils.escapeHtml(a.user.name)}</strong><div class="text-muted small d-sm-none">${lastStr}</div></td>
+                <td>${i+1}</td>
+                <td><strong>${Utils.escapeHtml(a.user.name)}</strong></td>
                 <td>${info}</td>
-                <td class="d-none d-sm-table-cell">${lastStr}</td>
+                <td>${lastStr}</td>
                 <td>
                     <div class="d-flex gap-1">
                         <button class="btn btn-sm btn-outline-success" onclick="Attendance.whatsappInasistencia('${a.user.id}')" title="WhatsApp"><i class="fab fa-whatsapp"></i></button>
