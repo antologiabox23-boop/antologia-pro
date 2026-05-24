@@ -149,6 +149,7 @@ const Attendance = (() => {
             return;
         }
 
+        // Todas las columnas visibles en todos los tamaños, scroll horizontal con table-responsive
         tbody.innerHTML = users.map((user, i) => {
             const record = attendance.find(a => a.userId === user.id);
             const status = record?.status || 'sin registro';
@@ -160,33 +161,28 @@ const Attendance = (() => {
                     ? '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Ausente</span>'
                     : '<span class="badge bg-secondary">Sin registro</span>';
 
-            // En móvil: vigencia inline bajo el nombre
-            const vigencia = vigenciaBadge(user.id);
-
             return `<tr>
-                <td class="d-none d-md-table-cell">${i+1}</td>
+                <td>${i+1}</td>
                 <td>
                     <strong>${Utils.escapeHtml(user.name)}</strong>
                     <div class="text-muted small">${user.classTime || '-'}</div>
-                    <div class="d-md-none mt-1">${vigencia}</div>
-                    <div class="d-md-none text-muted small mt-1">${time !== '-' ? 'Hora: '+time : ''}</div>
                 </td>
+                <td>${statusBadge}<div class="text-muted small mt-1">${time !== '-' ? 'Hora: '+time : ''}</div></td>
+                <td>${vigenciaBadge(user.id)}</td>
                 <td>
-                    ${statusBadge}
-                    <div class="text-muted small mt-1 d-none d-md-block">${time !== '-' ? 'Hora: '+time : ''}</div>
-                </td>
-                <td class="d-none d-md-table-cell">${vigencia}</td>
-                <td>
-                    <div class="d-flex gap-1 flex-nowrap">
+                    <div class="d-flex gap-1 flex-wrap">
                         <button class="btn btn-sm btn-success" onclick="Attendance.mark('${user.id}','presente')" title="Presente">
                             <i class="fas fa-check"></i>
                         </button>
                         <button class="btn btn-sm btn-outline-danger" onclick="Attendance.mark('${user.id}','ausente')" title="Ausente">
                             <i class="fas fa-times"></i>
                         </button>
+                        <button class="btn btn-sm btn-outline-success d-sm-none" onclick="Attendance.contactEmergency('${user.id}')" title="WhatsApp Emergencia">
+                            <i class="fab fa-whatsapp"></i>
+                        </button>
                     </div>
                 </td>
-                <td class="d-none d-md-table-cell">
+                <td>
                     <button class="btn btn-sm btn-outline-success" onclick="Attendance.contactEmergency('${user.id}')" title="WhatsApp Emergencia">
                         <i class="fab fa-whatsapp"></i>
                     </button>
@@ -235,20 +231,16 @@ const Attendance = (() => {
             const lastStr = a.lastDate ? Utils.formatDate(a.lastDate) : '-';
             return `<tr>
                 <td class="d-none d-md-table-cell">${i+1}</td>
-                <td>
-                    <strong>${Utils.escapeHtml(a.user.name)}</strong>
-                    <div class="text-muted small d-sm-none">${lastStr}</div>
-                </td>
+                <td><strong>${Utils.escapeHtml(a.user.name)}</strong><div class="text-muted small d-sm-none">${lastStr}</div></td>
                 <td>${info}</td>
                 <td class="d-none d-sm-table-cell">${lastStr}</td>
                 <td>
-                    <div class="d-flex gap-1 flex-nowrap">
+                    <div class="d-flex gap-1">
                         <button class="btn btn-sm btn-outline-success" onclick="Attendance.whatsappInasistencia('${a.user.id}')" title="WhatsApp"><i class="fab fa-whatsapp"></i></button>
                         <button class="btn btn-sm btn-outline-warning" onclick="Attendance.inactivarUsuario('${a.user.id}')" title="Inactivar"><i class="fas fa-user-slash"></i></button>
                     </div>
                 </td>
             </tr>`;
-        }).join('');
         }).join('');
     }
 
