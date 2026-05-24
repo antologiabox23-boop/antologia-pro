@@ -1106,37 +1106,52 @@ textarea {
         font-size: 0.9rem;
     }
 }
-/* Scroll horizontal forzado para tablas de asistencia y alertas en móvil */
-@media (max-width: 768px) {
-    #attendanceTableContainer,
-    #alertsTableContainer {
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch;
-        width: 100%;
-        border-radius: 0.5rem;
-    }
+/* ── Tabla Asistencia del Día – responsive móvil ── */
+/* Columnas: 1=#  2=Usuario  3=Estado  4=Vigencia  5=Acción  6=Emergencia */
+/* En móvil (<576px): mostrar sólo Usuario, Estado y Acción */
+#attendanceTableContainer .table > thead > tr > th:nth-child(1),
+#attendanceTableContainer .table > tbody > tr > td:nth-child(1),
+#attendanceTableContainer .table > thead > tr > th:nth-child(4),
+#attendanceTableContainer .table > tbody > tr > td:nth-child(4),
+#attendanceTableContainer .table > thead > tr > th:nth-child(6),
+#attendanceTableContainer .table > tbody > tr > td:nth-child(6) { display: none; }
 
-    #attendanceTableContainer .table,
-    #alertsTableContainer .table {
-        min-width: 700px;
-        white-space: nowrap;
-    }
-
-    #alertsTableContainer .table {
-        min-width: 550px;
-    }
-
-    /* Opcional: mejora visual del scroll */
-    #attendanceTableContainer::-webkit-scrollbar,
-    #alertsTableContainer::-webkit-scrollbar {
-        height: 6px;
-    }
-    #attendanceTableContainer::-webkit-scrollbar-track {
-        background: #2d3748;
-        border-radius: 10px;
-    }
-    #attendanceTableContainer::-webkit-scrollbar-thumb {
-        background: #4a5568;
-        border-radius: 10px;
-    }
+/* sm (≥576px): mostrar también Emergencia */
+@media (min-width: 576px) {
+    #attendanceTableContainer .table > thead > tr > th:nth-child(6),
+    #attendanceTableContainer .table > tbody > tr > td:nth-child(6) { display: table-cell; }
 }
+/* md (≥768px): mostrar todas las columnas */
+@media (min-width: 768px) {
+    #attendanceTableContainer .table > thead > tr > th:nth-child(1),
+    #attendanceTableContainer .table > tbody > tr > td:nth-child(1),
+    #attendanceTableContainer .table > thead > tr > th:nth-child(4),
+    #attendanceTableContainer .table > tbody > tr > td:nth-child(4) { display: table-cell; }
+}
+
+/* Evitar texto largo que rompa el layout en asistencia */
+#attendanceTableContainer .table td,
+#attendanceTableContainer .table th { white-space: nowrap; }
+
+/* ── Tabla Alertas de Inasistencia – responsive móvil ── */
+/* Columnas: 1=#  2=Usuario  3=Estado  4=Última asistencia  5=Acciones */
+/* En móvil (<576px): mostrar sólo Usuario, Estado y Acciones */
+#alertsTableContainer .table > thead > tr > th:nth-child(1),
+#alertsTableContainer .table > tbody > tr > td:nth-child(1),
+#alertsTableContainer .table > thead > tr > th:nth-child(4),
+#alertsTableContainer .table > tbody > tr > td:nth-child(4) { display: none; }
+
+/* sm (≥576px): mostrar también Última asistencia */
+@media (min-width: 576px) {
+    #alertsTableContainer .table > thead > tr > th:nth-child(4),
+    #alertsTableContainer .table > tbody > tr > td:nth-child(4) { display: table-cell; }
+}
+/* md (≥768px): mostrar todas las columnas */
+@media (min-width: 768px) {
+    #alertsTableContainer .table > thead > tr > th:nth-child(1),
+    #alertsTableContainer .table > tbody > tr > td:nth-child(1) { display: table-cell; }
+}
+
+/* Evitar texto largo en alertas */
+#alertsTableContainer .table td,
+#alertsTableContainer .table th { white-space: nowrap; }
