@@ -62,6 +62,52 @@
         #income .table th {
             white-space: nowrap;
         }
+
+        /* ── Tabla Asistencia del Día – responsive móvil ── */
+        /* Columnas: 1=#  2=Usuario  3=Estado  4=Vigencia  5=Acción  6=Emergencia */
+        /* En móvil (<576px): mostrar sólo Usuario, Estado y Acción */
+        #attendanceTableContainer .table > thead > tr > th:nth-child(1),
+        #attendanceTableContainer .table > tbody > tr > td:nth-child(1),
+        #attendanceTableContainer .table > thead > tr > th:nth-child(4),
+        #attendanceTableContainer .table > tbody > tr > td:nth-child(4),
+        #attendanceTableContainer .table > thead > tr > th:nth-child(6),
+        #attendanceTableContainer .table > tbody > tr > td:nth-child(6) { display: none; }
+
+        /* sm (≥576px): mostrar también Emergencia */
+        @media (min-width: 576px) {
+            #attendanceTableContainer .table > thead > tr > th:nth-child(6),
+            #attendanceTableContainer .table > tbody > tr > td:nth-child(6) { display: table-cell; }
+        }
+        /* md (≥768px): mostrar todas las columnas */
+        @media (min-width: 768px) {
+            #attendanceTableContainer .table > thead > tr > th:nth-child(1),
+            #attendanceTableContainer .table > tbody > tr > td:nth-child(1),
+            #attendanceTableContainer .table > thead > tr > th:nth-child(4),
+            #attendanceTableContainer .table > tbody > tr > td:nth-child(4) { display: table-cell; }
+        }
+        #attendanceTableContainer .table td,
+        #attendanceTableContainer .table th { white-space: nowrap; }
+
+        /* ── Tabla Alertas de Inasistencia – responsive móvil ── */
+        /* Columnas: 1=#  2=Usuario  3=Estado  4=Última asistencia  5=Acciones */
+        /* En móvil (<576px): mostrar sólo Usuario, Estado y Acciones */
+        #alertsTableContainer .table > thead > tr > th:nth-child(1),
+        #alertsTableContainer .table > tbody > tr > td:nth-child(1),
+        #alertsTableContainer .table > thead > tr > th:nth-child(4),
+        #alertsTableContainer .table > tbody > tr > td:nth-child(4) { display: none; }
+
+        /* sm (≥576px): mostrar también Última asistencia */
+        @media (min-width: 576px) {
+            #alertsTableContainer .table > thead > tr > th:nth-child(4),
+            #alertsTableContainer .table > tbody > tr > td:nth-child(4) { display: table-cell; }
+        }
+        /* md (≥768px): mostrar todas las columnas */
+        @media (min-width: 768px) {
+            #alertsTableContainer .table > thead > tr > th:nth-child(1),
+            #alertsTableContainer .table > tbody > tr > td:nth-child(1) { display: table-cell; }
+        }
+        #alertsTableContainer .table td,
+        #alertsTableContainer .table th { white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -469,12 +515,12 @@
                             <table class="table table-hover mb-0 attendance-table">
                                 <thead>
                                     <tr>
-                                        <th class="d-none d-md-table-cell">#</th>
+                                        <th>#</th>
                                         <th>Usuario</th>
                                         <th>Estado</th>
-                                        <th class="d-none d-md-table-cell">Vigencia</th>
+                                        <th>Vigencia</th>
                                         <th>Acción</th>
-                                        <th class="d-none d-md-table-cell">Emergencia</th>
+                                        <th>Emergencia</th>
                                     </tr>
                                 </thead>
                                 <tbody id="attendanceList">
@@ -534,7 +580,7 @@
                     <div class="card-body p-0">
                         <div class="table-responsive" id="alertsTableContainer">
                             <table class="table table-sm mb-0">
-                                <thead><tr><th class="d-none d-md-table-cell">#</th><th>Usuario</th><th>Estado</th><th class="d-none d-sm-table-cell">Última asistencia</th><th>WhatsApp</th></tr></thead>
+                                <thead><tr><th>#</th><th>Usuario</th><th>Estado</th><th>Última asistencia</th><th>Acciones</th></tr></thead>
                                 <tbody id="alertsList"></tbody>
                             </table>
                         </div>
