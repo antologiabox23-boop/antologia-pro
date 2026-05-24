@@ -145,10 +145,11 @@ const Attendance = (() => {
             <span class="badge bg-secondary">Total activos: ${users.length}</span>`;
 
         if (users.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No hay usuarios activos registrados</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No hay usuarios activos registrados</td></tr>`;
             return;
         }
 
+        // Todas las columnas visibles en todos los tamaños, scroll horizontal con table-responsive
         tbody.innerHTML = users.map((user, i) => {
             const record = attendance.find(a => a.userId === user.id);
             const status = record?.status || 'sin registro';
@@ -161,7 +162,7 @@ const Attendance = (() => {
                     : '<span class="badge bg-secondary">Sin registro</span>';
 
             return `<tr>
-                <td class="d-none d-md-table-cell">${i+1}</td>
+                <td>${i+1}</td>
                 <td>
                     <strong>${Utils.escapeHtml(user.name)}</strong>
                     <div class="text-muted small">${user.classTime || '-'}</div>
@@ -181,7 +182,7 @@ const Attendance = (() => {
                         </button>
                     </div>
                 </td>
-                <td class="d-none d-md-table-cell">
+                <td>
                     <button class="btn btn-sm btn-outline-success" onclick="Attendance.contactEmergency('${user.id}')" title="WhatsApp Emergencia">
                         <i class="fab fa-whatsapp"></i>
                     </button>
@@ -218,7 +219,7 @@ const Attendance = (() => {
         if (countEl) countEl.textContent = alerts.length;
 
         if (alerts.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-muted">
                 <i class="fas fa-check-circle text-success me-2"></i>Sin alertas de inasistencia</td></tr>`;
             return;
         }
