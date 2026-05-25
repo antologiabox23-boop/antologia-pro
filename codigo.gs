@@ -6,8 +6,8 @@
  */
 
 // ── CONFIGURACIÓN ────────────────────────────────────────────────────────────
-const SPREADSHEET_ID = '1Q3uao_brBssNkaASs3OBFvtW2J3Of9BflTBHFRqqnR4';
-
+const SPREADSHEET_ID = PropertiesService.getScriptProperties()
+                         .getProperty('SPREADSHEET_ID') || '';
 // Secreto compartido con el frontend (storage.js → API_SECRET).
 // Debe ser la MISMA cadena en ambos lados. Cámbiala por un valor aleatorio
 // y nunca la compartas públicamente.
