@@ -16,7 +16,7 @@
 const Storage = (() => {
 
     // ─── CONFIGURACIÓN ───────────────────────────────────────────────────────
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWZrPFGwBjjL8YXwfa_4BRuX9kpcRKDSiaXgzW4NTu-bpTM9-WuN1k_pNQfMPJTn0z/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx8jV_WSmCJTKIi8gl1XCZOmrsIR0yR0OCRCCeqcG7-t4zDTZ9USgqqRVtgijzLxtSC/exec';
 
     // Secreto compartido con el Apps Script. CAMBIA ESTE VALOR y pon el mismo
     // en codigo.gs → const API_SECRET = '...';
