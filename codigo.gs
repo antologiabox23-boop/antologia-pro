@@ -8,6 +8,69 @@
 // ── CONFIGURACIÓN ────────────────────────────────────────────────────────────
 const SPREADSHEET_ID = '1Q3uao_brBssNkaASs3OBFvtW2J3Of9BflTBHFRqqnR4';
 
+// Secreto compartido con el frontend (storage.js → API_SECRET).
+// Debe ser la MISMA cadena en ambos lados. Cámbiala por un valor aleatorio
+// y nunca la compartas públicamente.
+const API_SECRET = PropertiesService.getScriptProperties()
+                     .getProperty('API_SECRET') || '';
+// Ventana de tiempo permitida para una petición (segundos).
+// Evita ataques de replay: una firma válida capturada no sirve pasados 5 min.
+const HMAC_WINDOW_SECS = 300;
+
+// ── VERIFICACIÓN HMAC ────────────────────────────────────────────────────────
+
+/**
+ * Verifica que la petición viene del frontend autorizado.
+ *
+ * El frontend envía:
+ *   ?action=X&payload=BASE64&ts=UNIX_SECS&sig=HMAC_HEX
+ *
+ * El servidor recalcula HMAC-SHA256(secret, action + ts + payload)
+ * y compara con sig. También verifica que ts esté dentro de la ventana.
+ *
+ * @param {string} action
+ * @param {string} payload  — string base64 tal como llega en la URL
+ * @param {string} ts       — timestamp Unix en segundos (string)
+ * @param {string} sig      — firma hex enviada por el cliente
+ * @returns {boolean}
+ */
+function verifyHmac(action, payload, ts, sig) {
+  if (!action || !ts || !sig) return false;
+
+  // Verificar ventana de tiempo
+  const now  = Math.floor(Date.now() / 1000);
+  const tsN  = parseInt(ts, 10);
+  if (isNaN(tsN) || Math.abs(now - tsN) > HMAC_WINDOW_SECS) {
+    Logger.log('HMAC: timestamp fuera de ventana. now=' + now + ' ts=' + tsN);
+    return false;
+  }
+
+  // Recalcular firma
+  const message  = action + ts + (payload || '');
+  const expected = computeHmac(API_SECRET, message);
+
+  // Comparación en tiempo constante (evita timing attacks)
+  if (expected.length !== sig.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) {
+    diff |= expected.charCodeAt(i) ^ sig.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+/**
+ * Calcula HMAC-SHA256 usando las utilidades de Google Apps Script.
+ * @param {string} secret
+ * @param {string} message
+ * @returns {string} firma en hexadecimal
+ */
+function computeHmac(secret, message) {
+  const sigBytes = Utilities.computeHmacSha256Signature(message, secret);
+  return sigBytes.map(function(b) {
+    return ('0' + (b < 0 ? b + 256 : b).toString(16)).slice(-2);
+  }).join('');
+}
+
 const SHEETS = {
   USERS:              'Usuarios',
   ATTENDANCE:         'Asistencia',
@@ -47,17 +110,33 @@ function doGet(e) {
     if (!e || !e.parameter || !e.parameter.action) {
       return jsonResponse({ ok: true, message: 'Antología Box23 API activa ✓' });
     }
-    const action = e.parameter.action;
+
+    const action     = e.parameter.action;
+    const payloadRaw = e.parameter.payload || '';
+    const ts         = e.parameter.ts  || '';
+    const sig        = e.parameter.sig || '';
+
+    // ── Verificación HMAC ──────────────────────────────────────────────────
+    // Omite la verificación solo si API_SECRET no ha sido configurado todavía
+    // (permite migración sin cortar el servicio).
+    if (!API_SECRET.startsWith('CAMBIA_ESTE')) {
+      if (!verifyHmac(action, payloadRaw, ts, sig)) {
+        Logger.log('doGet HMAC FAIL: action=' + action + ' ts=' + ts);
+        return jsonResponse({ error: 'No autorizado' });
+      }
+    } else {
+      Logger.log('⚠️ ADVERTENCIA: API_SECRET no configurado, verificación omitida.');
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
     var payload = {};
-    if (e.parameter.payload) {
+    if (payloadRaw) {
       try {
-        // Intenta JSON plano (frontend actual)
-        payload = JSON.parse(decodeURIComponent(e.parameter.payload));
+        payload = JSON.parse(decodeURIComponent(payloadRaw));
       } catch (e1) {
         try {
-          // Fallback: base64 (versiones anteriores)
           var decoded = Utilities.newBlob(
-            Utilities.base64Decode(decodeURIComponent(e.parameter.payload))
+            Utilities.base64Decode(decodeURIComponent(payloadRaw))
           ).getDataAsString();
           payload = JSON.parse(decoded);
         } catch (e2) {
