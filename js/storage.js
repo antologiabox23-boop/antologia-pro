@@ -1,19 +1,26 @@
 /**
- * Storage v3.0 — Google Sheets como base de datos
+ * Storage v3.1 — Google Sheets como base de datos + autenticación HMAC
  *
  * Arquitectura:
- *   App (Vercel) ──fetch──► Google Apps Script (Web App) ──► Google Sheets
+ *   App ──fetch(firmado)──► Google Apps Script (Web App) ──► Google Sheets
  *
- * ⚠️  ÚNICO PASO DE CONFIGURACIÓN:
- *     Reemplaza SCRIPT_URL con la URL de tu Google Apps Script desplegado.
- *     Ver instrucciones en: CONFIGURACION_GOOGLE_SHEETS.md
+ * ⚠️  DOS PASOS DE CONFIGURACIÓN:
+ *   1. Reemplaza SCRIPT_URL con la URL de tu Google Apps Script desplegado.
+ *   2. Reemplaza API_SECRET con una cadena aleatoria larga (mínimo 32 caracteres).
+ *      Esa MISMA cadena debe estar en codigo.gs como constante API_SECRET.
+ *
+ *   Genera un secreto seguro ejecutando en la consola del navegador:
+ *     crypto.getRandomValues(new Uint8Array(32)).reduce((s,b)=>s+b.toString(16).padStart(2,'0'),'')
  */
 
 const Storage = (() => {
 
     // ─── CONFIGURACIÓN ───────────────────────────────────────────────────────
-    // Pega aquí la URL de tu Apps Script después de desplegarlo:
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyzHA3REGDWd2yF368dNR8fyaWG6ZJrPTAb7q3RCA4532g0VDo1MSc_GOssuNH4n8Xn/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWZrPFGwBjjL8YXwfa_4BRuX9kpcRKDSiaXgzW4NTu-bpTM9-WuN1k_pNQfMPJTn0z/exec';
+
+    // Secreto compartido con el Apps Script. CAMBIA ESTE VALOR y pon el mismo
+    // en codigo.gs → const API_SECRET = '...';
+    const API_SECRET = 'a73b08104cde41819e5bb37070ec0b1f6772a503ea178ffba67f154d87b6e9f5';
     // ─────────────────────────────────────────────────────────────────────────
 
     const DEFAULT_SETTINGS = {
@@ -32,8 +39,22 @@ const Storage = (() => {
     };
 
     // Settings siempre en localStorage (son preferencias del navegador, no datos)
-    const LS_SETTINGS = 'antologia_settings';
+    const LS_SETTINGS    = 'antologia_settings';
     const LS_LAST_BACKUP = 'antologia_last_backup';
+
+    // ─── HMAC-SHA256 (Web Crypto API) ────────────────────────────────────────
+
+    async function hmacSign(secret, message) {
+        const enc = new TextEncoder();
+        const key = await crypto.subtle.importKey(
+            'raw', enc.encode(secret),
+            { name: 'HMAC', hash: 'SHA-256' },
+            false, ['sign']
+        );
+        const sig = await crypto.subtle.sign('HMAC', key, enc.encode(message));
+        return Array.from(new Uint8Array(sig))
+            .map(b => b.toString(16).padStart(2, '0')).join('');
+    }
 
     // ─── HELPERS HTTP ────────────────────────────────────────────────────────
 
@@ -41,23 +62,25 @@ const Storage = (() => {
         if (!SCRIPT_URL || SCRIPT_URL === 'PEGA_AQUI_TU_URL_DE_APPS_SCRIPT') {
             throw new Error('⚙️ Configura SCRIPT_URL en storage.js primero.');
         }
+        if (API_SECRET.startsWith('CAMBIA_ESTE')) {
+            throw new Error('⚙️ Configura API_SECRET en storage.js y en codigo.gs.');
+        }
 
-        // Usamos GET con el payload en base64 para evitar CORS preflight.
-        // Apps Script siempre permite GET desde cualquier origen.
-        const data   = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(payload)))));
-        const url    = `${SCRIPT_URL}?action=${action}&payload=${data}`;
+        // Nonce de tiempo: segundos actuales con ventana de ±5 min en el servidor
+        const ts   = Math.floor(Date.now() / 1000).toString();
+        const data = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(payload)))));
 
-        // Timeout de 15 segundos para evitar que la app quede bloqueada
+        // Firma: HMAC-SHA256(secret, action + ts + data)
+        const sig  = await hmacSign(API_SECRET, action + ts + data);
+
+        const url  = `${SCRIPT_URL}?action=${action}&payload=${data}&ts=${ts}&sig=${sig}`;
+
         const controller = new AbortController();
         const timeoutId  = setTimeout(() => controller.abort(), 15000);
 
         let res;
         try {
-            res = await fetch(url, {
-                method:   'GET',
-                redirect: 'follow',
-                signal:   controller.signal
-            });
+            res = await fetch(url, { method: 'GET', redirect: 'follow', signal: controller.signal });
         } catch (fetchErr) {
             clearTimeout(timeoutId);
             if (fetchErr.name === 'AbortError') {
@@ -69,11 +92,9 @@ const Storage = (() => {
 
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-        // Apps Script a veces devuelve text/html envolviendo el JSON
         const text = await res.text();
         let json;
         try {
-            // Extraer el primer objeto JSON válido del texto
             const match = text.match(/\{[\s\S]*\}/);
             if (!match) throw new Error('Sin respuesta JSON');
             json = JSON.parse(match[0]);
