@@ -46,62 +46,54 @@ const Attendance = (() => {
         const classCount = payment.classCount ? parseInt(payment.classCount, 10) : null;
         const esPaquete  = CLASS_PACK_TYPES.includes(tipo) && classCount;
 
-        // Contar asistencias en el período
-        const attendsInPeriod = Storage.getAttendance()
-            .filter(a => a.userId === userId && a.status === 'presente' && a.date >= start && a.date <= end).length;
-
-        // ── Lógica especial para paquetes de clases ──────────────────────
+        // ── Paquetes de clases ───────────────────────────────────────────
         if (esPaquete) {
-            // Total de clases asistidas desde el inicio del paquete (incluyendo tras vencimiento)
-            const totalClases = Storage.getAttendance()
+            const totalClases     = Storage.getAttendance()
                 .filter(a => a.userId === userId && a.status === 'presente' && a.date >= start).length;
+            const clasesRestantes = classCount - totalClases;
+            const clasesExcedidas = totalClases - classCount;
 
-            const clasesRestantes  = classCount - totalClases;
-            const clasesExcedidas  = totalClases - classCount;
-            const tipoLabel        = `${tipo} · ${classCount} clases`;
-
-            let vigTag, extraInfo = '';
+            let vigTag, extra = '';
             if (clasesRestantes > 0) {
                 vigTag = `<span class="badge bg-success">✔ ${clasesRestantes} clase${clasesRestantes !== 1 ? 's' : ''} restante${clasesRestantes !== 1 ? 's' : ''}</span>`;
             } else if (clasesRestantes === 0) {
-                vigTag = `<span class="badge bg-warning text-dark">⚠ Paquete agotado (${classCount} clases)</span>`;
+                vigTag = `<span class="badge bg-warning text-dark">⚠ Paquete agotado</span>`;
             } else {
-                vigTag = `<span class="badge bg-danger">🚫 Paquete vencido</span>`;
-                extraInfo = `<div class="text-danger small mt-1 fw-semibold">${clasesExcedidas} clase${clasesExcedidas !== 1 ? 's' : ''} tras vencimiento del paquete</div>`;
+                vigTag = `<span class="badge bg-danger">🚫 Vencido</span>`;
+                extra  = `<div class="text-danger small fw-semibold">${clasesExcedidas} clase${clasesExcedidas !== 1 ? 's' : ''} tras venc.</div>`;
             }
-
             return `<div class="small lh-sm">
                 ${vigTag}
-                <div class="text-muted mt-1">${Utils.formatDate(start)} → ${Utils.formatDate(end)} ·
-                <em>${tipoLabel}</em> · <strong>${totalClases}</strong> / ${classCount} clase${classCount !== 1 ? 's' : ''} usadas</div>
-                ${extraInfo}
+                <div class="text-muted">${Utils.formatDate(end)} · <strong>${totalClases}</strong>/${classCount} clases</div>
+                ${extra}
             </div>`;
         }
 
-        // ── Lógica estándar por fechas ────────────────────────────────────
+        // ── Vigencia por fechas ──────────────────────────────────────────
+        const attendsInPeriod = Storage.getAttendance()
+            .filter(a => a.userId === userId && a.status === 'presente' && a.date >= start && a.date <= end).length;
+
         const endDate   = new Date(end   + 'T00:00:00');
         const todayDate = new Date(today + 'T00:00:00');
         const diffDays  = Math.floor((todayDate - endDate) / 86400000);
 
-        let vigTag, extraInfo = '';
+        let vigTag, extra = '';
         if (diffDays < 0) {
-            vigTag = `<span class="badge bg-success">Vigente hasta ${Utils.formatDate(end)}</span>`;
+            vigTag = `<span class="badge bg-success">Vence ${Utils.formatDate(end)}</span>`;
         } else if (diffDays === 0) {
             vigTag = `<span class="badge bg-warning text-dark">Vence hoy</span>`;
         } else {
-            vigTag = `<span class="badge bg-danger">Vencida hace ${diffDays} día${diffDays>1?'s':''}</span>`;
-            // Clases después del vencimiento
+            vigTag = `<span class="badge bg-danger">Vencida hace ${diffDays}d</span>`;
             const afterExpiry = Storage.getAttendance()
                 .filter(a => a.userId === userId && a.status === 'presente' && a.date > end).length;
             if (afterExpiry > 0)
-                extraInfo = ` · <span class="text-warning small">${afterExpiry} clase${afterExpiry>1?'s':''} tras vencimiento</span>`;
+                extra = `<div class="text-danger small fw-semibold">${afterExpiry} clase${afterExpiry > 1 ? 's' : ''} tras venc.</div>`;
         }
 
         return `<div class="small lh-sm">
             ${vigTag}
-            <div class="text-muted mt-1">${Utils.formatDate(start)} → ${Utils.formatDate(end)} · 
-            <em>${tipo}</em> · <strong>${attendsInPeriod}</strong> asistencia${attendsInPeriod!==1?'s':''}</div>
-            ${extraInfo}
+            <div class="text-muted"><strong>${attendsInPeriod}</strong> asistencia${attendsInPeriod !== 1 ? 's' : ''}</div>
+            ${extra}
         </div>`;
     }
 
@@ -149,25 +141,21 @@ const Attendance = (() => {
             return;
         }
 
-        // Todas las columnas visibles en todos los tamaños, scroll horizontal con table-responsive
+        // Columnas: 1=# | 2=Usuario | 3=Vigencia | 4=Acción | 5=Emergencia
         tbody.innerHTML = users.map((user, i) => {
-            const record = attendance.find(a => a.userId === user.id);
-            const status = record?.status || 'sin registro';
-            const time   = record?.time   || '-';
+            const record  = attendance.find(a => a.userId === user.id);
+            const status  = record?.status || 'sin registro';
+            const time    = record?.time   || '-';
 
-            const statusBadge = status === 'presente'
-                ? '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Presente</span>'
-                : status === 'ausente'
-                    ? '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Ausente</span>'
-                    : '<span class="badge bg-secondary">Sin registro</span>';
+            // Color de fila según estado
+            const rowClass = status === 'presente' ? 'table-success' : '';
 
-            return `<tr>
+            return `<tr class="${rowClass}">
                 <td>${i+1}</td>
                 <td>
                     <strong>${Utils.escapeHtml(user.name)}</strong>
                     <div class="text-muted small">${user.classTime || '-'}</div>
                 </td>
-                <td>${statusBadge}<div class="text-muted small mt-1">${time !== '-' ? 'Hora: '+time : ''}</div></td>
                 <td>${vigenciaBadge(user.id)}</td>
                 <td>
                     <div class="d-flex gap-1 flex-wrap">
