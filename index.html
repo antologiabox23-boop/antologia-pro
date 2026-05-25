@@ -64,29 +64,48 @@
         }
 
         /* ── Tabla Asistencia del Día – responsive móvil ── */
-        /* Columnas: 1=#  2=Usuario  3=Estado  4=Vigencia  5=Acción  6=Emergencia */
-        /* En móvil (<576px): mostrar sólo Usuario, Estado y Acción */
+        /* Columnas: 1=#  2=Usuario  3=Vigencia  4=Acción  5=Emergencia */
+        /* En móvil (<576px): mostrar sólo Usuario, Vigencia y Acción */
         #attendanceTableContainer .table > thead > tr > th:nth-child(1),
         #attendanceTableContainer .table > tbody > tr > td:nth-child(1),
-        #attendanceTableContainer .table > thead > tr > th:nth-child(4),
-        #attendanceTableContainer .table > tbody > tr > td:nth-child(4),
-        #attendanceTableContainer .table > thead > tr > th:nth-child(6),
-        #attendanceTableContainer .table > tbody > tr > td:nth-child(6) { display: none; }
+        #attendanceTableContainer .table > thead > tr > th:nth-child(5),
+        #attendanceTableContainer .table > tbody > tr > td:nth-child(5) { display: none; }
 
         /* sm (≥576px): mostrar también Emergencia */
         @media (min-width: 576px) {
-            #attendanceTableContainer .table > thead > tr > th:nth-child(6),
-            #attendanceTableContainer .table > tbody > tr > td:nth-child(6) { display: table-cell; }
+            #attendanceTableContainer .table > thead > tr > th:nth-child(5),
+            #attendanceTableContainer .table > tbody > tr > td:nth-child(5) { display: table-cell; }
         }
         /* md (≥768px): mostrar todas las columnas */
         @media (min-width: 768px) {
             #attendanceTableContainer .table > thead > tr > th:nth-child(1),
-            #attendanceTableContainer .table > tbody > tr > td:nth-child(1),
-            #attendanceTableContainer .table > thead > tr > th:nth-child(4),
-            #attendanceTableContainer .table > tbody > tr > td:nth-child(4) { display: table-cell; }
+            #attendanceTableContainer .table > tbody > tr > td:nth-child(1) { display: table-cell; }
         }
-        #attendanceTableContainer .table td,
-        #attendanceTableContainer .table th { white-space: nowrap; }
+        /* En móvil: proporciones fijas para las 3 columnas visibles */
+        @media (max-width: 575px) {
+            #attendanceTableContainer .table td,
+            #attendanceTableContainer .table th { white-space: normal; }
+            #attendanceTableContainer .table > thead > tr > th:nth-child(2),
+            #attendanceTableContainer .table > tbody > tr > td:nth-child(2) { width: 38%; }
+            #attendanceTableContainer .table > thead > tr > th:nth-child(3),
+            #attendanceTableContainer .table > tbody > tr > td:nth-child(3) { width: 40%; }
+            #attendanceTableContainer .table > thead > tr > th:nth-child(4),
+            #attendanceTableContainer .table > tbody > tr > td:nth-child(4) { width: 22%; }
+            #attendanceTableContainer .table td:nth-child(2) .text-muted.small { display: none; }
+            #attendanceTableContainer .badge { font-size: 0.7rem; padding: 0.3em 0.45em; }
+        }
+        @media (min-width: 576px) {
+            #attendanceTableContainer .table td,
+            #attendanceTableContainer .table th { white-space: nowrap; }
+        }
+        /* Fila presente: color verde adaptado al tema oscuro */
+        #attendanceTableContainer .table tr.table-success td {
+            background-color: rgba(16, 185, 129, 0.15) !important;
+            border-bottom-color: rgba(16, 185, 129, 0.2) !important;
+        }
+        [data-theme="light"] #attendanceTableContainer .table tr.table-success td {
+            background-color: rgba(16, 185, 129, 0.12) !important;
+        }
 
         /* ── Tabla Alertas de Inasistencia – responsive móvil ── */
         /* Columnas: 1=#  2=Usuario  3=Estado  4=Última asistencia  5=Acciones */
@@ -531,7 +550,6 @@
                                     <tr>
                                         <th>#</th>
                                         <th>Usuario</th>
-                                        <th>Estado</th>
                                         <th>Vigencia</th>
                                         <th>Acción</th>
                                         <th>Emergencia</th>
