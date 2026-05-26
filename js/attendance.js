@@ -46,54 +46,62 @@ const Attendance = (() => {
         const classCount = payment.classCount ? parseInt(payment.classCount, 10) : null;
         const esPaquete  = CLASS_PACK_TYPES.includes(tipo) && classCount;
 
-        // ── Paquetes de clases ───────────────────────────────────────────
-        if (esPaquete) {
-            const totalClases     = Storage.getAttendance()
-                .filter(a => a.userId === userId && a.status === 'presente' && a.date >= start).length;
-            const clasesRestantes = classCount - totalClases;
-            const clasesExcedidas = totalClases - classCount;
-
-            let vigTag, extra = '';
-            if (clasesRestantes > 0) {
-                vigTag = `<span class="badge bg-success">✔ ${clasesRestantes} clase${clasesRestantes !== 1 ? 's' : ''} restante${clasesRestantes !== 1 ? 's' : ''}</span>`;
-            } else if (clasesRestantes === 0) {
-                vigTag = `<span class="badge bg-warning text-dark">⚠ Paquete agotado</span>`;
-            } else {
-                vigTag = `<span class="badge bg-danger">🚫 Vencido</span>`;
-                extra  = `<div class="text-danger small fw-semibold">${clasesExcedidas} clase${clasesExcedidas !== 1 ? 's' : ''} tras venc.</div>`;
-            }
-            return `<div class="small lh-sm">
-                ${vigTag}
-                <div class="text-muted">${Utils.formatDate(end)} · <strong>${totalClases}</strong>/${classCount} clases</div>
-                ${extra}
-            </div>`;
-        }
-
-        // ── Vigencia por fechas ──────────────────────────────────────────
+        // Contar asistencias en el período
         const attendsInPeriod = Storage.getAttendance()
             .filter(a => a.userId === userId && a.status === 'presente' && a.date >= start && a.date <= end).length;
 
+        // ── Lógica especial para paquetes de clases ──────────────────────
+        if (esPaquete) {
+            // Total de clases asistidas desde el inicio del paquete (incluyendo tras vencimiento)
+            const totalClases = Storage.getAttendance()
+                .filter(a => a.userId === userId && a.status === 'presente' && a.date >= start).length;
+
+            const clasesRestantes  = classCount - totalClases;
+            const clasesExcedidas  = totalClases - classCount;
+            const tipoLabel        = `${tipo} · ${classCount} clases`;
+
+            let vigTag, extraInfo = '';
+            if (clasesRestantes > 0) {
+                vigTag = `<span class="badge bg-success">✔ ${clasesRestantes} clase${clasesRestantes !== 1 ? 's' : ''} restante${clasesRestantes !== 1 ? 's' : ''}</span>`;
+            } else if (clasesRestantes === 0) {
+                vigTag = `<span class="badge bg-warning text-dark">⚠ Paquete agotado (${classCount} clases)</span>`;
+            } else {
+                vigTag = `<span class="badge bg-danger">🚫 Paquete vencido</span>`;
+                extraInfo = `<div class="text-danger small mt-1 fw-semibold">${clasesExcedidas} clase${clasesExcedidas !== 1 ? 's' : ''} tras vencimiento del paquete</div>`;
+            }
+
+            return `<div class="small lh-sm">
+                ${vigTag}
+                <div class="text-muted mt-1">${Utils.formatDate(start)} → ${Utils.formatDate(end)} ·
+                <em>${tipoLabel}</em> · <strong>${totalClases}</strong> / ${classCount} clase${classCount !== 1 ? 's' : ''} usadas</div>
+                ${extraInfo}
+            </div>`;
+        }
+
+        // ── Lógica estándar por fechas ────────────────────────────────────
         const endDate   = new Date(end   + 'T00:00:00');
         const todayDate = new Date(today + 'T00:00:00');
         const diffDays  = Math.floor((todayDate - endDate) / 86400000);
 
-        let vigTag, extra = '';
+        let vigTag, extraInfo = '';
         if (diffDays < 0) {
-            vigTag = `<span class="badge bg-success">Vence ${Utils.formatDate(end)}</span>`;
+            vigTag = `<span class="badge bg-success">Vigente hasta ${Utils.formatDate(end)}</span>`;
         } else if (diffDays === 0) {
             vigTag = `<span class="badge bg-warning text-dark">Vence hoy</span>`;
         } else {
-            vigTag = `<span class="badge bg-danger">Vencida hace ${diffDays}d</span>`;
+            vigTag = `<span class="badge bg-danger">Vencida hace ${diffDays} día${diffDays>1?'s':''}</span>`;
+            // Clases después del vencimiento
             const afterExpiry = Storage.getAttendance()
                 .filter(a => a.userId === userId && a.status === 'presente' && a.date > end).length;
             if (afterExpiry > 0)
-                extra = `<div class="text-danger small fw-semibold">${afterExpiry} clase${afterExpiry > 1 ? 's' : ''} tras venc.</div>`;
+                extraInfo = ` · <span class="text-warning small">${afterExpiry} clase${afterExpiry>1?'s':''} tras vencimiento</span>`;
         }
 
         return `<div class="small lh-sm">
             ${vigTag}
-            <div class="text-muted"><strong>${attendsInPeriod}</strong> asistencia${attendsInPeriod !== 1 ? 's' : ''}</div>
-            ${extra}
+            <div class="text-muted mt-1">${Utils.formatDate(start)} → ${Utils.formatDate(end)} · 
+            <em>${tipo}</em> · <strong>${attendsInPeriod}</strong> asistencia${attendsInPeriod!==1?'s':''}</div>
+            ${extraInfo}
         </div>`;
     }
 
@@ -137,35 +145,36 @@ const Attendance = (() => {
             <span class="badge bg-secondary">Total activos: ${users.length}</span>`;
 
         if (users.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No hay usuarios activos registrados</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No hay usuarios activos registrados</td></tr>`;
             return;
         }
 
-        // Columnas: 1=# | 2=Usuario | 3=Vigencia | 4=Acción | 5=Emergencia
         tbody.innerHTML = users.map((user, i) => {
-            const record  = attendance.find(a => a.userId === user.id);
-            const status  = record?.status || 'sin registro';
-            const time    = record?.time   || '-';
+            const record = attendance.find(a => a.userId === user.id);
+            const status = record?.status || 'sin registro';
+            const time   = record?.time   || '-';
 
-            // Color de fila según estado
-            const rowClass = status === 'presente' ? 'table-success' : '';
+            const statusBadge = status === 'presente'
+                ? '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Presente</span>'
+                : status === 'ausente'
+                    ? '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Ausente</span>'
+                    : '<span class="badge bg-secondary">Sin registro</span>';
 
-            return `<tr class="${rowClass}">
+            return `<tr>
                 <td>${i+1}</td>
                 <td>
                     <strong>${Utils.escapeHtml(user.name)}</strong>
                     <div class="text-muted small">${user.classTime || '-'}</div>
                 </td>
+                <td>${statusBadge}<div class="text-muted small mt-1">${time !== '-' ? 'Hora: '+time : ''}</div></td>
                 <td>${vigenciaBadge(user.id)}</td>
                 <td>
-                    <div class="d-flex gap-1 flex-wrap">
-                        <button class="btn btn-sm btn-success" onclick="Attendance.mark('${user.id}','presente')" title="Presente">
-                            <i class="fas fa-check"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="Attendance.mark('${user.id}','ausente')" title="Ausente">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
+                    <button class="btn btn-sm btn-success me-1" onclick="Attendance.mark('${user.id}','presente')" title="Presente">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="Attendance.mark('${user.id}','ausente')" title="Ausente">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </td>
                 <td>
                     <button class="btn btn-sm btn-outline-success" onclick="Attendance.contactEmergency('${user.id}')" title="WhatsApp Emergencia">
@@ -204,7 +213,7 @@ const Attendance = (() => {
         if (countEl) countEl.textContent = alerts.length;
 
         if (alerts.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-muted">
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">
                 <i class="fas fa-check-circle text-success me-2"></i>Sin alertas de inasistencia</td></tr>`;
             return;
         }
@@ -219,11 +228,15 @@ const Attendance = (() => {
                 <td><strong>${Utils.escapeHtml(a.user.name)}</strong></td>
                 <td>${info}</td>
                 <td>${lastStr}</td>
-                <td>
-                    <div class="d-flex gap-1">
-                        <button class="btn btn-sm btn-outline-success" onclick="Attendance.whatsappInasistencia('${a.user.id}')" title="WhatsApp"><i class="fab fa-whatsapp"></i></button>
-                        <button class="btn btn-sm btn-outline-warning" onclick="Attendance.inactivarUsuario('${a.user.id}')" title="Inactivar"><i class="fas fa-user-slash"></i></button>
-                    </div>
+                <td class="d-flex gap-1">
+                    <button class="btn btn-sm btn-outline-success" 
+                        onclick="Attendance.whatsappInasistencia('${a.user.id}')" title="Enviar mensaje WhatsApp">
+                        <i class="fab fa-whatsapp"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-warning" 
+                        onclick="Attendance.inactivarUsuario('${a.user.id}')" title="Inactivar usuario">
+                        <i class="fas fa-user-slash"></i>
+                    </button>
                 </td>
             </tr>`;
         }).join('');
