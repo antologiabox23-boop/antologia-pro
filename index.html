@@ -62,85 +62,6 @@
         #income .table th {
             white-space: nowrap;
         }
-
-        /* ── Tabla Asistencia del Día – responsive móvil ── */
-        /* Columnas: 1=#  2=Usuario  3=Vigencia  4=Acción  5=Emergencia */
-        /* En móvil (<576px): mostrar sólo Usuario, Vigencia y Acción */
-        #attendanceTableContainer .table > thead > tr > th:nth-child(1),
-        #attendanceTableContainer .table > tbody > tr > td:nth-child(1),
-        #attendanceTableContainer .table > thead > tr > th:nth-child(5),
-        #attendanceTableContainer .table > tbody > tr > td:nth-child(5) { display: none; }
-
-        /* sm (≥576px): mostrar también Emergencia */
-        @media (min-width: 576px) {
-            #attendanceTableContainer .table > thead > tr > th:nth-child(5),
-            #attendanceTableContainer .table > tbody > tr > td:nth-child(5) { display: table-cell; }
-        }
-        /* md (≥768px): mostrar todas las columnas */
-        @media (min-width: 768px) {
-            #attendanceTableContainer .table > thead > tr > th:nth-child(1),
-            #attendanceTableContainer .table > tbody > tr > td:nth-child(1) { display: table-cell; }
-        }
-        /* En móvil: proporciones fijas para las 3 columnas visibles */
-        @media (max-width: 575px) {
-            #attendanceTableContainer .table td,
-            #attendanceTableContainer .table th { white-space: normal; }
-            #attendanceTableContainer .table > thead > tr > th:nth-child(2),
-            #attendanceTableContainer .table > tbody > tr > td:nth-child(2) { width: 38%; }
-            #attendanceTableContainer .table > thead > tr > th:nth-child(3),
-            #attendanceTableContainer .table > tbody > tr > td:nth-child(3) { width: 40%; }
-            #attendanceTableContainer .table > thead > tr > th:nth-child(4),
-            #attendanceTableContainer .table > tbody > tr > td:nth-child(4) { width: 22%; }
-            #attendanceTableContainer .table td:nth-child(2) .text-muted.small { display: none; }
-            #attendanceTableContainer .badge { font-size: 0.7rem; padding: 0.3em 0.45em; }
-        }
-        @media (min-width: 576px) {
-            #attendanceTableContainer .table td,
-            #attendanceTableContainer .table th { white-space: nowrap; }
-        }
-        /* Fila presente: color verde adaptado al tema oscuro */
-        #attendanceTableContainer .table tr.table-success td {
-            background-color: rgba(16, 185, 129, 0.15) !important;
-            border-bottom-color: rgba(16, 185, 129, 0.2) !important;
-        }
-        [data-theme="light"] #attendanceTableContainer .table tr.table-success td {
-            background-color: rgba(16, 185, 129, 0.12) !important;
-        }
-
-        /* ── Tabla Alertas de Inasistencia – responsive móvil ── */
-        /* Columnas: 1=#  2=Usuario  3=Estado  4=Última asistencia  5=Acciones */
-        /* En móvil (<576px): mostrar sólo Usuario, Estado y Acciones */
-        #alertsTableContainer .table > thead > tr > th:nth-child(1),
-        #alertsTableContainer .table > tbody > tr > td:nth-child(1),
-        #alertsTableContainer .table > thead > tr > th:nth-child(4),
-        #alertsTableContainer .table > tbody > tr > td:nth-child(4) { display: none; }
-
-        /* sm (≥576px): mostrar también Última asistencia */
-        @media (min-width: 576px) {
-            #alertsTableContainer .table > thead > tr > th:nth-child(4),
-            #alertsTableContainer .table > tbody > tr > td:nth-child(4) { display: table-cell; }
-        }
-        /* md (≥768px): mostrar todas las columnas */
-        @media (min-width: 768px) {
-            #alertsTableContainer .table > thead > tr > th:nth-child(1),
-            #alertsTableContainer .table > tbody > tr > td:nth-child(1) { display: table-cell; }
-        }
-        /* En móvil: permitir wrap en Estado para que quepan las 3 columnas */
-        @media (max-width: 575px) {
-            #alertsTableContainer .table td,
-            #alertsTableContainer .table th { white-space: normal; }
-            #alertsTableContainer .table > thead > tr > th:nth-child(2),
-            #alertsTableContainer .table > tbody > tr > td:nth-child(2) { width: 40%; }
-            #alertsTableContainer .table > thead > tr > th:nth-child(3),
-            #alertsTableContainer .table > tbody > tr > td:nth-child(3) { width: 35%; }
-            #alertsTableContainer .table > thead > tr > th:nth-child(5),
-            #alertsTableContainer .table > tbody > tr > td:nth-child(5) { width: 25%; }
-            #alertsTableContainer .badge { font-size: 0.7rem; padding: 0.3em 0.4em; }
-        }
-        @media (min-width: 576px) {
-            #alertsTableContainer .table td,
-            #alertsTableContainer .table th { white-space: nowrap; }
-        }
     </style>
 </head>
 <body>
@@ -534,24 +455,25 @@
                 <div class="card mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Asistencia del Día</h5>
-                        <div class="attendance-controls d-flex align-items-center gap-2 flex-wrap w-100 w-md-auto">
-                            <span id="attendanceDaySummary" class="me-auto me-md-0"></span>
-                            <input type="date" class="form-control form-control-sm attendance-date-input" id="attendanceDate" style="width:160px">
-                            <input type="text" class="form-control form-control-sm attendance-search-input" id="attendanceSearch" placeholder="Buscar usuario...">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span id="attendanceDaySummary"></span>
+                            <input type="date" class="form-control form-control-sm" id="attendanceDate" style="width:160px">
+                            <input type="text" class="form-control form-control-sm" id="attendanceSearch" placeholder="Buscar usuario..." style="width:180px">
                             <button class="btn btn-sm btn-success" id="markAllPresent">
-                                <i class="fas fa-check-double me-1"></i><span class="d-none d-sm-inline">Marcar todos presentes</span><span class="d-sm-none">✓ Todos</span>
+                                <i class="fas fa-check-double me-1"></i>Marcar todos presentes
                             </button>
                         </div>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive" id="attendanceTableContainer">
-                            <table class="table table-hover mb-0 attendance-table">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
                                 <thead>
                                     <tr>
                                         <th>#</th>
                                         <th>Usuario</th>
-                                        <th>Vigencia</th>
-                                        <th>Acción</th>
+                                        <th>Estado</th>
+                                        <th>Vigencia del Pago</th>
+                                        <th>Asistencia</th>
                                         <th>Emergencia</th>
                                     </tr>
                                 </thead>
@@ -610,9 +532,9 @@
                         <small class="text-muted">Usuarios activos sin asistir más de 6 días</small>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive" id="alertsTableContainer">
+                        <div class="table-responsive">
                             <table class="table table-sm mb-0">
-                                <thead><tr><th>#</th><th>Usuario</th><th>Estado</th><th>Última asistencia</th><th>Acciones</th></tr></thead>
+                                <thead><tr><th>#</th><th>Usuario</th><th>Estado</th><th>Última asistencia</th><th>WhatsApp</th></tr></thead>
                                 <tbody id="alertsList"></tbody>
                             </table>
                         </div>
@@ -1640,7 +1562,7 @@
 
     <!-- User Modal -->
     <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-fullscreen-md-down">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="userModalLabel">
@@ -1780,7 +1702,7 @@
 
     <!-- Income Modal -->
     <div class="modal fade" id="incomeModal" tabindex="-1" aria-labelledby="incomeModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-fullscreen-sm-down">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="incomeModalLabel">
