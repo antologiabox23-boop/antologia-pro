@@ -23,27 +23,26 @@ const Dashboard = (() => {
             const incomeEl = document.getElementById('monthlyIncome');
             if (incomeEl) incomeEl.textContent = Utils.formatCurrency(monthlyTotal);
 
-            // Asistencia hoy
-            const today = Utils.getCurrentDate();
-            const todayAttendance = Storage.getAttendanceByDate(today).filter(a => a.status === 'presente');
-            const attEl = document.getElementById('todayAttendance');
-            if (attEl) attEl.textContent = todayAttendance.length;
-            const rate = activeUsers.length > 0
-                ? ((todayAttendance.length / activeUsers.length) * 100).toFixed(0) : 0;
-            const rateEl = document.getElementById('todayAttendanceRate');
-            if (rateEl) rateEl.textContent = `${rate}% asistencia`;
+            // Gastos del mes
+            const expenses = Storage.getExpenses();
+            const monthlyExpenses = expenses.filter(e => e.date >= start && e.date <= end);
+            const monthlyExpensesTotal = monthlyExpenses.reduce((s, e) => s + Utils.parseAmount(e.amount), 0);
+            const expTotalEl = document.getElementById('monthlyExpensesTotal');
+            if (expTotalEl) expTotalEl.textContent = Utils.formatCurrency(monthlyExpensesTotal);
+            const expCountEl = document.getElementById('monthlyExpensesCount');
+            if (expCountEl) expCountEl.textContent = `${monthlyExpenses.length} gasto${monthlyExpenses.length !== 1 ? 's' : ''} registrado${monthlyExpenses.length !== 1 ? 's' : ''}`;
 
-            // Vigencias vencidas
-            const vencidas = activeUsers.filter(u => {
-                const pay = Storage.getIncome()
-                    .filter(p => p.userId === u.id && p.endDate)
-                    .sort((a, b) => b.endDate.localeCompare(a.endDate))[0];
-                return !pay || pay.endDate < today;
-            }).length;
-            const pendEl = document.getElementById('pendingPayments');
-            if (pendEl) pendEl.textContent = vencidas;
-            const pendTxt = document.getElementById('pendingPaymentsAmount');
-            if (pendTxt) pendTxt.textContent = `${vencidas} vigencia${vencidas !== 1 ? 's' : ''} vencida${vencidas !== 1 ? 's' : ''}`;
+            // Saldo total (ingresos - gastos acumulados)
+            const totalIncome = Storage.getIncome().reduce((s, p) => s + Utils.parseAmount(p.amount), 0);
+            const totalExpenses = expenses.reduce((s, e) => s + Utils.parseAmount(e.amount), 0);
+            const totalBalance = totalIncome - totalExpenses;
+            const balEl = document.getElementById('dashboardTotalBalance');
+            if (balEl) {
+                balEl.textContent = Utils.formatCurrency(totalBalance);
+                balEl.className = `mb-0 ${totalBalance < 0 ? 'text-danger' : ''}`;
+            }
+            const balDetail = document.getElementById('dashboardBalanceDetail');
+            if (balDetail) balDetail.textContent = `${Utils.formatCurrency(totalIncome)} ingresos — ${Utils.formatCurrency(totalExpenses)} gastos`;
 
             if (window.Charts && typeof Chart !== 'undefined') {
                 try { Charts.updateAllCharts(); } catch(e) {}
