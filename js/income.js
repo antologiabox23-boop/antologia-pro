@@ -584,7 +584,8 @@ const Income = (() => {
         const nombre   = user.name.split(' ')[0];
         const monto    = Utils.formatCurrency(Utils.parseAmount(p.amount));
         const tipo     = p.paymentType  || 'Membresía';
-        const tipoLabel = (CLASS_PACK_TYPES.includes(p.paymentType) && p.classCount)
+        const isSemiDiana26 = p.paymentType === 'Semipersonalizado Diana' && Number(p.classCount) === 26;
+        const tipoLabel = (!isSemiDiana26 && CLASS_PACK_TYPES.includes(p.paymentType) && p.classCount)
             ? `${tipo} · ${p.classCount} clases`
             : tipo;
         const metodo   = p.paymentMethod || '';
