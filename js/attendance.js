@@ -68,12 +68,22 @@ const Attendance = (() => {
             let vigTag, extraInfo = '';
 
             if (fechaVencida) {
+                // Clases tomadas estrictamente después de la fecha de vencimiento
+                const clasesTrasFecha = Storage.getAttendance()
+                    .filter(a => a.userId === userId && a.status === 'presente' && a.date > end).length;
+
                 // Venció por fecha, independientemente de clases restantes
                 vigTag = `<span class="badge bg-danger">🚫 Vigencia vencida hace ${diffDays} día${diffDays > 1 ? 's' : ''}</span>`;
+
+                const partes = [];
                 if (clasesRestantes > 0) {
-                    extraInfo = `<div class="text-warning small mt-1 fw-semibold">⚠ ${clasesRestantes} clase${clasesRestantes !== 1 ? 's' : ''} sin usar al vencer</div>`;
-                } else if (clasesExcedidas > 0) {
-                    extraInfo = `<div class="text-danger small mt-1 fw-semibold">${clasesExcedidas} clase${clasesExcedidas !== 1 ? 's' : ''} tomadas tras vencimiento</div>`;
+                    partes.push(`⚠ ${clasesRestantes} clase${clasesRestantes !== 1 ? 's' : ''} sin usar al vencer`);
+                }
+                if (clasesTrasFecha > 0) {
+                    partes.push(`${clasesTrasFecha} clase${clasesTrasFecha !== 1 ? 's' : ''} tomada${clasesTrasFecha !== 1 ? 's' : ''} tras vencimiento`);
+                }
+                if (partes.length > 0) {
+                    extraInfo = `<div class="text-danger small mt-1 fw-semibold">${partes.join(' · ')}</div>`;
                 }
             } else if (clasesRestantes > 0) {
                 // Vigente: quedan clases y la fecha no ha vencido
