@@ -52,22 +52,41 @@ const Attendance = (() => {
 
         // ── Lógica especial para paquetes de clases ──────────────────────
         if (esPaquete) {
-            // Total de clases asistidas desde el inicio del paquete (incluyendo tras vencimiento)
+            // Total de clases asistidas desde el inicio del paquete
             const totalClases = Storage.getAttendance()
                 .filter(a => a.userId === userId && a.status === 'presente' && a.date >= start).length;
 
+            const endDate   = new Date(end   + 'T00:00:00');
+            const todayDate = new Date(today + 'T00:00:00');
+            const diffDays  = Math.floor((todayDate - endDate) / 86400000);
+
+            const fechaVencida     = diffDays > 0;
             const clasesRestantes  = classCount - totalClases;
             const clasesExcedidas  = totalClases - classCount;
             const tipoLabel        = `${tipo} · ${classCount} clases`;
 
             let vigTag, extraInfo = '';
-            if (clasesRestantes > 0) {
+
+            if (fechaVencida) {
+                // Venció por fecha, independientemente de clases restantes
+                vigTag = `<span class="badge bg-danger">🚫 Vigencia vencida hace ${diffDays} día${diffDays > 1 ? 's' : ''}</span>`;
+                if (clasesRestantes > 0) {
+                    extraInfo = `<div class="text-warning small mt-1 fw-semibold">⚠ ${clasesRestantes} clase${clasesRestantes !== 1 ? 's' : ''} sin usar al vencer</div>`;
+                } else if (clasesExcedidas > 0) {
+                    extraInfo = `<div class="text-danger small mt-1 fw-semibold">${clasesExcedidas} clase${clasesExcedidas !== 1 ? 's' : ''} tomadas tras vencimiento</div>`;
+                }
+            } else if (clasesRestantes > 0) {
+                // Vigente: quedan clases y la fecha no ha vencido
+                const labelFecha = diffDays === 0
+                    ? ' · <span class="text-warning fw-semibold">Vence hoy</span>'
+                    : ` · vence ${Utils.formatDate(end)}`;
                 vigTag = `<span class="badge bg-success">✔ ${clasesRestantes} clase${clasesRestantes !== 1 ? 's' : ''} restante${clasesRestantes !== 1 ? 's' : ''}</span>`;
+                extraInfo = `<div class="text-muted small mt-1">${labelFecha}</div>`;
             } else if (clasesRestantes === 0) {
                 vigTag = `<span class="badge bg-warning text-dark">⚠ Paquete agotado (${classCount} clases)</span>`;
             } else {
-                vigTag = `<span class="badge bg-danger">🚫 Paquete vencido</span>`;
-                extraInfo = `<div class="text-danger small mt-1 fw-semibold">${clasesExcedidas} clase${clasesExcedidas !== 1 ? 's' : ''} tras vencimiento del paquete</div>`;
+                vigTag = `<span class="badge bg-danger">🚫 Paquete agotado</span>`;
+                extraInfo = `<div class="text-danger small mt-1 fw-semibold">${clasesExcedidas} clase${clasesExcedidas !== 1 ? 's' : ''} sobre el límite del paquete</div>`;
             }
 
             return `<div class="small lh-sm">
