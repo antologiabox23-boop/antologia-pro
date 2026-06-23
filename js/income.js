@@ -132,11 +132,8 @@ const Income = (() => {
             }
         });
 
-        // Recalcular vigencia cuando cambia la fecha de pago.
-        // Si ya existe una fecha de inicio distinta (edición de un pago, o una
-        // sugerencia de continuidad ya aplicada), se pregunta si se desea
-        // mantenerla o actualizarla a la nueva fecha de pago.
-        document.getElementById('incomeDate')?.addEventListener('change', handlePaymentDateChange);
+        // Recalcular vigencia cuando cambia la fecha de pago
+        document.getElementById('incomeDate')?.addEventListener('change', recalcVigencia);
 
         // Si el usuario edita manualmente la fecha de inicio, recalcular solo el fin
         document.getElementById('incomeStartDate')?.addEventListener('change', () => {
@@ -159,39 +156,6 @@ const Income = (() => {
 
         calcEndDate(tipo);
         showVigenciaInfo();
-    }
-
-    // Cuando cambia la fecha de pago, si ya hay una fecha de inicio de vigencia
-    // distinta (pago existente en edición, o sugerencia de continuidad ya
-    // aplicada), se pregunta si se desea mantenerla o actualizarla a la nueva
-    // fecha de pago, en lugar de sobrescribirla automáticamente.
-    function handlePaymentDateChange() {
-        const fechaPago    = document.getElementById('incomeDate')?.value;
-        const currentStart = document.getElementById('incomeStartDate')?.value;
-
-        if (!fechaPago) return;
-
-        // Sin fecha de inicio previa, o ya coincide con la nueva fecha de pago → sin conflicto
-        if (!currentStart || currentStart === fechaPago) {
-            recalcVigencia();
-            return;
-        }
-
-        UI.showConfirmModal(
-            'Cambio de fecha de pago',
-            `La vigencia de este pago inicia actualmente el ${Utils.formatDate(currentStart)}. ` +
-            `¿Quieres actualizar también la fecha de inicio de la vigencia a la nueva fecha de pago (${Utils.formatDate(fechaPago)})?`,
-            () => recalcVigencia(), // Confirmar → sincroniza inicio = fecha de pago y recalcula el fin
-            false,
-            {
-                confirmText: 'Actualizar fecha de inicio',
-                confirmIcon: 'fa-calendar-check',
-                cancelText:  `Mantener (${Utils.formatDate(currentStart)})`,
-                cancelIcon:  'fa-calendar'
-                // Cancelar → no hace nada: la vigencia (inicio/fin) se conserva igual,
-                // solo queda actualizado el campo "fecha de pago".
-            }
-        );
     }
 
     function calcEndDate(tipo) {
