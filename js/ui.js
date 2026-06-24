@@ -6,6 +6,7 @@
 const UI = (() => {
     let loadingOverlay = null;
     let confirmCallback = null;
+    let cancelCallback  = null;
 
     // Inicializar elementos de UI
     function initialize() {
@@ -127,23 +128,48 @@ const UI = (() => {
 
     function setupConfirmModal() {
         const confirmBtn = document.getElementById('confirmActionBtn');
+        const cancelBtn  = document.getElementById('confirmCancelBtn');
+
         if (confirmBtn) {
             confirmBtn.addEventListener('click', () => {
                 if (confirmCallback) {
                     confirmCallback();
-                    confirmCallback = null;
                 }
+                confirmCallback = null;
+                cancelCallback  = null;
                 hideConfirmModal();
+            });
+        }
+
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                if (cancelCallback) {
+                    cancelCallback();
+                }
+                confirmCallback = null;
+                cancelCallback  = null;
+                // El propio data-bs-dismiss del botón ya cierra el modal
+            });
+        }
+
+        // Si el modal se cierra de cualquier otra forma (X, click afuera, Esc),
+        // se descartan los callbacks pendientes sin ejecutarlos.
+        const modal = document.getElementById('confirmModal');
+        if (modal) {
+            modal.addEventListener('hidden.bs.modal', () => {
+                confirmCallback = null;
+                cancelCallback  = null;
             });
         }
     }
 
-    function showConfirmModal(title, message, callback, danger = false) {
+    function showConfirmModal(title, message, callback, danger = false, options = {}) {
         const modal = document.getElementById('confirmModal');
         const modalTitle = document.getElementById('confirmModalLabel');
         const modalBody = document.getElementById('confirmModalBody');
         const confirmBtn = document.getElementById('confirmActionBtn');
-        
+        const cancelBtn = document.getElementById('confirmCancelBtn');
+
         if (!modal || !modalTitle || !modalBody || !confirmBtn) return;
 
         modalTitle.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${title}`;
@@ -156,7 +182,20 @@ const UI = (() => {
             confirmBtn.className = 'btn btn-primary';
         }
 
+        // Texto/icono del botón de confirmar (por defecto: "Confirmar")
+        const confirmText = options.confirmText || 'Confirmar';
+        const confirmIcon = options.confirmIcon || 'fa-check';
+        confirmBtn.innerHTML = `<i class="fas ${confirmIcon} me-2"></i>${confirmText}`;
+
+        // Texto/icono del botón de cancelar (por defecto: "Cancelar")
+        if (cancelBtn) {
+            const cancelText = options.cancelText || 'Cancelar';
+            const cancelIcon = options.cancelIcon || 'fa-times';
+            cancelBtn.innerHTML = `<i class="fas ${cancelIcon} me-2"></i>${cancelText}`;
+        }
+
         confirmCallback = callback;
+        cancelCallback  = options.onCancel || null;
         
         const bsModal = new bootstrap.Modal(modal);
         bsModal.show();

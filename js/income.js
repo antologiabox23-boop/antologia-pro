@@ -26,6 +26,7 @@ const Income = (() => {
         if (form) { form.reset(); Validation.clearFormValidation(form); }
         document.getElementById('incomeId').value = '';
         document.getElementById('vigenciaInfo').style.display = 'none';
+        _hideDateChangeBanner();
 
         const labelEl = document.getElementById('incomeModalLabel');
 
@@ -98,6 +99,7 @@ const Income = (() => {
         document.getElementById('incomeModal')?.addEventListener('hidden.bs.modal', () => {
             UI.resetModalForm('incomeModal', 'incomeForm');
             document.getElementById('vigenciaInfo').style.display = 'none';
+            _hideDateChangeBanner();
             // Limpiar buscador
             const inp = document.getElementById('incomeUserSearch');
             if (inp) inp.value = '';
@@ -132,8 +134,15 @@ const Income = (() => {
             }
         });
 
-        // Recalcular vigencia cuando cambia la fecha de pago
-        document.getElementById('incomeDate')?.addEventListener('change', recalcVigencia);
+        // Recalcular vigencia cuando cambia la fecha de pago.
+        // Si ya existe una fecha de inicio distinta (edición de un pago, o una
+        // sugerencia de continuidad ya aplicada), se muestra un banner para
+        // preguntar si se desea mantenerla o actualizarla a la nueva fecha de pago.
+        document.getElementById('incomeDate')?.addEventListener('change', handlePaymentDateChange);
+
+        // Botones del banner de cambio de fecha de pago
+        document.getElementById('dateChangeKeepBtn')?.addEventListener('click', () => _resolveDateChange(false));
+        document.getElementById('dateChangeUpdateBtn')?.addEventListener('click', () => _resolveDateChange(true));
 
         // Si el usuario edita manualmente la fecha de inicio, recalcular solo el fin
         document.getElementById('incomeStartDate')?.addEventListener('change', () => {
@@ -156,6 +165,56 @@ const Income = (() => {
 
         calcEndDate(tipo);
         showVigenciaInfo();
+    }
+
+    // Cuando cambia la fecha de pago, si ya hay una fecha de inicio de vigencia
+    // distinta (pago existente en edición, o sugerencia de continuidad ya
+    // aplicada), se muestra un banner dentro del propio formulario para que el
+    // usuario decida mantenerla o actualizarla — sin abrir un modal aparte,
+    // ya que Bootstrap no soporta modales anidados (eso bloqueaba la app).
+    let _pendingDateChange = null;
+
+    function handlePaymentDateChange() {
+        const fechaPago    = document.getElementById('incomeDate')?.value;
+        const currentStart = document.getElementById('incomeStartDate')?.value;
+
+        if (!fechaPago) return;
+
+        // Sin fecha de inicio previa, o ya coincide con la nueva fecha de pago → sin conflicto
+        if (!currentStart || currentStart === fechaPago) {
+            _hideDateChangeBanner();
+            recalcVigencia();
+            return;
+        }
+
+        const box = document.getElementById('dateChangeConfirm');
+        const text = document.getElementById('dateChangeConfirmText');
+        if (!box || !text) {
+            // Si el HTML del banner no está presente, conservar el comportamiento anterior
+            recalcVigencia();
+            return;
+        }
+
+        _pendingDateChange = { fechaPago, currentStart };
+        text.textContent =
+            `La vigencia de este pago inicia actualmente el ${Utils.formatDate(currentStart)}. ` +
+            `¿Actualizar el inicio a la nueva fecha de pago (${Utils.formatDate(fechaPago)}) o mantenerlo como está?`;
+        box.style.display = 'block';
+    }
+
+    function _hideDateChangeBanner() {
+        const box = document.getElementById('dateChangeConfirm');
+        if (box) box.style.display = 'none';
+        _pendingDateChange = null;
+    }
+
+    function _resolveDateChange(update) {
+        if (update && _pendingDateChange) {
+            recalcVigencia(); // Sincroniza inicio = fecha de pago y recalcula el fin
+        }
+        // Si no se actualiza: la fecha de pago queda con el nuevo valor, pero
+        // la vigencia (inicio/fin) se conserva exactamente como estaba.
+        _hideDateChangeBanner();
     }
 
     function calcEndDate(tipo) {
