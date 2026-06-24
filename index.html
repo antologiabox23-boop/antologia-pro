@@ -1802,6 +1802,17 @@
                                 </div>
                             </div>
                             <div id="vigenciaInfo" class="form-text text-success mt-1" style="display:none"></div>
+                            <div id="dateChangeConfirm" class="alert alert-warning mt-2 p-2 mb-0" style="display:none">
+                                <div class="small mb-2" id="dateChangeConfirmText"></div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="dateChangeKeepBtn">
+                                        <i class="fas fa-calendar me-1"></i>Mantener fecha actual
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-primary" id="dateChangeUpdateBtn">
+                                        <i class="fas fa-calendar-check me-1"></i>Actualizar fecha de inicio
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label for="incomeNotes" class="form-label">Notas</label>
@@ -1839,7 +1850,7 @@
                     ¿Estás seguro de realizar esta acción?
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-secondary" id="confirmCancelBtn" data-bs-dismiss="modal">
                         <i class="fas fa-times me-2"></i>Cancelar
                     </button>
                     <button type="button" class="btn btn-danger" id="confirmActionBtn">
