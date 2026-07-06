@@ -516,9 +516,9 @@
                         </div>
                         <div class="table-responsive">
                             <table class="table table-sm mb-0">
-                                <thead><tr><th>#</th><th>Fecha</th><th>Usuario</th><th>Hora</th></tr></thead>
+                                <thead><tr><th>#</th><th>Fecha</th><th>Usuario</th><th>Hora</th><th>Observación</th></tr></thead>
                                 <tbody id="reportList">
-                                    <tr><td colspan="4" class="text-center py-3 text-muted">Selecciona un rango de fechas</td></tr>
+                                    <tr><td colspan="5" class="text-center py-3 text-muted">Selecciona un rango de fechas</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -1855,6 +1855,34 @@
                     </button>
                     <button type="button" class="btn btn-danger" id="confirmActionBtn">
                         <i class="fas fa-check me-2"></i>Confirmar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Observación de Asistencia (usuarios "Clase xxx" / esporádicos) -->
+    <div class="modal fade" id="attendanceNoteModal" tabindex="-1" aria-labelledby="attendanceNoteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="attendanceNoteModalLabel">
+                        <i class="fas fa-user-edit me-2"></i>¿Quién asistió?
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-2">Registra el nombre de la persona esporádica que asistió, para poder cobrarle luego.</p>
+                    <input type="hidden" id="attendanceNoteUserId">
+                    <label class="form-label small">Nombre</label>
+                    <input type="text" class="form-control" id="attendanceNoteInput" placeholder="Ej: Juan Pérez" autocomplete="off">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success" id="attendanceNoteSaveBtn">
+                        <i class="fas fa-check me-2"></i>Guardar y marcar presente
                     </button>
                 </div>
             </div>
