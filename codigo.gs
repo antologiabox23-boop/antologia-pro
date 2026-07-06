@@ -82,9 +82,12 @@ const SHEETS = {
   PROG_POLE:          'ProgramacionPole'
 };
 
+// ⚠️ FIX: se agregó 'note' a la hoja Asistencia. Sin esta columna, cualquier
+// dato extra (como el nombre de la persona esporádica) se descarta al
+// escribir/leer la fila, aunque el frontend sí lo esté enviando.
 const COLUMNS = {
   Usuarios:           ['id','name','document','birthdate','phone','eps','bloodType','pathology','emergencyContact','emergencyPhone','classTime','affiliationType','status','createdAt','updatedAt'],
-  Asistencia:         ['id','userId','date','status','time','createdAt'],
+  Asistencia:         ['id','userId','date','status','time','note','createdAt'],
   Ingresos:           ['id','userId','paymentType','amount','paymentMethod','paymentDate','startDate','endDate','notes','classCount','createdAt'],
   Gastos:             ['id','date','description','amount','category','account','createdAt'],
   Clases:             ['id','date','hour','trainerId','classType','duration','payment','createdAt'],
@@ -493,12 +496,12 @@ function checkIncomeDiana(payload) {
   // ── Resolver todos los userId candidatos para este usuario ──────────────
   // La hoja Ingresos solo tiene userId, no documento.
   // Cruzamos con Usuarios para obtener el id correcto si se pasó documento.
-  // Normaliza userId quitando decimales innecesarios ("1.0" → "1")
-  // Normaliza userId solo quitando decimales ("1.0" → "1"). NO truncar UUIDs —
-  // en este sistema userId en Ingresos === id en Usuarios de forma exacta.
   function normUid(v) {
     return String(v || '').trim().replace(/\.0+$/, '');
   }
+  // ⚠️ FIX: 'candidateIds' no estaba declarado en el script original,
+  // lo que provocaba un ReferenceError al llamar checkIncomeDiana.
+  var candidateIds = [];
   if (userId) candidateIds.push(normUid(userId));
 
   if (userDoc) {
