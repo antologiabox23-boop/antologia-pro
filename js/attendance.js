@@ -21,6 +21,14 @@ const Attendance = (() => {
         document.getElementById('markAllPresent')?.addEventListener('click', markAllPresent);
         document.getElementById('applyAttendanceReport')?.addEventListener('click', renderReport);
         document.getElementById('quickAttendance')?.addEventListener('click', () => UI.switchTab('attendance'));
+        document.getElementById('attendanceNoteSaveBtn')?.addEventListener('click', confirmNote);
+    }
+
+    // ── Usuarios genéricos "Clase xxx" (esporádicos) ─────────────────────
+    // Se usan como cupo genérico para registrar asistencia de visitantes
+    // ocasionales que aún no tienen (o no necesitan) un perfil propio.
+    function isClaseUser(user) {
+        return (user?.name || '').toLowerCase().includes('clase');
     }
 
     // ── Helpers de vigencia ──────────────────────────────────────────────
@@ -147,13 +155,42 @@ const Attendance = (() => {
         });
     }
 
-    async function markAttendance(userId, status) {
+    async function markAttendance(userId, status, note) {
         const existing = Storage.getAttendanceByDate(currentDate).find(a => a.userId === userId);
+        const payload = { status, time: new Date().toLocaleTimeString('es-ES') };
+        if (note !== undefined) payload.note = note;
         if (existing) {
-            await Storage.updateAttendance(existing.id, { status, time: new Date().toLocaleTimeString('es-ES') });
+            await Storage.updateAttendance(existing.id, payload);
         } else {
-            await Storage.addAttendance({ userId, date: currentDate, status, time: new Date().toLocaleTimeString('es-ES') });
+            await Storage.addAttendance({ userId, date: currentDate, ...payload });
         }
+    }
+
+    // ── Modal de observación (nombre de quien asiste) para usuarios "Clase xxx" ──
+
+    function openNoteModal(userId) {
+        const user = Storage.getUserById(userId);
+        const existing = Storage.getAttendanceByDate(currentDate).find(a => a.userId === userId);
+        document.getElementById('attendanceNoteUserId').value = userId;
+        document.getElementById('attendanceNoteInput').value = existing?.note || '';
+        const modalEl = document.getElementById('attendanceNoteModal');
+        const label = document.getElementById('attendanceNoteModalLabel');
+        if (label) label.innerHTML = `<i class="fas fa-user-edit me-2"></i>¿Quién asistió? ${user ? '· ' + Utils.escapeHtml(user.name) : ''}`;
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+        setTimeout(() => document.getElementById('attendanceNoteInput')?.focus(), 300);
+    }
+
+    async function confirmNote() {
+        const userId = document.getElementById('attendanceNoteUserId').value;
+        const note = document.getElementById('attendanceNoteInput').value.trim();
+        if (!userId) return;
+        await markAttendance(userId, 'presente', note);
+        const modalEl = document.getElementById('attendanceNoteModal');
+        bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+        renderAttendance();
+        renderAlerts();
+        if (window.Dashboard) Dashboard.updateStats();
     }
 
     function renderAttendance() {
@@ -189,18 +226,41 @@ const Attendance = (() => {
                     ? '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Ausente</span>'
                     : '<span class="badge bg-secondary">Sin registro</span>';
 
+            const esClase = isClaseUser(user);
+            let noteInfo = '';
+            if (esClase) {
+                if (record?.note) {
+                    noteInfo = `<div class="small mt-1">
+                        <i class="fas fa-user me-1 text-primary"></i>${Utils.escapeHtml(record.note)}
+                        <a href="#" class="ms-1" onclick="event.preventDefault();Attendance.openNoteModal('${user.id}')" title="Editar nombre"><i class="fas fa-pen"></i></a>
+                    </div>`;
+                } else if (status === 'presente') {
+                    noteInfo = `<div class="small mt-1">
+                        <a href="#" class="text-warning fw-semibold" onclick="event.preventDefault();Attendance.openNoteModal('${user.id}')">
+                            <i class="fas fa-exclamation-circle me-1"></i>Agregar nombre
+                        </a>
+                    </div>`;
+                }
+            }
+
+            const presenteBtn = esClase
+                ? `<button class="btn btn-sm btn-success me-1" onclick="Attendance.openNoteModal('${user.id}')" title="Presente (registrar nombre)">
+                        <i class="fas fa-check"></i>
+                   </button>`
+                : `<button class="btn btn-sm btn-success me-1" onclick="Attendance.mark('${user.id}','presente')" title="Presente">
+                        <i class="fas fa-check"></i>
+                   </button>`;
+
             return `<tr>
                 <td>${i+1}</td>
                 <td>
                     <strong>${Utils.escapeHtml(user.name)}</strong>
                     <div class="text-muted small">${user.classTime || '-'}</div>
                 </td>
-                <td>${statusBadge}<div class="text-muted small mt-1">${time !== '-' ? 'Hora: '+time : ''}</div></td>
+                <td>${statusBadge}<div class="text-muted small mt-1">${time !== '-' ? 'Hora: '+time : ''}</div>${noteInfo}</td>
                 <td>${vigenciaBadge(user.id)}</td>
                 <td>
-                    <button class="btn btn-sm btn-success me-1" onclick="Attendance.mark('${user.id}','presente')" title="Presente">
-                        <i class="fas fa-check"></i>
-                    </button>
+                    ${presenteBtn}
                     <button class="btn btn-sm btn-outline-danger" onclick="Attendance.mark('${user.id}','ausente')" title="Ausente">
                         <i class="fas fa-times"></i>
                     </button>
@@ -301,7 +361,7 @@ const Attendance = (() => {
         records.sort((a, b) => b.date.localeCompare(a.date));
 
         if (records.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">Sin asistencias en el período</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-muted">Sin asistencias en el período</td></tr>`;
             document.getElementById('reportSummary').textContent = '0 asistencias';
             return;
         }
@@ -311,11 +371,15 @@ const Attendance = (() => {
 
         tbody.innerHTML = records.map((a, i) => {
             const user = Storage.getUserById(a.userId);
+            const noteCell = a.note
+                ? `<strong class="text-primary">${Utils.escapeHtml(a.note)}</strong>`
+                : (user && isClaseUser(user) ? '<span class="text-muted small">Sin nombre registrado</span>' : '-');
             return `<tr>
                 <td>${i+1}</td>
                 <td>${Utils.formatDate(a.date)}</td>
                 <td>${user ? Utils.escapeHtml(user.name) : '-'}</td>
                 <td>${a.time || '-'}</td>
+                <td>${noteCell}</td>
             </tr>`;
         }).join('');
     }
@@ -397,6 +461,8 @@ const Attendance = (() => {
             renderAlerts();
             if (window.Dashboard) Dashboard.updateStats();
         },
+        openNoteModal,
+        isClaseUser,
         renderAttendance,
         inactivarUsuario,
         renderAlerts,
