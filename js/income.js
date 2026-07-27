@@ -17,7 +17,19 @@ const Income = (() => {
         setupEventListeners();
         setupRealtimeValidation();
         document.getElementById('incomeDate').value = Utils.getCurrentDate();
+        _setDefaultMonthFilter();
         renderIncome();
+    }
+
+    function _setDefaultMonthFilter() {
+        const hoy = new Date();
+        const first = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        const last  = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+        const toISO = d => d.toISOString().slice(0, 10);
+        const from  = document.getElementById('paymentDateFrom');
+        const to    = document.getElementById('paymentDateTo');
+        if (from) from.value = toISO(first);
+        if (to)   to.value   = toISO(last);
     }
 
     function openModal(paymentId = null) {
@@ -536,7 +548,8 @@ const Income = (() => {
         const income     = Storage.getIncome();
         const dateFrom   = document.getElementById('paymentDateFrom')?.value  || '';
         const dateTo     = document.getElementById('paymentDateTo')?.value    || '';
-        const typeFilter = document.getElementById('paymentTypeFilter')?.value || '';
+        const typeFilter   = document.getElementById('paymentTypeFilter')?.value || '';
+        const methodFilter = document.getElementById('paymentMethodFilter')?.value || '';
         const userSearch = document.getElementById('paymentUserSearch')?.value.toLowerCase().trim() || '';
 
         let filtered = income.filter(p => {
@@ -544,6 +557,7 @@ const Income = (() => {
             if (dateFrom && pd < dateFrom) return false;
             if (dateTo   && pd > dateTo)   return false;
             if (typeFilter && p.paymentType !== typeFilter) return false;
+            if (methodFilter && p.paymentMethod !== methodFilter) return false;
             
             // Filtro por nombre de usuario
             if (userSearch) {
