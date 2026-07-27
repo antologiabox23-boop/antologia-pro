@@ -586,7 +586,7 @@ const Income = (() => {
                 <td>${(currentPage - 1) * itemsPerPage + i + 1}</td>
                 <td>${Utils.formatDate(p.paymentDate)}</td>
                 <td>${user ? Utils.escapeHtml(user.name) : '<span class="text-muted">Eliminado</span>'}</td>
-                <td><span class="badge bg-info">${CLASS_PACK_TYPES.includes(p.paymentType) && p.classCount ? `${p.paymentType} · ${p.classCount} clases` : p.paymentType}</span></td>
+                <td><span class="badge bg-info">${p.paymentType === 'Clase suelta' ? (Utils.escapeHtml(p.notes || '') || 'Sin observaciones') : (CLASS_PACK_TYPES.includes(p.paymentType) && p.classCount ? `${p.paymentType} · ${p.classCount} clases` : p.paymentType)}</span></td>
                 <td><strong>${Utils.formatCurrency(Utils.parseAmount(p.amount))}</strong></td>
                 <td>${p.paymentMethod}</td>
                 <td><small>${vigencia}</small></td>
@@ -626,34 +626,6 @@ const Income = (() => {
         }, true);
     }
 
-    // ── Fidelización: elegibilidad para bioimpedancia ────────────────────
-    // 3 pagos de Mensualidad continuos, cada uno con máx. 8 días de retraso
-    // respecto al vencimiento de la vigencia anterior.
-    const LOYALTY_MEMBERSHIP_TYPES = ['Mensualidad', 'Semipersonalizado Diana'];
-    const LOYALTY_MAX_DELAY_DAYS  = 8;
-    const LOYALTY_MONTHS_REQUIRED = 3;
-
-    function _isEligibleForBioimpedance(userId) {
-        const payments = Storage.getIncome()
-            .filter(p => p.userId === userId && LOYALTY_MEMBERSHIP_TYPES.includes(p.paymentType) && p.startDate)
-            .map(p => ({ ...p, startDate: Utils.normalizeDate(p.startDate), endDate: Utils.normalizeDate(p.endDate), paymentDate: Utils.normalizeDate(p.paymentDate) }))
-            .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
-
-        if (payments.length < LOYALTY_MONTHS_REQUIRED) return false;
-
-        const lastThree = payments.slice(-LOYALTY_MONTHS_REQUIRED);
-        for (let i = 1; i < lastThree.length; i++) {
-            const prevEnd = lastThree[i - 1].endDate;
-            const pagoActual = lastThree[i].paymentDate;
-            if (!prevEnd || !pagoActual) return false;
-            const prev = new Date(prevEnd + 'T00:00:00');
-            const cur  = new Date(pagoActual + 'T00:00:00');
-            const delayDays = Math.round((cur - prev) / 86400000);
-            if (delayDays > LOYALTY_MAX_DELAY_DAYS) return false;
-        }
-        return true;
-    }
-
     // ── WhatsApp: enviar comprobante de pago ─────────────────────────────
 
     function sendPaymentWA(paymentOrId) {
@@ -681,18 +653,13 @@ const Income = (() => {
             ? `\n📅 Vigencia: ${Utils.formatDate(p.startDate)} al ${Utils.formatDate(p.endDate)}`
             : '';
 
-        const bioimpedancia = (LOYALTY_MEMBERSHIP_TYPES.includes(p.paymentType) && _isEligibleForBioimpedance(user.id))
-            ? `\n\n🎉 ¡Felicidades por tu constancia, ${nombre}! Llevas 3 meses seguidos al día con tu membresía.
-Como parte de nuestro programa de fidelización, te invitamos a agendar tu *valoración de análisis de bioimpedancia eléctrica* sin costo. ¡Pregúntanos por tu cita! 📊💪`
-            : '';
-
         const msg =
 `¡Hola ${nombre}! 👋
 Hemos registrado tu pago correctamente. ✅
 
 💰 Monto: *${monto}*
 📌 Tipo: *${tipoLabel}*
-🗓️ Fecha: *${fecha}*${vigencia}${bioimpedancia}
+🗓️ Fecha: *${fecha}*${vigencia}
 
 📢 Aviso sobre membresías
 Política de Membresías – Antología Box 23
