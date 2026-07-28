@@ -3,6 +3,13 @@ const Reports = (() => {
         setupEventListeners();
         document.getElementById('attendanceReportMonth').value = Utils.getCurrentMonth();
         document.getElementById('incomeReportMonth').value = Utils.getCurrentMonth();
+
+        // Movimientos por cuenta e informe combinado: mes actual por defecto
+        const { start, end } = Utils.getMonthRange(Utils.getCurrentMonth());
+        const arf = document.getElementById('accountReportFrom');  if (arf) arf.value = start;
+        const art = document.getElementById('accountReportTo');    if (art) art.value = end;
+        const crf = document.getElementById('combinedReportFrom'); if (crf) crf.value = start;
+        const crt = document.getElementById('combinedReportTo');   if (crt) crt.value = end;
     }
 
     function setupEventListeners() {

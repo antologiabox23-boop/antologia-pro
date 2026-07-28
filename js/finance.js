@@ -14,14 +14,15 @@ const Finance = (() => {
 
     function setDefaultDates() {
         const today = Utils.getCurrentDate();
-        ['expenseDate','expHistFrom','expHistTo','finRepFrom','finRepTo'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el && !el.value) el.value = today;
-        });
-        // Reporte: mes actual
+        const el = document.getElementById('expenseDate');
+        if (el && !el.value) el.value = today;
+
+        // Historial de gastos y reporte financiero: mes actual
         const { start, end } = Utils.getMonthRange(Utils.getCurrentMonth());
-        const fr = document.getElementById('finRepFrom'); if (fr) fr.value = start;
-        const ft = document.getElementById('finRepTo');   if (ft) ft.value = end;
+        const eh1 = document.getElementById('expHistFrom'); if (eh1) eh1.value = start;
+        const eh2 = document.getElementById('expHistTo');   if (eh2) eh2.value = end;
+        const fr  = document.getElementById('finRepFrom');  if (fr)  fr.value  = start;
+        const ft  = document.getElementById('finRepTo');    if (ft)  ft.value  = end;
     }
 
     function setupEventListeners() {
