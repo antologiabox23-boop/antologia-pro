@@ -67,20 +67,21 @@ const WhatsApp = (() => {
         const clean = (phone || '').replace(/\D/g, '');
         // encodeURIComponent codifica todo incluyendo emojis correctamente como UTF-8
         // WhatsApp requiere que los espacios sean %20 (no +)
-        const encoded = encodeURIComponent(message);
-        return `https://wa.me/57${clean}?text=${encoded}`;
+        const base = `https://wa.me/57${clean}`;
+        if (!message) return base; // chat en blanco, sin texto precargado
+        return `${base}?text=${encodeURIComponent(message)}`;
     }
 
     function openWA(phone, message) {
         if (isDesktop()) {
-            showCopyToast(message, () => window.open(buildUrl(phone, message), '_blank'));
+            showCopyToast(message, () => window.open(buildUrl(phone, message), '_blank'), phone);
         } else {
             window.open(buildUrl(phone, message), '_blank');
         }
     }
 
     // Toast con cuenta regresiva — WhatsApp abre después de 4 s (solo PC)
-    function showCopyToast(message, onOpen) {
+    function showCopyToast(message, onOpen, phone) {
         document.getElementById('waCopyToast')?.remove();
 
         const DELAY = 4;
@@ -122,6 +123,9 @@ const WhatsApp = (() => {
                     <i class="fab fa-whatsapp me-1"></i>Abrir ya
                 </button>
             </div>
+            <button id="waCopyBlank" class="btn btn-sm btn-outline-success w-100">
+                <i class="fas fa-paste me-1"></i>¿No se pegó bien? Copiar y abrir chat en blanco
+            </button>
         `;
         document.body.appendChild(toast);
 
@@ -160,6 +164,15 @@ const WhatsApp = (() => {
         toast.querySelector('#waCopyClose').addEventListener('click', () => {
             clearInterval(countdownInterval);
             toast.remove();
+        });
+        toast.querySelector('#waCopyBlank').addEventListener('click', (e) => {
+            clearInterval(countdownInterval);
+            opened = true;
+            copyToClipboard(message, toast.querySelector('#waCopyBtn'));
+            window.open(buildUrl(phone, null), '_blank');
+            const label = document.getElementById('waToastLabel');
+            if (label) label.innerHTML = 'Mensaje copiado, pégalo en el chat <i class="fas fa-check text-success ms-1"></i>';
+            setTimeout(() => toast.remove(), 2500);
         });
     }
 
