@@ -693,15 +693,12 @@ ${table.outerHTML}
             // Botón WhatsApp recordatorio membresía
             let waBtn = '';
             if (d.user.phone && d.membershipEnd) {
-                const clean = d.user.phone.replace(/\D/g, '');
-                const msgWA = encodeURIComponent(
+                const msgWA =
                     `Hola, *${d.user.name.split(' ')[0]}* 😊\n\n` +
                     `Estamos realizando el cierre del mes y al revisar nuestro sistema notamos que tu membresía venció el *${Utils.formatDate(d.membershipEnd)}* y no hemos registrado tu pago.\n\n` +
                     `Si ya cancelaste, alleganos tu comprobante para actualizar tu estado en el sistema.\n\n` +
-                    `Cualquier inquietud, con mucho gusto te atendemos. ¡Gracias por confiar en *Antología Box23* 🌟!`
-                );
-                const waUrl = `https://wa.me/57${clean}?text=${msgWA}`;
-                waBtn = `<a href="${waUrl}" target="_blank" class="btn btn-success btn-sm py-0 px-1 ms-1" title="Enviar recordatorio WhatsApp" style="font-size:11px"><i class="fab fa-whatsapp"></i></a>`;
+                    `Cualquier inquietud, con mucho gusto te atendemos. ¡Gracias por confiar en *Antología Box23* 🌟!`;
+                waBtn = `<button type="button" class="btn btn-success btn-sm py-0 px-1 ms-1" title="Enviar recordatorio WhatsApp" style="font-size:11px" data-phone="${d.user.phone}" data-msg="${Utils.escapeHtml(msgWA)}" onclick="WhatsApp.openWA(this.dataset.phone, this.dataset.msg)"><i class="fab fa-whatsapp"></i></button>`;
             }
 
             return `

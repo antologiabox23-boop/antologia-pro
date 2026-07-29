@@ -682,8 +682,7 @@ Política de Membresías – Antología Box 23
 
 ¡Gracias por confiar en *Antología Box23*! 🥊💪`;
 
-        const phone = user.phone.replace(/\D/g, '');
-        window.open(`https://wa.me/57${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+        WhatsApp.openWA(user.phone, msg);
     }
 
     return {
