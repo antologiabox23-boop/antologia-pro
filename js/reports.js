@@ -370,6 +370,7 @@ ${table.outerHTML}
                 .map(p => ({
                     fecha: p.paymentDate,
                     descripcion: (() => { const u = Storage.getUserById(p.userId); return `Ingreso — ${p.paymentType || 'Pago'}${u ? ' · ' + u.name : ''}`; })(),
+                    observaciones: p.notes || '',
                     tipo: 'ingreso',
                     debe: 0,
                     haber: Utils.parseAmount(p.amount),
@@ -380,6 +381,7 @@ ${table.outerHTML}
                 .map(e => ({
                     fecha: e.date,
                     descripcion: `Gasto — ${e.category}${e.description ? ' · ' + e.description : ''}`,
+                    observaciones: '',
                     tipo: 'gasto',
                     debe: Utils.parseAmount(e.amount),
                     haber: 0,
@@ -445,7 +447,7 @@ ${table.outerHTML}
             // Fila de saldo inicial de la cuenta
             if (method === 'all') {
                 tableRows += `<tr class="table-${colors[acc] || 'secondary'} bg-opacity-10">
-                    <td colspan="5" class="fw-bold small">
+                    <td colspan="6" class="fw-bold small">
                         <span class="badge bg-${colors[acc] || 'secondary'}">${icons[acc] || '💳'} ${acc}</span>
                         &nbsp; Saldo inicial al ${dateFrom}: <strong>${Utils.formatCurrency(saldoInicial)}</strong>
                     </td>
@@ -453,7 +455,7 @@ ${table.outerHTML}
             }
 
             if (movs.length === 0) {
-                tableRows += `<tr><td colspan="5" class="text-muted small text-center fst-italic">Sin movimientos en el período</td></tr>`;
+                tableRows += `<tr><td colspan="6" class="text-muted small text-center fst-italic">Sin movimientos en el período</td></tr>`;
             } else {
                 let saldoAcumulado = saldoInicial;
                 movs.forEach(m => {
@@ -461,6 +463,7 @@ ${table.outerHTML}
                     tableRows += `<tr>
                         <td class="small">${m.fecha}</td>
                         <td class="small">${Utils.escapeHtml(m.descripcion)}</td>
+                        <td class="small">${Utils.escapeHtml(m.observaciones)}</td>
                         <td class="text-end small ${m.debe > 0 ? 'text-danger' : 'text-muted'}">${m.debe > 0 ? Utils.formatCurrency(m.debe) : '—'}</td>
                         <td class="text-end small ${m.haber > 0 ? 'text-success' : 'text-muted'}">${m.haber > 0 ? Utils.formatCurrency(m.haber) : '—'}</td>
                         <td class="text-end small fw-bold ${saldoAcumulado >= 0 ? '' : 'text-danger'}">${Utils.formatCurrency(saldoAcumulado)}</td>
@@ -471,7 +474,7 @@ ${table.outerHTML}
             // Subtotal por cuenta si hay varias
             if (method === 'all') {
                 tableRows += `<tr class="table-light">
-                    <td colspan="2" class="small fw-bold text-end">Saldo final ${acc}:</td>
+                    <td colspan="3" class="small fw-bold text-end">Saldo final ${acc}:</td>
                     <td class="text-end text-danger small fw-bold">-${Utils.formatCurrency(totalGas)}</td>
                     <td class="text-end text-success small fw-bold">+${Utils.formatCurrency(totalIng)}</td>
                     <td class="text-end fw-bold">${Utils.formatCurrency(saldoFinal)}</td>
@@ -479,12 +482,12 @@ ${table.outerHTML}
             }
         });
 
-        tbody.innerHTML = tableRows || `<tr><td colspan="5" class="text-center text-muted">No hay movimientos en el período seleccionado</td></tr>`;
+        tbody.innerHTML = tableRows || `<tr><td colspan="6" class="text-center text-muted">No hay movimientos en el período seleccionado</td></tr>`;
 
         const grandSaldoFinal = grandSaldoInicial + grandHaber - grandDebe;
         tfoot.innerHTML = `
             <tr class="table-dark fw-bold">
-                <td colspan="2">TOTALES DEL PERÍODO</td>
+                <td colspan="3">TOTALES DEL PERÍODO</td>
                 <td class="text-end text-danger">-${Utils.formatCurrency(grandDebe)}</td>
                 <td class="text-end text-success">+${Utils.formatCurrency(grandHaber)}</td>
                 <td class="text-end">${Utils.formatCurrency(grandSaldoFinal)}</td>
@@ -518,7 +521,7 @@ ${table.outerHTML}
                 if (method === 'all' && movs.length === 0 && saldoInicial === 0) return;
 
                 const data = [];
-                data.push({ 'Fecha': `Saldo inicial al ${dateFrom}`, 'Descripción': '', 'Gasto (Débito)': '', 'Ingreso (Crédito)': '', 'Saldo': saldoInicial });
+                data.push({ 'Fecha': `Saldo inicial al ${dateFrom}`, 'Descripción': '', 'Observaciones': '', 'Gasto (Débito)': '', 'Ingreso (Crédito)': '', 'Saldo': saldoInicial });
 
                 let saldo = saldoInicial;
                 movs.forEach(m => {
@@ -526,15 +529,16 @@ ${table.outerHTML}
                     data.push({
                         'Fecha': m.fecha,
                         'Descripción': m.descripcion,
+                        'Observaciones': m.observaciones || '',
                         'Gasto (Débito)': m.debe || '',
                         'Ingreso (Crédito)': m.haber || '',
                         'Saldo': saldo
                     });
                 });
-                data.push({ 'Fecha': `Saldo final al ${dateTo}`, 'Descripción': '', 'Gasto (Débito)': '', 'Ingreso (Crédito)': '', 'Saldo': saldoFinal });
+                data.push({ 'Fecha': `Saldo final al ${dateTo}`, 'Descripción': '', 'Observaciones': '', 'Gasto (Débito)': '', 'Ingreso (Crédito)': '', 'Saldo': saldoFinal });
 
                 const ws = XLSX.utils.json_to_sheet(data);
-                ws['!cols'] = [{ wch: 14 }, { wch: 40 }, { wch: 18 }, { wch: 18 }, { wch: 16 }];
+                ws['!cols'] = [{ wch: 14 }, { wch: 40 }, { wch: 30 }, { wch: 18 }, { wch: 18 }, { wch: 16 }];
                 XLSX.utils.book_append_sheet(wb, ws, acc.substring(0, 31));
             });
 
@@ -693,12 +697,15 @@ ${table.outerHTML}
             // Botón WhatsApp recordatorio membresía
             let waBtn = '';
             if (d.user.phone && d.membershipEnd) {
-                const msgWA =
+                const clean = d.user.phone.replace(/\D/g, '');
+                const msgWA = encodeURIComponent(
                     `Hola, *${d.user.name.split(' ')[0]}* 😊\n\n` +
                     `Estamos realizando el cierre del mes y al revisar nuestro sistema notamos que tu membresía venció el *${Utils.formatDate(d.membershipEnd)}* y no hemos registrado tu pago.\n\n` +
                     `Si ya cancelaste, alleganos tu comprobante para actualizar tu estado en el sistema.\n\n` +
-                    `Cualquier inquietud, con mucho gusto te atendemos. ¡Gracias por confiar en *Antología Box23* 🌟!`;
-                waBtn = `<button type="button" class="btn btn-success btn-sm py-0 px-1 ms-1" title="Enviar recordatorio WhatsApp" style="font-size:11px" data-phone="${d.user.phone}" data-msg="${Utils.escapeHtml(msgWA)}" onclick="WhatsApp.openWA(this.dataset.phone, this.dataset.msg)"><i class="fab fa-whatsapp"></i></button>`;
+                    `Cualquier inquietud, con mucho gusto te atendemos. ¡Gracias por confiar en *Antología Box23* 🌟!`
+                );
+                const waUrl = `https://wa.me/57${clean}?text=${msgWA}`;
+                waBtn = `<a href="${waUrl}" target="_blank" class="btn btn-success btn-sm py-0 px-1 ms-1" title="Enviar recordatorio WhatsApp" style="font-size:11px"><i class="fab fa-whatsapp"></i></a>`;
             }
 
             return `
