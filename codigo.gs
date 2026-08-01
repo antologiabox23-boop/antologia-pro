@@ -17,6 +17,11 @@ const API_SECRET = PropertiesService.getScriptProperties()
 // Evita ataques de replay: una firma válida capturada no sirve pasados 5 min.
 const HMAC_WINDOW_SECS = 300;
 
+// Interruptor manual: mientras storage.js (frontend) no envíe ts/sig,
+// deja esto en false para no bloquear la app con "No autorizado".
+// Actívalo (true) únicamente si también implementas la firma HMAC en el frontend.
+const ENABLE_HMAC_CHECK = false;
+
 // ── VERIFICACIÓN HMAC ────────────────────────────────────────────────────────
 
 /**
@@ -88,7 +93,7 @@ const SHEETS = {
 const COLUMNS = {
   Usuarios:           ['id','name','document','birthdate','phone','eps','bloodType','pathology','emergencyContact','emergencyPhone','classTime','affiliationType','status','createdAt','updatedAt'],
   Asistencia:         ['id','userId','date','status','time','note','createdAt'],
-  Ingresos:           ['id','userId','paymentType','amount','paymentMethod','paymentDate','startDate','endDate','notes','classCount','createdAt'],
+  Ingresos:           ['id','userId','paymentType','amount','paymentMethod','paymentDate','startDate','endDate','notes','createdAt', 'classCount'],
   Gastos:             ['id','date','description','amount','category','account','createdAt'],
   Clases:             ['id','date','hour','trainerId','classType','duration','payment','createdAt'],
   Membresias:         ['id','userId','userDoc','userName','tipo','vigenciaDesde','vigenciaHasta','estado','clasesTotal','clasesUsadas','createdAt'],
@@ -120,15 +125,13 @@ function doGet(e) {
     const sig        = e.parameter.sig || '';
 
     // ── Verificación HMAC ──────────────────────────────────────────────────
-    // Omite la verificación solo si API_SECRET no ha sido configurado todavía
-    // (permite migración sin cortar el servicio).
-    if (!API_SECRET.startsWith('CAMBIA_ESTE')) {
+    // Controlada por ENABLE_HMAC_CHECK (arriba). Desactivada mientras el
+    // frontend (storage.js) no envíe ts/sig en cada petición.
+    if (ENABLE_HMAC_CHECK) {
       if (!verifyHmac(action, payloadRaw, ts, sig)) {
         Logger.log('doGet HMAC FAIL: action=' + action + ' ts=' + ts);
         return jsonResponse({ error: 'No autorizado' });
       }
-    } else {
-      Logger.log('⚠️ ADVERTENCIA: API_SECRET no configurado, verificación omitida.');
     }
     // ──────────────────────────────────────────────────────────────────────
 
