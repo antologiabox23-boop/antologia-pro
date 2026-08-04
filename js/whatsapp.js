@@ -44,12 +44,14 @@ const WhatsApp = (() => {
     function initialize() {
         setupEventListeners();
         checkBirthdays('proximos');
+        checkVencidas();
     }
 
     function setupEventListeners() {
         document.getElementById('waBirthdayProximos')?.addEventListener('click', () => checkBirthdays('proximos'));
         document.getElementById('waBirthdayMes')?.addEventListener('click',      () => checkBirthdays('mes'));
         document.getElementById('waBirthdayMensajeGrupal')?.addEventListener('click', enviarMensajeCumpleanerosMes);
+        document.getElementById('waVencidasRefresh')?.addEventListener('click', checkVencidas);
         document.getElementById('enviarNuevoIngresoBtn')?.addEventListener('click', enviarNuevoIngreso);
 
         // Preview en tiempo real
@@ -312,6 +314,88 @@ ${FORM_LINK}`;
         openWA(user.phone, msg);
     }
 
+    // \u2500\u2500 4b. Membres\u00EDas vencidas \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+
+    function sendVencida(userId) {
+        const user = Storage.getUserById(userId);
+        if (!user) return;
+        const nombre  = user.name.split(' ')[0];
+        const payment = Storage.getIncome()
+            .filter(p => p.userId === userId && p.endDate)
+            .sort((a, b) => b.endDate.localeCompare(a.endDate))[0];
+
+        const today = Utils.getCurrentDate();
+        const dias  = payment
+            ? Math.round((new Date(today + 'T00:00:00') - new Date(payment.endDate + 'T00:00:00')) / 86400000)
+            : null;
+
+        let cuerpo;
+        if (dias === null) {
+            cuerpo = `Notamos que tu membres\u00EDa en *${GYM_NAME}* no est\u00E1 vigente actualmente.`;
+        } else if (dias <= 3) {
+            cuerpo = `Tu membres\u00EDa venci\u00F3 hace ${dias} d\u00EDa${dias === 1 ? '' : 's'} (el *${Utils.formatDate(payment.endDate)}*). \u00A1Es un buen momento para renovar y no perder el ritmo! \uD83D\uDCAA`;
+        } else if (dias <= 10) {
+            cuerpo = `Tu membres\u00EDa venci\u00F3 el *${Utils.formatDate(payment.endDate)}* (hace ${dias} d\u00EDas). Te extra\u00F1amos en el box, \u00A1renueva cuando puedas para volver a tus clases! \uD83C\uDFCB\uFE0F`;
+        } else {
+            cuerpo = `Hemos notado que tu membres\u00EDa est\u00E1 vencida desde el *${Utils.formatDate(payment.endDate)}*. Si deseas continuar con nosotros, cu\u00E9ntanos y con gusto te ayudamos a renovarla. \u00A1Nos encantar\u00EDa verte de nuevo! \u2764\uFE0F`;
+        }
+
+        const msg = `\u00A1Hola ${nombre}! \uD83D\uDC4B\n${cuerpo}\n\nCualquier duda, escr\u00EDbenos por aqu\u00ED mismo.\n\uD83D\uDCAA Equipo de ${GYM_NAME}`;
+        openWA(user.phone, msg);
+    }
+
+    function checkVencidas() {
+        const today     = Utils.getCurrentDate();
+        const todayDate = new Date(today + 'T00:00:00');
+        const users     = Users.getActiveUsers().filter(u => u.affiliationType !== 'Entrenador(a)');
+
+        const vencidas = users
+            .map(u => {
+                const payment = Storage.getIncome()
+                    .filter(p => p.userId === u.id && p.endDate)
+                    .sort((a, b) => b.endDate.localeCompare(a.endDate))[0];
+                if (!payment) return null;
+                const dias = Math.round((todayDate - new Date(payment.endDate + 'T00:00:00')) / 86400000);
+                if (dias <= 0) return null;
+                return { user: u, endDate: payment.endDate, dias };
+            })
+            .filter(Boolean)
+            .sort((a, b) => b.dias - a.dias);
+
+        const container = document.getElementById('vencidasList');
+        if (!container) return;
+
+        if (vencidas.length === 0) {
+            container.innerHTML = `<p class="text-muted text-center py-3"><i class="fas fa-check-circle me-2"></i>Sin membres\u00EDas vencidas</p>`;
+            const badge = document.getElementById('vencidasBadge');
+            if (badge) badge.style.display = 'none';
+            return;
+        }
+
+        container.innerHTML = vencidas.map(item => {
+            const u = item.user;
+            let tag;
+            if (item.dias <= 3)       tag = `<span class="badge bg-warning text-dark ms-2">Hace ${item.dias} d\u00EDa${item.dias === 1 ? '' : 's'}</span>`;
+            else if (item.dias <= 10) tag = `<span class="badge bg-danger ms-2">Hace ${item.dias} d\u00EDas</span>`;
+            else                      tag = `<span class="badge bg-secondary ms-2">Hace ${item.dias} d\u00EDas</span>`;
+
+            return `<div class="d-flex align-items-center justify-content-between p-2 border rounded mb-2">
+                <span>
+                    <i class="fas fa-calendar-times text-danger me-2"></i>
+                    <strong>${Utils.escapeHtml(u.name)}</strong>
+                    ${tag}
+                    <small class="text-muted ms-2">venci\u00F3 ${Utils.formatDate(item.endDate)}</small>
+                </span>
+                <button class="btn btn-sm btn-success" onclick="WhatsApp.sendVencida('${u.id}')" title="Enviar aviso de vencimiento">
+                    <i class="fab fa-whatsapp me-1"></i>Avisar
+                </button>
+            </div>`;
+        }).join('');
+
+        const badge = document.getElementById('vencidasBadge');
+        if (badge) { badge.textContent = vencidas.length; badge.style.display = 'inline'; }
+    }
+
     // \u2500\u2500 5. Verificador de cumplea\u00F1os \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
     function checkBirthdays(modo = 'proximos') {
@@ -501,7 +585,8 @@ ${FORM_LINK}`;
 
     return {
         initialize, openNuevoIngreso, confirmacionPago, recordatorioPago,
-        recordatorioInasistencia, checkBirthdays, openWA, sendBirthday
+        recordatorioInasistencia, checkBirthdays, openWA, sendBirthday,
+        checkVencidas, sendVencida
     };
 })();
 window.WhatsApp = WhatsApp;
