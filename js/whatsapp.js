@@ -357,7 +357,9 @@ ${FORM_LINK}`;
                 if (!payment) return null;
                 const dias = Math.round((todayDate - new Date(payment.endDate + 'T00:00:00')) / 86400000);
                 if (dias <= 0) return null;
-                return { user: u, endDate: payment.endDate, dias };
+                const postClases = Storage.getAttendanceByUser(u.id)
+                    .filter(a => a.status === 'presente' && a.date > payment.endDate).length;
+                return { user: u, endDate: payment.endDate, dias, postClases };
             })
             .filter(Boolean)
             .sort((a, b) => b.dias - a.dias);
@@ -385,6 +387,7 @@ ${FORM_LINK}`;
                     <strong>${Utils.escapeHtml(u.name)}</strong>
                     ${tag}
                     <small class="text-muted ms-2">venci\u00F3 ${Utils.formatDate(item.endDate)}</small>
+                    ${item.postClases > 0 ? `<span class="badge bg-info ms-2" title="Clases asistidas despu\u00E9s del vencimiento">${item.postClases} clase${item.postClases === 1 ? '' : 's'} post-vencimiento</span>` : ''}
                 </span>
                 <button class="btn btn-sm btn-success" onclick="WhatsApp.sendVencida('${u.id}')" title="Enviar aviso de vencimiento">
                     <i class="fab fa-whatsapp me-1"></i>Avisar
