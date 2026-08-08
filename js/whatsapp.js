@@ -347,7 +347,9 @@ ${FORM_LINK}`;
     function checkVencidas() {
         const today     = Utils.getCurrentDate();
         const todayDate = new Date(today + 'T00:00:00');
-        const users     = Users.getActiveUsers().filter(u => u.affiliationType !== 'Entrenador(a)');
+        const users     = Users.getActiveUsers()
+            .filter(u => u.affiliationType !== 'Entrenador(a)')
+            .filter(u => !u.name.toLowerCase().includes('clase'));
 
         const vencidas = users
             .map(u => {
