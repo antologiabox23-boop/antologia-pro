@@ -406,7 +406,7 @@ ${FORM_LINK}`;
     function checkBirthdays(modo = 'proximos') {
         const today     = Utils.getCurrentDate();
         const todayDate = new Date(today + 'T00:00:00');
-        const users     = Users.getActiveUsers();
+        const users     = Storage.getUsers(); // todos: incluye inactivos y entrenadores;
 
         // Marcar bot\u00F3n activo
         document.getElementById('waBirthdayProximos')?.classList.toggle('active', modo === 'proximos');
