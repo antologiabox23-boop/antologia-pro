@@ -76,20 +76,30 @@ const WhatsApp = (() => {
 
     function openWA(phone, message) {
         if (isDesktop()) {
-            showCopyToast(message, () => window.open(buildUrl(phone, message), '_blank'), phone);
+            showCopyToast(message, phone);
         } else {
             window.open(buildUrl(phone, message), '_blank');
         }
     }
 
-    // Toast con cuenta regresiva — WhatsApp abre después de 4 s (solo PC)
-    function showCopyToast(message, onOpen, phone) {
+    // Copia el mensaje automáticamente y abre el chat en blanco para pegar (solo PC)
+    function showCopyToast(message, phone) {
         document.getElementById('waCopyToast')?.remove();
 
-        const DELAY = 4;
-        let secondsLeft = DELAY;
-        let opened = false;
-        let countdownInterval;
+        // Copiar al portapapeles de inmediato
+        navigator.clipboard.writeText(message).catch(() => {
+            const ta = document.createElement('textarea');
+            ta.value = message;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+        });
+
+        // Abrir el chat en blanco (sin texto precargado, se pega con Ctrl+V)
+        window.open(buildUrl(phone, null), '_blank');
 
         const toast = document.createElement('div');
         toast.id = 'waCopyToast';
@@ -97,7 +107,7 @@ const WhatsApp = (() => {
             position: fixed; bottom: 24px; right: 24px; z-index: 9999;
             background: #fff; border: 1px solid #dee2e6; border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.18); padding: 14px 18px;
-            display: flex; flex-direction: column; gap: 10px;
+            display: flex; align-items: center; gap: 10px;
             font-size: 14px; width: 320px; animation: slideInRight .25s ease;
         `;
         toast.innerHTML = `
@@ -106,76 +116,15 @@ const WhatsApp = (() => {
                     from { transform: translateX(120%); opacity: 0; }
                     to   { transform: translateX(0);    opacity: 1; }
                 }
-                #waCopyProgress { height:4px; border-radius:2px; background:#e9ecef; overflow:hidden; }
-                #waCopyProgressBar { height:100%; width:100%; background:#25D366; transition:width ${DELAY}s linear; }
             </style>
-            <div style="display:flex;align-items:center;gap:10px">
-                <i class="fab fa-whatsapp" style="color:#25D366;font-size:22px;flex-shrink:0"></i>
-                <span id="waToastLabel" style="flex:1;color:#333;font-weight:500">
-                    Abriendo en <span id="waCountdown">${DELAY}</span>s…
-                </span>
-                <button id="waCopyClose" style="background:none;border:none;font-size:20px;color:#aaa;cursor:pointer;padding:0;line-height:1" title="Cerrar">&times;</button>
-            </div>
-            <div id="waCopyProgress"><div id="waCopyProgressBar"></div></div>
-            <div style="display:flex;gap:8px">
-                <button id="waCopyBtn" class="btn btn-sm btn-outline-secondary" style="flex:1">
-                    <i class="fas fa-copy me-1"></i>Copiar mensaje
-                </button>
-                <button id="waOpenNow" class="btn btn-sm btn-success" style="flex:1">
-                    <i class="fab fa-whatsapp me-1"></i>Abrir ya
-                </button>
-            </div>
-            <button id="waCopyBlank" class="btn btn-sm btn-outline-success w-100">
-                <i class="fas fa-paste me-1"></i>¿No se pegó bien? Copiar y abrir chat en blanco
-            </button>
+            <i class="fas fa-check-circle" style="color:#25D366;font-size:22px;flex-shrink:0"></i>
+            <span style="flex:1;color:#333;font-weight:500">Mensaje copiado. Pega con Ctrl+V en el chat</span>
+            <button id="waCopyClose" style="background:none;border:none;font-size:20px;color:#aaa;cursor:pointer;padding:0;line-height:1" title="Cerrar">&times;</button>
         `;
         document.body.appendChild(toast);
 
-        // Disparar la transición de la barra en el siguiente frame
-        requestAnimationFrame(() => {
-            const bar = document.getElementById('waCopyProgressBar');
-            if (bar) bar.style.width = '0%';
-        });
-
-        function openWhatsApp() {
-            if (opened) return;
-            opened = true;
-            clearInterval(countdownInterval);
-            onOpen();
-            const label = document.getElementById('waToastLabel');
-            if (label) label.innerHTML = 'WhatsApp abierto <i class="fas fa-check text-success ms-1"></i>';
-            const openBtn = document.getElementById('waOpenNow');
-            if (openBtn) openBtn.disabled = true;
-            setTimeout(() => toast.remove(), 3000);
-        }
-
-        countdownInterval = setInterval(() => {
-            secondsLeft--;
-            const el = document.getElementById('waCountdown');
-            if (el) el.textContent = secondsLeft;
-            if (secondsLeft <= 0) {
-                clearInterval(countdownInterval);
-                openWhatsApp();
-            }
-        }, 1000);
-
-        toast.querySelector('#waCopyBtn').addEventListener('click', () => {
-            copyToClipboard(message, toast.querySelector('#waCopyBtn'));
-        });
-        toast.querySelector('#waOpenNow').addEventListener('click', openWhatsApp);
-        toast.querySelector('#waCopyClose').addEventListener('click', () => {
-            clearInterval(countdownInterval);
-            toast.remove();
-        });
-        toast.querySelector('#waCopyBlank').addEventListener('click', (e) => {
-            clearInterval(countdownInterval);
-            opened = true;
-            copyToClipboard(message, toast.querySelector('#waCopyBtn'));
-            window.open(buildUrl(phone, null), '_blank');
-            const label = document.getElementById('waToastLabel');
-            if (label) label.innerHTML = 'Mensaje copiado, pégalo en el chat <i class="fas fa-check text-success ms-1"></i>';
-            setTimeout(() => toast.remove(), 2500);
-        });
+        toast.querySelector('#waCopyClose').addEventListener('click', () => toast.remove());
+        setTimeout(() => toast.remove(), 4000);
     }
 
     function sendBirthday(userId) {
@@ -347,9 +296,7 @@ ${FORM_LINK}`;
     function checkVencidas() {
         const today     = Utils.getCurrentDate();
         const todayDate = new Date(today + 'T00:00:00');
-        const users     = Users.getActiveUsers()
-            .filter(u => u.affiliationType !== 'Entrenador(a)')
-            .filter(u => !u.name.toLowerCase().includes('clase'));
+        const users     = Users.getActiveUsers().filter(u => u.affiliationType !== 'Entrenador(a)');
 
         const vencidas = users
             .map(u => {
@@ -406,7 +353,7 @@ ${FORM_LINK}`;
     function checkBirthdays(modo = 'proximos') {
         const today     = Utils.getCurrentDate();
         const todayDate = new Date(today + 'T00:00:00');
-        const users     = Storage.getUsers(); // todos: incluye inactivos y entrenadores;
+        const users     = Storage.getUsers(); // todos: incluye inactivos y entrenadores
 
         // Marcar bot\u00F3n activo
         document.getElementById('waBirthdayProximos')?.classList.toggle('active', modo === 'proximos');
