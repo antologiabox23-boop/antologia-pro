@@ -274,7 +274,7 @@ const Attendance = (() => {
         }).join('');
     }
 
-    // ── Alertas de inasistencia (>6 días sin asistir) ───────────────────
+    // ── Alertas de inasistencia (>5 días sin asistir) ───────────────────
 
     function renderAlerts() {
         const tbody = document.getElementById('alertsList');
@@ -295,7 +295,7 @@ const Attendance = (() => {
                 : null;
 
             return { user, lastDate: lastAttend?.date || null, daysSince };
-        }).filter(a => a.daysSince === null || a.daysSince > 6)
+        }).filter(a => a.daysSince === null || a.daysSince > 5)
           .sort((a, b) => (b.daysSince || 999) - (a.daysSince || 999));
 
         const countEl = document.getElementById('alertsCount');
