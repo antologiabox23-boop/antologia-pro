@@ -31,6 +31,33 @@ const Attendance = (() => {
         return (user?.name || '').toLowerCase().includes('clase');
     }
 
+    // ── Helper: convertir classTime a minutos para poder ordenar ─────────
+    function parseClassTime(t) {
+        if (!t) return Infinity; // sin horario → al final
+        const s = String(t).trim().toLowerCase();
+
+        // Formato 12h: "6:00 am", "6:00am", "6 pm", "6:30 p.m."
+        const m12 = s.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)/);
+        if (m12) {
+            let h = parseInt(m12[1], 10);
+            const m = m12[2] ? parseInt(m12[2], 10) : 0;
+            const ap = m12[3].replace(/\./g, '');
+            if (ap === 'pm' && h !== 12) h += 12;
+            if (ap === 'am' && h === 12) h = 0;
+            return h * 60 + m;
+        }
+
+        // Formato 24h: "18:30", "6:00"
+        const m24 = s.match(/(\d{1,2}):(\d{2})/);
+        if (m24) return parseInt(m24[1], 10) * 60 + parseInt(m24[2], 10);
+
+        // Solo hora: "6", "18"
+        const hOnly = s.match(/^(\d{1,2})$/);
+        if (hOnly) return parseInt(hOnly[1], 10) * 60;
+
+        return Infinity;
+    }
+
     // ── Helpers de vigencia ──────────────────────────────────────────────
 
     function getActivePayment(userId) {
@@ -195,10 +222,16 @@ const Attendance = (() => {
 
     function renderAttendance() {
         const searchTerm = document.getElementById('attendanceSearch')?.value.toLowerCase() || '';
-        // Solo activos, sin entrenadores
+        // Solo activos, sin entrenadores, ordenados por horario de clase
         const users = Users.getActiveUsers()
             .filter(u => u.affiliationType !== 'Entrenador(a)')
-            .filter(u => !searchTerm || u.name.toLowerCase().includes(searchTerm));
+            .filter(u => !searchTerm || u.name.toLowerCase().includes(searchTerm))
+            .sort((a, b) => {
+                const ta = parseClassTime(a.classTime);
+                const tb = parseClassTime(b.classTime);
+                if (ta !== tb) return ta - tb;               // orden por horario
+                return a.name.localeCompare(b.name, 'es');   // desempate por nombre
+            });
 
         const attendance = Storage.getAttendanceByDate(currentDate);
         const tbody = document.getElementById('attendanceList');
@@ -211,7 +244,7 @@ const Attendance = (() => {
             <span class="badge bg-secondary">Total activos: ${users.length}</span>`;
 
         if (users.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No hay usuarios activos registrados</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No hay usuarios activos registrados</td></tr>`;
             return;
         }
 
@@ -358,7 +391,14 @@ const Attendance = (() => {
             records = records.filter(a => matchingIds.has(a.userId));
         }
 
-        records.sort((a, b) => b.date.localeCompare(a.date));
+        // Ordenar por fecha desc, y dentro del mismo día por horario de clase
+        records.sort((a, b) => {
+            const da = b.date.localeCompare(a.date);
+            if (da !== 0) return da;
+            const ua = Storage.getUserById(a.userId);
+            const ub = Storage.getUserById(b.userId);
+            return parseClassTime(ua?.classTime) - parseClassTime(ub?.classTime);
+        });
 
         if (records.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-muted">Sin asistencias en el período</td></tr>`;
