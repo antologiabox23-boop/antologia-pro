@@ -25,18 +25,15 @@ const Attendance = (() => {
     }
 
     // ── Usuarios genéricos "Clase xxx" (esporádicos) ─────────────────────
-    // Se usan como cupo genérico para registrar asistencia de visitantes
-    // ocasionales que aún no tienen (o no necesitan) un perfil propio.
     function isClaseUser(user) {
         return (user?.name || '').toLowerCase().includes('clase');
     }
 
     // ── Helper: convertir classTime a minutos para poder ordenar ─────────
     function parseClassTime(t) {
-        if (!t) return Infinity; // sin horario → al final
+        if (!t) return Infinity;
         const s = String(t).trim().toLowerCase();
 
-        // Formato 12h: "6:00 am", "6:00am", "6 pm", "6:30 p.m."
         const m12 = s.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)/);
         if (m12) {
             let h = parseInt(m12[1], 10);
@@ -46,26 +43,20 @@ const Attendance = (() => {
             if (ap === 'am' && h === 12) h = 0;
             return h * 60 + m;
         }
-
-        // Formato 24h: "18:30", "6:00"
         const m24 = s.match(/(\d{1,2}):(\d{2})/);
         if (m24) return parseInt(m24[1], 10) * 60 + parseInt(m24[2], 10);
-
-        // Solo hora: "6", "18"
         const hOnly = s.match(/^(\d{1,2})$/);
         if (hOnly) return parseInt(hOnly[1], 10) * 60;
-
         return Infinity;
     }
 
     // ── Helpers de vigencia ──────────────────────────────────────────────
 
     function getActivePayment(userId) {
-        const today = Utils.getCurrentDate();
         const payments = Storage.getIncome()
             .filter(p => p.userId === userId && p.startDate && p.endDate)
             .sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
-        return payments[0] || null; // el pago más reciente
+        return payments[0] || null;
     }
 
     const CLASS_PACK_TYPES = ['Paquete clases', 'Semipersonalizado Diana'];
@@ -81,13 +72,10 @@ const Attendance = (() => {
         const classCount = payment.classCount ? parseInt(payment.classCount, 10) : null;
         const esPaquete  = CLASS_PACK_TYPES.includes(tipo) && classCount;
 
-        // Contar asistencias en el período
         const attendsInPeriod = Storage.getAttendance()
             .filter(a => a.userId === userId && a.status === 'presente' && a.date >= start && a.date <= end).length;
 
-        // ── Lógica especial para paquetes de clases ──────────────────────
         if (esPaquete) {
-            // Total de clases asistidas desde el inicio del paquete
             const totalClases = Storage.getAttendance()
                 .filter(a => a.userId === userId && a.status === 'presente' && a.date >= start).length;
 
@@ -103,11 +91,9 @@ const Attendance = (() => {
             let vigTag, extraInfo = '';
 
             if (fechaVencida) {
-                // Clases tomadas estrictamente después de la fecha de vencimiento
                 const clasesTrasFecha = Storage.getAttendance()
                     .filter(a => a.userId === userId && a.status === 'presente' && a.date > end).length;
 
-                // Venció por fecha, independientemente de clases restantes
                 vigTag = `<span class="badge bg-danger">🚫 Vigencia vencida hace ${diffDays} día${diffDays > 1 ? 's' : ''}</span>`;
 
                 const partes = [];
@@ -121,7 +107,6 @@ const Attendance = (() => {
                     extraInfo = `<div class="text-danger small mt-1 fw-semibold">${partes.join(' · ')}</div>`;
                 }
             } else if (clasesRestantes > 0) {
-                // Vigente: quedan clases y la fecha no ha vencido
                 const labelFecha = diffDays === 0
                     ? ' · <span class="text-warning fw-semibold">Vence hoy</span>'
                     : ` · vence ${Utils.formatDate(end)}`;
@@ -142,7 +127,6 @@ const Attendance = (() => {
             </div>`;
         }
 
-        // ── Lógica estándar por fechas ────────────────────────────────────
         const endDate   = new Date(end   + 'T00:00:00');
         const todayDate = new Date(today + 'T00:00:00');
         const diffDays  = Math.floor((todayDate - endDate) / 86400000);
@@ -154,7 +138,6 @@ const Attendance = (() => {
             vigTag = `<span class="badge bg-warning text-dark">Vence hoy</span>`;
         } else {
             vigTag = `<span class="badge bg-danger">Vencida hace ${diffDays} día${diffDays>1?'s':''}</span>`;
-            // Clases después del vencimiento
             const afterExpiry = Storage.getAttendance()
                 .filter(a => a.userId === userId && a.status === 'presente' && a.date > end).length;
             if (afterExpiry > 0)
@@ -193,6 +176,25 @@ const Attendance = (() => {
         }
     }
 
+    // ── Quitar asistencia (botón ✕) ─────────────────────────────────────
+    // Si el usuario NO está registrado como presente, no hace nada.
+    // Si está presente, elimina el registro de asistencia (no lo marca ausente).
+    async function removeAttendance(userId) {
+        const existing = Storage.getAttendanceByDate(currentDate).find(a => a.userId === userId);
+        if (!existing) return;                    // no hay registro → nada
+        if (existing.status !== 'presente') return; // no estaba presente → nada
+
+        try {
+            await Storage.deleteAttendance(existing.id);
+            renderAttendance();
+            renderAlerts();
+            if (window.Dashboard) Dashboard.updateStats();
+        } catch (err) {
+            console.error(err);
+            UI.showErrorToast('Error al eliminar la asistencia');
+        }
+    }
+
     // ── Modal de observación (nombre de quien asiste) para usuarios "Clase xxx" ──
 
     function openNoteModal(userId) {
@@ -222,22 +224,20 @@ const Attendance = (() => {
 
     function renderAttendance() {
         const searchTerm = document.getElementById('attendanceSearch')?.value.toLowerCase() || '';
-        // Solo activos, sin entrenadores, ordenados por horario de clase
         const users = Users.getActiveUsers()
             .filter(u => u.affiliationType !== 'Entrenador(a)')
             .filter(u => !searchTerm || u.name.toLowerCase().includes(searchTerm))
             .sort((a, b) => {
                 const ta = parseClassTime(a.classTime);
                 const tb = parseClassTime(b.classTime);
-                if (ta !== tb) return ta - tb;               // orden por horario
-                return a.name.localeCompare(b.name, 'es');   // desempate por nombre
+                if (ta !== tb) return ta - tb;
+                return a.name.localeCompare(b.name, 'es');
             });
 
         const attendance = Storage.getAttendanceByDate(currentDate);
         const tbody = document.getElementById('attendanceList');
         if (!tbody) return;
 
-        // Resumen del día
         const presentes = attendance.filter(a => a.status === 'presente').length;
         const el = document.getElementById('attendanceDaySummary');
         if (el) el.innerHTML = `<span class="badge bg-success me-2">✓ Presentes: ${presentes}</span>
@@ -294,7 +294,7 @@ const Attendance = (() => {
                 <td>${vigenciaBadge(user.id)}</td>
                 <td>
                     ${presenteBtn}
-                    <button class="btn btn-sm btn-outline-danger" onclick="Attendance.mark('${user.id}','ausente')" title="Ausente">
+                    <button class="btn btn-sm btn-outline-danger" onclick="Attendance.unmark('${user.id}')" title="Quitar asistencia">
                         <i class="fas fa-times"></i>
                     </button>
                 </td>
@@ -391,7 +391,6 @@ const Attendance = (() => {
             records = records.filter(a => matchingIds.has(a.userId));
         }
 
-        // Ordenar por fecha desc, y dentro del mismo día por horario de clase
         records.sort((a, b) => {
             const da = b.date.localeCompare(a.date);
             if (da !== 0) return da;
@@ -500,6 +499,9 @@ const Attendance = (() => {
             renderAttendance();
             renderAlerts();
             if (window.Dashboard) Dashboard.updateStats();
+        },
+        unmark: async (userId) => {
+            await removeAttendance(userId);
         },
         openNoteModal,
         isClaseUser,
