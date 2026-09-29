@@ -277,6 +277,12 @@ html, body { height: 100%; background: var(--bg); color: var(--text);
 .btn-attend.present.active { background: var(--success); border-color: var(--success); color: #0d1117; }
 .btn-attend.absent         { background: rgba(248,81,73,.12); border-color: rgba(248,81,73,.3); color: var(--danger); }
 .btn-attend.absent.active  { background: var(--danger);  border-color: var(--danger);  color: #fff; }
+.btn-attend.absent:disabled,
+.btn-attend.absent.is-disabled {
+    opacity: .35;
+    cursor: not-allowed;
+    pointer-events: auto;
+}
 .btn-attend.emergency { 
     background: rgba(37,211,102,.12); 
     border-color: rgba(37,211,102,.3); 
@@ -286,8 +292,6 @@ html, body { height: 100%; background: var(--bg); color: var(--text);
     background: rgba(37,211,102,.2); 
     border-color: rgba(37,211,102,.5); 
 }
-
-
 
 /* ── Toast ───────────────────────────────────────────────── */
 .toast-box {
@@ -526,7 +530,6 @@ async function changeDate(newDate) {
     if (!newDate || newDate === selectedDate) return;
     selectedDate = newDate;
     updateHeaderDate();
-    const list = document.getElementById('userList');
     try {
         attendanceCache = Storage.getAttendanceByDate(selectedDate);
         renderList();
@@ -658,11 +661,17 @@ function renderList() {
     list.innerHTML = filtered.map((u, idx) => {
         const rec    = attendanceCache.find(a => a.userId === u.id);
         const status = rec?.status || null;
-        const rowCls = status === 'presente' ? 'is-present' : status === 'ausente' ? 'is-absent' : '';
+        const isPresent = status === 'presente';
+        const rowCls = isPresent ? 'is-present' : '';
 
         const noteHtml = rec?.note
             ? `<div class="user-note"><i class="fas fa-user-edit"></i>${Utils.escapeHtml(rec.note)}</div>`
             : '';
+
+        // El botón ✕ solo se activa si el usuario está presente.
+        // Si no está presente, queda deshabilitado (no ejecuta nada).
+        const removeDisabled = isPresent ? '' : 'disabled';
+        const removeTitle    = isPresent ? 'Quitar asistencia' : 'Sin asistencia que quitar';
 
         return `<div class="user-row ${rowCls}" id="row-${u.id}" style="animation-delay:${idx * 0.025}s">
             <div class="user-info">
@@ -670,12 +679,12 @@ function renderList() {
                 ${noteHtml}
             </div>
             <div class="btn-group-attend">
-                <button class="btn-attend present ${status === 'presente' ? 'active' : ''}"
+                <button class="btn-attend present ${isPresent ? 'active' : ''}"
                         onclick="markUser('${u.id}', 'presente')" title="Presente">
                     <i class="fas fa-check"></i>
                 </button>
-                <button class="btn-attend absent ${status === 'ausente' ? 'active' : ''}"
-                        onclick="markUser('${u.id}', 'ausente')" title="Ausente">
+                <button class="btn-attend absent ${isPresent ? '' : 'is-disabled'}"
+                        onclick="removeUser('${u.id}')" title="${removeTitle}" ${removeDisabled}>
                     <i class="fas fa-times"></i>
                 </button>
                 <button class="btn-attend emergency"
@@ -720,7 +729,6 @@ async function markUser(userId, status) {
             await Storage.updateAttendance(existing.id, { status, time, note });
         } else {
             const saved = await Storage.addAttendance({ userId, date: selectedDate, status, time, note });
-            // Actualizar el id temporal con el real
             const idx = attendanceCache.findIndex(a => a.userId === userId);
             if (idx !== -1 && saved) attendanceCache[idx] = { ...attendanceCache[idx], id: saved.id || attendanceCache[idx].id };
         }
@@ -728,6 +736,37 @@ async function markUser(userId, status) {
         showToast(`${user?.name?.split(' ')[0] || ''} — ${label}`, status === 'presente' ? 'success' : 'info');
     } catch (err) {
         showToast('Error al guardar. Verifica conexión.', 'info');
+    }
+}
+
+/* ── Quitar asistencia (botón ✕) ──────────────────────────── */
+/* Regla:
+   - Si el usuario NO está registrado como presente → no hace nada.
+   - Si está presente → elimina el registro de asistencia (no lo marca ausente). */
+async function removeUser(userId) {
+    const existing = attendanceCache.find(a => a.userId === userId);
+    if (!existing) return;                       // no hay registro → nada
+    if (existing.status !== 'presente') return;  // no estaba presente → nada
+
+    const user = usersCache.find(u => u.id === userId);
+
+    // Registro temporal (aún no persistido en Sheets): solo quitarlo de cache
+    if (existing.id && existing.id.startsWith('tmp-')) {
+        const idx = attendanceCache.indexOf(existing);
+        if (idx !== -1) attendanceCache.splice(idx, 1);
+        renderList();
+        showToast(`${user?.name?.split(' ')[0] || ''} — asistencia eliminada`, 'info');
+        return;
+    }
+
+    try {
+        await Storage.deleteAttendance(existing.id);
+        const idx = attendanceCache.indexOf(existing);
+        if (idx !== -1) attendanceCache.splice(idx, 1);
+        renderList();
+        showToast(`${user?.name?.split(' ')[0] || ''} — asistencia eliminada`, 'info');
+    } catch (err) {
+        showToast('Error al eliminar. Verifica conexión.', 'info');
     }
 }
 
