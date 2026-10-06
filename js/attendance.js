@@ -59,7 +59,7 @@ const Attendance = (() => {
         return payments[0] || null;
     }
 
-    const CLASS_PACK_TYPES = ['Paquete clases', 'Semipersonalizado Diana'];
+    const CLASS_PACK_TYPES = ['Paquete clases', 'Semipersonalizado'];
 
     function vigenciaBadge(userId) {
         const today   = Utils.getCurrentDate();
