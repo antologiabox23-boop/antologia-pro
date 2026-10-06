@@ -221,13 +221,13 @@ ${FORM_LINK}`;
             ? `\n\uD83D\uDCC5 Vigencia: ${Utils.formatDate(payment.startDate)} al ${Utils.formatDate(payment.endDate)}`
             : '';
         // Paquetes de clases: incluir número de clases en el mensaje
-        const CLASS_PACK_TYPES_WA = ['Paquete clases', 'Semipersonalizado Diana'];
-        const isSemiDiana26 = payment.paymentType === 'Semipersonalizado Diana' && Number(payment.classCount) === 26;
-        const clasesInfo = CLASS_PACK_TYPES_WA.includes(payment.paymentType) && payment.classCount && !isSemiDiana26
+        const CLASS_PACK_TYPES_WA = ['Paquete clases', 'Semipersonalizado'];
+        const isSemi26 = payment.paymentType === 'Semipersonalizado' && Number(payment.classCount) === 26;
+        const clasesInfo = CLASS_PACK_TYPES_WA.includes(payment.paymentType) && payment.classCount && !isSemi26
             ? `\n\uD83C\uDFAF Clases incluidas: *${payment.classCount} clases*`
             : '';
-        const tipoLabel = isSemiDiana26
-            ? 'Semipersonalizado Diana'
+        const tipoLabel = isSemi26
+            ? 'Semipersonalizado'
             : (CLASS_PACK_TYPES_WA.includes(payment.paymentType) && payment.classCount
                 ? `${payment.paymentType} \u00B7 ${payment.classCount} clases`
                 : payment.paymentType);
