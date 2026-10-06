@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Programar Clase — Semipersonalizados Diana</title>
+    <title>Programar Clase — Semipersonalizados</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -367,9 +367,9 @@
     <img src="images/logo.png" class="logo" alt="Antología" onerror="this.style.display='none'">
     <div class="title-block">
         <h1><i class="fas fa-dumbbell me-1"></i>Semipersonalizados</h1>
-        <span>Programación de clases — Diana</span>
+        <span>Programación de clases — Semi</span>
     </div>
-    <div class="badge-diana"><i class="fas fa-star me-1"></i>Diana</div>
+    <div class="badge-semi"><i class="fas fa-star me-1"></i>Semi</div>
 </header>
 
 <!-- MAIN -->
@@ -483,7 +483,7 @@
     <!-- ═══ STEP 5: MIS CLASES ═══ -->
     <div class="step" id="step5">
         <div class="sched-card">
-            <h2><i class="fas fa-calendar-check"></i>Mis Clases — Diana</h2>
+            <h2><i class="fas fa-calendar-check"></i>Mis Clases — Semi</h2>
             <div id="membershipBanner" style="display:none;margin-bottom:1rem;padding:.75rem 1rem;border-radius:10px;font-size:.85rem;font-weight:600;"></div>
             <div id="misClasesLoading" style="text-align:center;padding:1.5rem 0;color:var(--color-muted);">
                 <i class="fas fa-spinner fa-spin me-2"></i>Cargando clases...
@@ -503,7 +503,7 @@
 <div class="modal-overlay" id="modalPlan">
     <div class="modal-box">
         <button class="modal-close" onclick="closePlanModal()"><i class="fas fa-times"></i></button>
-        <div class="modal-title"><i class="fas fa-id-badge me-2"></i>Mi Plan Diana</div>
+        <div class="modal-title"><i class="fas fa-id-badge me-2"></i>Mi Plan Semi</div>
         <div id="modalPlanContent">
             <div class="modal-loading"><i class="fas fa-spinner fa-spin me-2"></i>Cargando información...</div>
         </div>
@@ -523,10 +523,10 @@ const SCHEDULE_CONFIG = {
     'sábado':    ['08:00','09:00','10:00'],
 };
 const MAX_PER_SLOT = 4;
-const CLASS_TYPE   = 'semipersonalizado_diana';
+const CLASS_TYPE   = 'semipersonalizado';
 const SCRIPT_URL   = 'https://script.google.com/macros/s/AKfycbwtdbKP8h17MlV8md6ey8zidrWGUjVZMW-aPJRK8Os4zIs1Mb0SU7m_fYNSAqxrSu_p/exec';
 const CANCEL_HOURS = 2;
-const DIANA_TYPES  = ['semipersonalizado diana','personalizado diana','semipersonalizados diana','diana'];
+const SEMI_TYPES  = ['semipersonalizado','personalizado','semipersonalizados','semi'];
 const MONTHS_SHORT = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const MONTHS_LONG  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const MONTHS_FULL  = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -606,7 +606,7 @@ function extractRows(json) {
 // ══════════════════════════════════════════
 async function loadBookings() {
     try {
-        const json = await gasCall('getProgramacionDiana');
+        const json = await gasCall('getProgramacionSemi');
         // Normalizar: aceptar cualquier estructura de respuesta
         const rows = extractRows(json);
         // Filtrar solo ProgramacionDiana activas (no canceladas)
@@ -634,7 +634,7 @@ async function loadBookings() {
 // ══════════════════════════════════════════
 async function resolverMembresia(userId, userDoc) {
     try {
-        const r = await gasCall('checkIncomeDiana', { userId, userDoc });
+        const r = await gasCall('checkIncomeSemi', { userId, userDoc });
         console.log('[membresía] raw response:', JSON.stringify(r));
         // doGet envuelve en { data: resultado }
         // resultado es: { success, canBook, reason, membership, debug? }
@@ -672,7 +672,7 @@ async function loadUserExtraData(userId, userDoc) {
             const pDoc = (p.userDoc || p.document || p.notes || '').replace(/\D/g, '');
             const byId  = userId  && pUid === String(userId);
             const byDoc = cleanDoc && (pDoc === cleanDoc || pUid.replace(/\D/g, '') === cleanDoc);
-            const tipoOk = DIANA_TYPES.some(t => (p.paymentType || '').toLowerCase().includes(t));
+            const tipoOk = SEMI_TYPES.some(t => (p.paymentType || '').toLowerCase().includes(t));
             return (byId || byDoc) && tipoOk;
         });
 
@@ -808,7 +808,7 @@ function renderPlanModal() {
         const vigente = fin && fin >= today;
         planHtml = `
         <div class="plan-header">
-            <div class="plan-name"><i class="fas fa-star me-1" style="color:var(--color-accent)"></i>${m.tipo || 'Plan Diana'}</div>
+            <div class="plan-name"><i class="fas fa-star me-1" style="color:var(--color-accent)"></i>${m.tipo || 'Plan Semi'}</div>
             <div class="plan-dates">
                 <i class="fas fa-calendar-check me-1"></i>
                 ${fmtDate(m.vigenciaDesde)} &nbsp;→&nbsp; ${fmtDate(m.vigenciaHasta)}
@@ -823,7 +823,7 @@ function renderPlanModal() {
         if (state.ingresos.length > 1) {
             const sorted = [...state.ingresos].sort((a, b) => new Date(b.paymentDate || '2000-01-01') - new Date(a.paymentDate || '2000-01-01'));
             planHtml += `<div style="margin-bottom:1.25rem;">
-                <div class="section-label">Historial de pagos Diana</div>`;
+                <div class="section-label">Historial de pagos Semi</div>`;
             sorted.forEach(ing => {
                 const desde = fmtDate(ing.startDate || ing.paymentDate);
                 const hasta = fmtDate(ing.endDate);
@@ -836,7 +836,7 @@ function renderPlanModal() {
         }
     } else {
         planHtml = `<div style="background:rgba(239,68,68,.1);border:1.5px solid var(--color-danger);border-radius:12px;padding:.85rem 1rem;margin-bottom:1.25rem;font-size:.88rem;color:#fca5a5;">
-            <i class="fas fa-exclamation-triangle me-2"></i>No se encontró un plan Diana activo. Contacta a tu instructora.
+            <i class="fas fa-exclamation-triangle me-2"></i>No se encontró un plan Semi activo. Contacta a tu instructora.
         </div>`;
     }
 
@@ -1319,7 +1319,7 @@ function buildSummary() {
 
     document.getElementById('summaryContent').innerHTML = `
         <div class="summary-row"><span class="label">Alumna</span><span class="value">${state.user?.name || '-'}</span></div>
-        <div class="summary-row"><span class="label">Tipo</span><span class="value">⭐ Semipersonalizados Diana</span></div>
+        <div class="summary-row"><span class="label">Tipo</span><span class="value">⭐ Semipersonalizados</span></div>
         <div class="summary-row"><span class="label">Fecha</span><span class="value">${state.selectedDay?.charAt(0).toUpperCase() + (state.selectedDay?.slice(1) || '')} — ${fechaStr}</span></div>
         <div class="summary-row"><span class="label">Hora</span><span class="value">${state.selectedTime}</span></div>
         <div class="summary-row"><span class="label">Estado</span>
