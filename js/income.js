@@ -9,9 +9,9 @@ const Income = (() => {
     // Tipos que tienen vigencia de un solo día
     const SINGLE_DAY_TYPES    = ['Clase suelta', 'Movimientos caja'];
     // Tipos en los que la nueva vigencia continúa donde terminó la anterior
-    const CONTINUOUS_TYPES    = ['Mensualidad', 'Paquete clases', 'Semipersonalizado Diana', 'Personalizado Diana'];
+    const CONTINUOUS_TYPES    = ['Mensualidad', 'Paquete clases', 'Semipersonalizado', 'Personalizado'];
     // Tipos que manejan número de clases definible
-    const CLASS_PACK_TYPES    = ['Paquete clases', 'Semipersonalizado Diana'];
+    const CLASS_PACK_TYPES    = ['Paquete clases', 'Semipersonalizado'];
 
     function initialize() {
         setupEventListeners();
@@ -289,8 +289,8 @@ const Income = (() => {
             wrapper.style.display = 'block';
             const hint = document.getElementById('classCountHint');
             if (hint) {
-                hint.textContent = tipo === 'Semipersonalizado Diana'
-                    ? 'Número de sesiones semipersonalizadas con Diana.'
+                hint.textContent = tipo === 'Semipersonalizado'
+                    ? 'Número de sesiones semipersonalizadas.'
                     : 'Número de clases incluidas en el paquete.';
             }
         } else {
@@ -657,8 +657,8 @@ const Income = (() => {
         const nombre   = user.name.split(' ')[0];
         const monto    = Utils.formatCurrency(Utils.parseAmount(p.amount));
         const tipo     = p.paymentType  || 'Membresía';
-        const isSemiDiana26 = p.paymentType === 'Semipersonalizado Diana' && Number(p.classCount) === 26;
-        const tipoLabel = (!isSemiDiana26 && CLASS_PACK_TYPES.includes(p.paymentType) && p.classCount)
+        const isSemi26 = p.paymentType === 'Semipersonalizado' && Number(p.classCount) === 26;
+        const tipoLabel = (!isSemi26 && CLASS_PACK_TYPES.includes(p.paymentType) && p.classCount)
             ? `${tipo} · ${p.classCount} clases`
             : tipo;
         const metodo   = p.paymentMethod || '';
