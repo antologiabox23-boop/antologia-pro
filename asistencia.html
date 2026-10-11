@@ -834,7 +834,38 @@ document.getElementById('searchInput').addEventListener('input', (e) => {
     renderList();
 });
 
-/* ── Inicialización ──────────────────────────────────────── */
+document.getElementById('searchInput').addEventListener('keydown', async (e) => {
+    if (e.key !== 'Enter') return;
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return;
+
+    // Si ya hay coincidencias entre activos, no hacer nada
+    if (usersCache.some(u => u.name.toLowerCase().includes(term))) return;
+
+    const inactivos = Storage.getUsers().filter(u =>
+        u.status !== 'active' &&
+        u.affiliationType !== 'Entrenador(a)' &&
+        u.name.toLowerCase().includes(term)
+    );
+
+    if (inactivos.length === 0) { showToast('Sin resultados', 'info'); return; }
+    if (inactivos.length > 1)  { showToast('Varios inactivos coinciden, sé más específico', 'info'); return; }
+
+    const u = inactivos[0];
+    const ok = await showConfirm('Usuario inactivo', `"${u.name}" está inactivo. ¿Activarlo?`);
+    if (!ok) return;
+
+    try {
+        const updated = await Storage.updateUser(u.id, { status: 'active' });
+        usersCache.push(updated || { ...u, status: 'active' });
+        usersCache.sort((a, b) => a.name.localeCompare(b.name));
+        renderList();
+        showToast(`${u.name.split(' ')[0]} — Activado`, 'success');
+    } catch (err) {
+        showToast('Error al activar. Verifica conexión.', 'info');
+    }
+});
+    /* ── Inicialización ──────────────────────────────────────── */
 async function init() {
     const list = document.getElementById('userList');
     try {
