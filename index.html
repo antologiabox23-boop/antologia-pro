@@ -309,6 +309,27 @@
                         </div>
                     </div>
 
+                    <div class="card mb-4">
+                      <div class="card-header d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                        <span><i class="fas fa-chart-line me-2"></i>Análisis comparativo</span>
+                        <div class="d-flex gap-2">
+                          <select id="analysisMetric" class="form-select form-select-sm">
+                            <option value="income">Ingresos</option>
+                            <option value="attendance">Asistencia</option>
+                          </select>
+                          <select id="analysisView" class="form-select form-select-sm">
+                            <option value="6m">Últimos 6 meses</option>
+                            <option value="3m">Último trimestre</option>
+                            <option value="yoy">Vs. mismos meses año anterior</option>
+                            <option value="weekday">Por día de la semana</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div class="card-body" style="height:340px">
+                        <canvas id="analysisChart"></canvas>
+                      </div>
+                    </div>
+                    
                     <div class="col-lg-4">
                         <div class="card" data-animate="fade-up" style="animation-delay: 0.5s">
                             <div class="card-header">
