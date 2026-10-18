@@ -28,8 +28,16 @@ const Reports = (() => {
         document.getElementById('generateCustomReport')?.addEventListener('click', generateCustomReport);
 
         // Movimientos por cuenta
-        document.getElementById('generateAccountReport')?.addEventListener('click', generateAccountReport);
+        document.getElementById('generateAccountReport')?.addEventListener('click', () => generateAccountReport());
         document.getElementById('exportAccountReportExcel')?.addEventListener('click', exportAccountReportExcel);
+
+        // Refrescar el extracto al cerrar los modales de edición
+        ['incomeModal', 'editExpenseModal'].forEach(id => {
+            document.getElementById(id)?.addEventListener('hidden.bs.modal', () => {
+                const visible = !document.getElementById('accountReportResult')?.classList.contains('d-none');
+                if (visible && window._accountReportData) generateAccountReport(true);
+            });
+        });
     }
 
     function generateAttendanceReport() {
@@ -327,7 +335,7 @@ ${table.outerHTML}
 
     // ═══ MOVIMIENTOS POR CUENTA (EXTRACTO) ═══════════════════════════════
 
-    function generateAccountReport() {
+    function generateAccountReport(silent = false) {
         const dateFrom = document.getElementById('accountReportFrom').value;
         const dateTo   = document.getElementById('accountReportTo').value;
         const method   = document.getElementById('accountReportMethod').value;
@@ -462,7 +470,12 @@ ${table.outerHTML}
                     saldoAcumulado += m.haber - m.debe;
                     tableRows += `<tr>
                         <td class="small">${m.fecha}</td>
-                        <td class="small">${Utils.escapeHtml(m.descripcion)}</td>
+                        <td class="small">${Utils.escapeHtml(m.descripcion)}
+                            <button class="btn btn-sm btn-warning py-0 px-1 ms-2" title="Editar movimiento"
+                                onclick="Reports.editMovement('${m.tipo}','${m.raw.id}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </td>
                         <td class="small">${Utils.escapeHtml(m.observaciones)}</td>
                         <td class="text-end small ${m.debe > 0 ? 'text-danger' : 'text-muted'}">${m.debe > 0 ? Utils.formatCurrency(m.debe) : '—'}</td>
                         <td class="text-end small ${m.haber > 0 ? 'text-success' : 'text-muted'}">${m.haber > 0 ? Utils.formatCurrency(m.haber) : '—'}</td>
@@ -498,7 +511,7 @@ ${table.outerHTML}
 
         window._accountReportData = { allMovimientos, dateFrom, dateTo, method };
         const totalMovs = allMovimientos.reduce((s, a) => s + a.movs.length, 0);
-        UI.showSuccessToast(`${totalMovs} movimiento${totalMovs !== 1 ? 's' : ''} encontrado${totalMovs !== 1 ? 's' : ''}`);
+        if (!silent) UI.showSuccessToast(`${totalMovs} movimiento${totalMovs !== 1 ? 's' : ''} encontrado${totalMovs !== 1 ? 's' : ''}`);
     }
 
     async function exportAccountReportExcel() {
@@ -561,6 +574,12 @@ ${table.outerHTML}
             console.error(err);
             UI.showErrorToast('Error al exportar Excel');
         }
+    }
+
+    // Abre el modal de edición correspondiente al tipo de movimiento
+    function editMovement(tipo, id) {
+        if (tipo === 'ingreso') Income.editPayment(id);
+        else Finance.editExpense(id);
     }
 
     // ═══ INFORME COMBINADO: USUARIOS + ASISTENCIAS + PAGOS ═══════════════
@@ -798,6 +817,6 @@ ${table.outerHTML}
         }
     }
 
-    return { initialize };
+    return { initialize, editMovement };
 })();
 window.Reports = Reports;
