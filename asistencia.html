@@ -828,7 +828,8 @@ async function markUser(userId, status) {
     const existing = attendanceCache.find(a => a.userId === userId);
     const time     = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
     const user     = usersCache.find(u => u.id === userId);
-
+    const wasPresent = existing?.status === 'presente';
+    
     // Usuarios "Clase suelta" son esporádicos: se registra quién asistió
     // realmente para poder cobrarle luego.
     let note = existing?.note || null;
@@ -859,6 +860,7 @@ async function markUser(userId, status) {
         }
         const label = status === 'presente' ? '✓ Presente' : '✗ Ausente';
         showToast(`${user?.name?.split(' ')[0] || ''} — ${label}`, status === 'presente' ? 'success' : 'info');
+        if (status === 'presente' && !wasPresent) askRegisterPayment(user);
     } catch (err) {
         showToast('Error al guardar. Verifica conexión.', 'info');
     }
