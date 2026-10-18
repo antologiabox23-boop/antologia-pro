@@ -272,19 +272,6 @@ async function initializeApp() {
 
         UI.hideLoading();
         
-        const payUserId = new URLSearchParams(location.search).get('pagar');
-        if (payUserId) {
-            history.replaceState(null, '', location.pathname);
-            UI.switchTab('income');
-            setTimeout(() => {
-                Income.openModal();
-                const u = Storage.getUserById(payUserId);
-                if (u) Income.selectUser(u.id, u.name);
-                const t = document.getElementById('incomeType');
-                if (t) { t.value = 'Clase suelta'; t.dispatchEvent(new Event('change')); }
-            }, 400);
-        }
-        
         if (Storage.getUsers().length === 0) {
             setTimeout(() => UI.showInfoToast('¡Bienvenido! Comienza agregando usuarios.'), 1000);
         }
