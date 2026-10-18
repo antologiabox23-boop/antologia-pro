@@ -741,7 +741,88 @@ function renderList() {
 
     updateCounters();
 }
+/* ── Registrar pago (ventana flotante) ───────────────────── */
+const PAY_PACK_TYPES = ['Paquete clases', 'Semipersonalizado'];
 
+function payEndDate(type, startStr) {
+    const s = new Date(startStr + 'T00:00:00');
+    if (type === 'Clase suelta') return startStr;
+    const target = new Date(s.getFullYear(), s.getMonth() + 1, s.getDate());
+    if (target.getMonth() !== (s.getMonth() + 1) % 12)
+        return toDateStr(new Date(s.getFullYear(), s.getMonth() + 2, 0));
+    return toDateStr(new Date(target - 86400000));
+}
+
+function showPaySheet(user, prefillNote) {
+    return new Promise(resolve => {
+        const $ = id => document.getElementById(id);
+        const overlay = $('payOverlay');
+        $('payUserName').textContent = `${user.name} — ${user.affiliationType}`;
+        $('payType').value   = 'Clase suelta';
+        $('payCount').value  = '';
+        $('payAmount').value = '';
+        $('payMethod').value = '';
+        $('payNotes').value  = prefillNote || '';
+        $('payCountWrap').style.display = 'none';
+        overlay.classList.add('open');
+
+        const onType = () => {
+            $('payCountWrap').style.display = PAY_PACK_TYPES.includes($('payType').value) ? 'block' : 'none';
+        };
+        const close = (val) => {
+            overlay.classList.remove('open');
+            $('payType').removeEventListener('change', onType);
+            $('paySave').removeEventListener('click', onSave);
+            $('payCancel').removeEventListener('click', onCancel);
+            resolve(val);
+        };
+        const onSave = () => {
+            const type   = $('payType').value;
+            const amount = parseFloat($('payAmount').value);
+            const method = $('payMethod').value;
+            const count  = parseInt($('payCount').value, 10) || null;
+            if (!(amount > 0))  { showToast('Ingresa el monto', 'info'); return; }
+            if (!method)        { showToast('Selecciona el método de pago', 'info'); return; }
+            if (PAY_PACK_TYPES.includes(type) && !count) { showToast('Ingresa el número de clases', 'info'); return; }
+            close({ type, amount, method, count, notes: $('payNotes').value.trim() });
+        };
+        const onCancel = () => close(null);
+        $('payType').addEventListener('change', onType);
+        $('paySave').addEventListener('click', onSave);
+        $('payCancel').addEventListener('click', onCancel);
+        setTimeout(() => $('payAmount').focus(), 50);
+    });
+}
+
+async function askRegisterPayment(user) {
+    const type = (user?.affiliationType || '').trim();
+    if (!/^clase/i.test(type)) return;
+
+    const ok = await showConfirm('Registrar pago', `${user.name} — ${type}. ¿Registrar el pago ahora?`);
+    if (!ok) return;
+
+    const rec = attendanceCache.find(a => a.userId === user.id);
+    const data = await showPaySheet(user, rec?.note || '');
+    if (!data) return;
+
+    const today = Utils.getCurrentDate();
+    try {
+        await Storage.addIncome({
+            userId:        user.id,
+            paymentType:   data.type,
+            amount:        data.amount,
+            paymentMethod: data.method,
+            paymentDate:   today,
+            startDate:     today,
+            endDate:       payEndDate(data.type, today),
+            notes:         data.notes,
+            classCount:    PAY_PACK_TYPES.includes(data.type) ? data.count : null
+        });
+        showToast(`${user.name.split(' ')[0]} — Pago registrado`, 'success');
+    } catch (err) {
+        showToast('Error al guardar el pago. Verifica conexión.', 'info');
+    }
+}
 /* ── Marcar asistencia ────────────────────────────────────── */
 async function markUser(userId, status) {
     const existing = attendanceCache.find(a => a.userId === userId);
