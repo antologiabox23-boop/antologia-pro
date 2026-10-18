@@ -393,7 +393,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text);
     gap: .3rem;
     margin-top: .1rem;
 }
-.confirm-sheet input.note-input {
+.confirm-sheet input.note-input,
+.confirm-sheet select.note-input {
     width: 100%;
     background: var(--surface);
     border: 1px solid var(--border);
@@ -405,7 +406,11 @@ html, body { height: 100%; background: var(--bg); color: var(--text);
     font-family: 'Barlow', sans-serif;
 }
 .confirm-sheet input.note-input:focus { outline: none; border-color: var(--teal); }
-
+.confirm-sheet select.note-input { appearance: auto; }
+.confirm-sheet.pay-sheet { max-height: 92vh; overflow-y: auto; }
+.confirm-sheet.pay-sheet .pay-label { font-size: .72rem; color: var(--muted); margin-bottom: .25rem; display: block; }
+.confirm-sheet.pay-sheet .note-input { margin-bottom: .8rem; }
+.confirm-sheet.pay-sheet .confirm-btns { margin-top: .4rem; }
 /* ── Scrollbar ────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -486,7 +491,46 @@ html, body { height: 100%; background: var(--bg); color: var(--text);
         </div>
     </div>
 </div>
+<!-- Registrar pago (ventana flotante) -->
+<div class="confirm-overlay" id="payOverlay">
+    <div class="confirm-sheet pay-sheet">
+        <div class="confirm-title">Registrar pago</div>
+        <div class="confirm-text" id="payUserName"></div>
 
+        <label class="pay-label" for="payType">Tipo de pago</label>
+        <select class="note-input" id="payType">
+            <option value="Clase suelta">Clase suelta</option>
+            <option value="Mensualidad">Mensualidad</option>
+            <option value="Paquete clases">Paquete clases</option>
+            <option value="Semipersonalizado">Semipersonalizado</option>
+        </select>
+
+        <div id="payCountWrap" style="display:none">
+            <label class="pay-label" for="payCount">Número de clases</label>
+            <input type="number" class="note-input" id="payCount" min="1" inputmode="numeric">
+        </div>
+
+        <label class="pay-label" for="payAmount">Monto</label>
+        <input type="number" class="note-input" id="payAmount" min="0" inputmode="numeric" placeholder="0">
+
+        <label class="pay-label" for="payMethod">Método de pago</label>
+        <select class="note-input" id="payMethod">
+            <option value="">Seleccionar...</option>
+            <option value="Efectivo">Efectivo</option>
+            <option value="Bancolombia">Bancolombia</option>
+            <option value="Daviplata">Daviplata</option>
+            <option value="Nequi">Nequi</option>
+        </select>
+
+        <label class="pay-label" for="payNotes">Observaciones</label>
+        <input type="text" class="note-input" id="payNotes" placeholder="Opcional" autocomplete="off">
+
+        <div class="confirm-btns">
+            <button class="btn-confirm-no"  id="payCancel">Cancelar</button>
+            <button class="btn-confirm-yes" id="paySave">Guardar pago</button>
+        </div>
+    </div>
+</div>
 <!-- ── Scripts compartidos con la app principal ────────────── -->
 <script src="js/utils.js"></script>
 <script src="js/storage.js"></script>
