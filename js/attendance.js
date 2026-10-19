@@ -194,7 +194,31 @@ const Attendance = (() => {
             UI.showErrorToast('Error al eliminar la asistencia');
         }
     }
+    
+    // ── Pregunta de pago al marcar presente (Clase xxx) ──────────────────
+    function shouldAskPayment(user) {
+        return isClaseUser(user) || /^clase/i.test((user?.affiliationType || '').trim());
+    }
 
+    function askRegisterPayment(userId, note) {
+        const user = Storage.getUserById(userId);
+        if (!user || !shouldAskPayment(user)) return;
+        UI.showConfirmModal('Registrar pago', `${user.name}. ¿Registrar el pago ahora?`, () => {
+            // esperar a que cierre el modal de confirmación antes de abrir el de pago
+            setTimeout(() => {
+                Income.openModal();
+                Income.selectUser(user.id, user.name);
+                const t = document.getElementById('incomeType');
+                if (t) { t.value = 'Clase suelta'; t.dispatchEvent(new Event('change')); }
+                const n = document.getElementById('incomeNotes');
+                if (n && note) n.value = note;
+            }, 400);
+        }, false, { confirmText: 'Sí, registrar', confirmIcon: 'fa-dollar-sign', cancelText: 'No', cancelIcon: 'fa-times' });
+    }
+
+    function wasPresent(userId) {
+        return Storage.getAttendanceByDate(currentDate).find(a => a.userId === userId)?.status === 'presente';
+    }
     // ── Modal de observación (nombre de quien asiste) para usuarios "Clase xxx" ──
 
     function openNoteModal(userId) {
@@ -214,14 +238,16 @@ const Attendance = (() => {
         const userId = document.getElementById('attendanceNoteUserId').value;
         const note = document.getElementById('attendanceNoteInput').value.trim();
         if (!userId) return;
+        const already = wasPresent(userId);
         await markAttendance(userId, 'presente', note);
         const modalEl = document.getElementById('attendanceNoteModal');
         bootstrap.Modal.getOrCreateInstance(modalEl).hide();
         renderAttendance();
         renderAlerts();
         if (window.Dashboard) Dashboard.updateStats();
+        if (!already) setTimeout(() => askRegisterPayment(userId, note), 400);
     }
-
+    
     function renderAttendance() {
         const searchTerm = document.getElementById('attendanceSearch')?.value.toLowerCase() || '';
         const users = Users.getActiveUsers()
@@ -495,10 +521,12 @@ const Attendance = (() => {
     return {
         initialize,
         mark: async (userId, status) => {
+            const already = wasPresent(userId);
             await markAttendance(userId, status);
             renderAttendance();
             renderAlerts();
             if (window.Dashboard) Dashboard.updateStats();
+            if (status === 'presente' && !already) setTimeout(() => askRegisterPayment(userId), 400);
         },
         unmark: async (userId) => {
             await removeAttendance(userId);
