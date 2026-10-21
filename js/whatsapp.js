@@ -7,14 +7,13 @@ const WhatsApp = (() => {
     const WA_GROUP   = 'https://chat.whatsapp.com/DSJzYAb6h58FQDA8yEAzwN';
     const FORM_LINK  = 'https://forms.gle/ZHUj1Q7YiDhE5P498';
 
-    // ── Detección de PC y utilidades de copiado / toast ───────────────────
-
+    // ── Detección de PC y utilidad de copiado ──────────────────────────────
     function isDesktop() {
         return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
     }
 
     function copyToClipboard(text, btn) {
-        const succeed = () => {
+        navigator.clipboard.writeText(text).then(() => {
             const original = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-check me-1"></i>¡Copiado!';
             btn.classList.replace('btn-outline-secondary', 'btn-success');
@@ -22,109 +21,37 @@ const WhatsApp = (() => {
                 btn.innerHTML = original;
                 btn.classList.replace('btn-success', 'btn-outline-secondary');
             }, 2000);
-        };
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(text).then(succeed).catch(() => fallbackCopy(text, btn, succeed));
-        } else {
-            fallbackCopy(text, btn, succeed);
-        }
-    }
-
-    function fallbackCopy(text, btn, succeed) {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.cssText = 'position:fixed;opacity:0';
-        document.body.appendChild(ta);
-        ta.select();
-        try { document.execCommand('copy'); succeed(); } catch (e) {}
-        document.body.removeChild(ta);
-    }
-
-    // Toast con cuenta regresiva — WhatsApp abre después de 4 s (solo PC)
-    function showCopyToast(message, onOpen) {
-        document.getElementById('waCopyToast')?.remove();
-
-        const DELAY = 4;
-        let secondsLeft = DELAY;
-        let opened = false;
-        let countdownInterval;
-
-        const toast = document.createElement('div');
-        toast.id = 'waCopyToast';
-        toast.style.cssText = `
-            position:fixed;bottom:24px;right:24px;z-index:9999;
-            background:#fff;border:1px solid #dee2e6;border-radius:12px;
-            box-shadow:0 4px 20px rgba(0,0,0,.18);padding:14px 18px;
-            display:flex;flex-direction:column;gap:10px;
-            font-size:14px;width:320px;animation:waCopySlide .25s ease;
-        `;
-        toast.innerHTML = `
-            <style>
-                @keyframes waCopySlide{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
-                #waCopyProgress{height:4px;border-radius:2px;background:#e9ecef;overflow:hidden}
-                #waCopyProgressBar{height:100%;width:100%;background:#25D366;transition:width ${DELAY}s linear}
-            </style>
-            <div style="display:flex;align-items:center;gap:10px">
-                <i class="fab fa-whatsapp" style="color:#25D366;font-size:22px;flex-shrink:0"></i>
-                <span id="waToastLabel" style="flex:1;color:#333;font-weight:500">
-                    Abriendo en <span id="waCountdown">${DELAY}</span>s…
-                </span>
-                <button id="waCopyClose" style="background:none;border:none;font-size:20px;color:#aaa;cursor:pointer;padding:0;line-height:1" title="Cerrar">&times;</button>
-            </div>
-            <div id="waCopyProgress"><div id="waCopyProgressBar"></div></div>
-            <div style="display:flex;gap:8px">
-                <button id="waCopyBtn" class="btn btn-sm btn-outline-secondary" style="flex:1">
-                    <i class="fas fa-copy me-1"></i>Copiar mensaje
-                </button>
-                <button id="waOpenNow" class="btn btn-sm btn-success" style="flex:1">
-                    <i class="fab fa-whatsapp me-1"></i>Abrir ya
-                </button>
-            </div>
-        `;
-        document.body.appendChild(toast);
-
-        requestAnimationFrame(() => {
-            const bar = document.getElementById('waCopyProgressBar');
-            if (bar) bar.style.width = '0%';
-        });
-
-        function openWhatsApp() {
-            if (opened) return;
-            opened = true;
-            clearInterval(countdownInterval);
-            onOpen();
-            const label = document.getElementById('waToastLabel');
-            if (label) label.innerHTML = 'WhatsApp abierto <i class="fas fa-check text-success ms-1"></i>';
-            const openBtn = document.getElementById('waOpenNow');
-            if (openBtn) openBtn.disabled = true;
-            setTimeout(() => toast.remove(), 3000);
-        }
-
-        countdownInterval = setInterval(() => {
-            secondsLeft--;
-            const el = document.getElementById('waCountdown');
-            if (el) el.textContent = secondsLeft;
-            if (secondsLeft <= 0) { clearInterval(countdownInterval); openWhatsApp(); }
-        }, 1000);
-
-        toast.querySelector('#waCopyBtn').addEventListener('click', () =>
-            copyToClipboard(message, toast.querySelector('#waCopyBtn')));
-        toast.querySelector('#waOpenNow').addEventListener('click', openWhatsApp);
-        toast.querySelector('#waCopyClose').addEventListener('click', () => {
-            clearInterval(countdownInterval);
-            toast.remove();
+        }).catch(() => {
+            // Fallback para navegadores sin API clipboard
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            const original = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check me-1"></i>¡Copiado!';
+            btn.classList.replace('btn-outline-secondary', 'btn-success');
+            setTimeout(() => {
+                btn.innerHTML = original;
+                btn.classList.replace('btn-success', 'btn-outline-secondary');
+            }, 2000);
         });
     }
 
     function initialize() {
         setupEventListeners();
         checkBirthdays('proximos');
+        checkVencidas();
     }
 
     function setupEventListeners() {
         document.getElementById('waBirthdayProximos')?.addEventListener('click', () => checkBirthdays('proximos'));
         document.getElementById('waBirthdayMes')?.addEventListener('click',      () => checkBirthdays('mes'));
         document.getElementById('waBirthdayMensajeGrupal')?.addEventListener('click', enviarMensajeCumpleanerosMes);
+        document.getElementById('waVencidasRefresh')?.addEventListener('click', checkVencidas);
         document.getElementById('enviarNuevoIngresoBtn')?.addEventListener('click', enviarNuevoIngreso);
 
         // Preview en tiempo real
@@ -142,16 +69,63 @@ const WhatsApp = (() => {
         const clean = (phone || '').replace(/\D/g, '');
         // encodeURIComponent codifica todo incluyendo emojis correctamente como UTF-8
         // WhatsApp requiere que los espacios sean %20 (no +)
-        const encoded = encodeURIComponent(message);
-        return `https://wa.me/57${clean}?text=${encoded}`;
+        const base = `https://wa.me/57${clean}`;
+        if (!message) return base; // chat en blanco, sin texto precargado
+        return `${base}?text=${encodeURIComponent(message)}`;
     }
 
     function openWA(phone, message) {
         if (isDesktop()) {
-            showCopyToast(message, () => window.open(buildUrl(phone, message), '_blank'));
+            showCopyToast(message, phone);
         } else {
             window.open(buildUrl(phone, message), '_blank');
         }
+    }
+
+    // Copia el mensaje automáticamente y abre el chat en blanco para pegar (solo PC)
+    function showCopyToast(message, phone, opts = {}) {
+        document.getElementById('waCopyToast')?.remove();
+
+        // Copiar al portapapeles de inmediato
+        navigator.clipboard.writeText(message).catch(() => {
+            const ta = document.createElement('textarea');
+            ta.value = message;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+        });
+
+        // Abrir el chat en blanco (sin texto precargado, se pega con Ctrl+V)
+        const target = opts.url || (phone ? buildUrl(phone, null) : null);
+        if (target) window.open(target, '_blank');
+
+        const toast = document.createElement('div');
+        toast.id = 'waCopyToast';
+        toast.style.cssText = `
+            position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+            background: #fff; border: 1px solid #dee2e6; border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.18); padding: 14px 18px;
+            display: flex; align-items: center; gap: 10px;
+            font-size: 14px; width: 320px; animation: slideInRight .25s ease;
+        `;
+        toast.innerHTML = `
+            <style>
+                @keyframes slideInRight {
+                    from { transform: translateX(120%); opacity: 0; }
+                    to   { transform: translateX(0);    opacity: 1; }
+                }
+            </style>
+            <i class="fas fa-check-circle" style="color:#25D366;font-size:22px;flex-shrink:0"></i>
+            <span style="flex:1;color:#333;font-weight:500">${opts.text || 'Mensaje copiado. Pega con Ctrl+V en el chat'}</span>
+            <button id="waCopyClose" style="background:none;border:none;font-size:20px;color:#aaa;cursor:pointer;padding:0;line-height:1" title="Cerrar">&times;</button>
+        `;
+        document.body.appendChild(toast);
+
+        toast.querySelector('#waCopyClose').addEventListener('click', () => toast.remove());
+        setTimeout(() => toast.remove(), 4000);
     }
 
     function sendBirthday(userId) {
@@ -196,20 +170,22 @@ ${FORM_LINK}`;
     }
 
     function actualizarPreview() {
-        const nombre       = document.getElementById('nuevoIngresoNombre')?.value || '';
+        const nombre      = document.getElementById('nuevoIngresoNombre')?.value || '';
         const incluirGrupo = document.getElementById('incluirGrupo')?.checked ?? true;
-        const preview      = document.getElementById('previewMensaje');
+        const preview     = document.getElementById('previewMensaje');
         if (preview) preview.textContent = buildMensajeIngreso(nombre, incluirGrupo);
 
-        // Botón copiar bajo el preview — solo en PC
+        // Botón copiar en el preview (solo PC)
         const existingBtn = document.getElementById('previewCopyBtn');
         if (isDesktop()) {
             if (!existingBtn && preview) {
                 const btn = document.createElement('button');
-                btn.id        = 'previewCopyBtn';
+                btn.id = 'previewCopyBtn';
                 btn.className = 'btn btn-sm btn-outline-secondary mt-2';
                 btn.innerHTML = '<i class="fas fa-copy me-1"></i>Copiar mensaje';
-                btn.addEventListener('click', () => copyToClipboard(preview.textContent, btn));
+                btn.addEventListener('click', () => {
+                    copyToClipboard(preview.textContent, btn);
+                });
                 preview.parentNode?.insertBefore(btn, preview.nextSibling);
             }
         } else {
@@ -246,13 +222,16 @@ ${FORM_LINK}`;
             ? `\n\uD83D\uDCC5 Vigencia: ${Utils.formatDate(payment.startDate)} al ${Utils.formatDate(payment.endDate)}`
             : '';
         // Paquetes de clases: incluir número de clases en el mensaje
-        const CLASS_PACK_TYPES_WA = ['Paquete clases', 'Semipersonalizado Diana'];
-        const clasesInfo = CLASS_PACK_TYPES_WA.includes(payment.paymentType) && payment.classCount
+        const CLASS_PACK_TYPES_WA = ['Paquete clases', 'Semipersonalizado'];
+        const isSemi26 = payment.paymentType === 'Semipersonalizado' && Number(payment.classCount) === 26;
+        const clasesInfo = CLASS_PACK_TYPES_WA.includes(payment.paymentType) && payment.classCount && !isSemi26
             ? `\n\uD83C\uDFAF Clases incluidas: *${payment.classCount} clases*`
             : '';
-        const tipoLabel = CLASS_PACK_TYPES_WA.includes(payment.paymentType) && payment.classCount
-            ? `${payment.paymentType} \u00B7 ${payment.classCount} clases`
-            : payment.paymentType;
+        const tipoLabel = isSemi26
+            ? 'Semipersonalizado'
+            : (CLASS_PACK_TYPES_WA.includes(payment.paymentType) && payment.classCount
+                ? `${payment.paymentType} \u00B7 ${payment.classCount} clases`
+                : payment.paymentType);
         const msg = `\u00A1Hola ${nombre}! \uD83D\uDC4B\nHemos recibido tu pago correctamente. \u2705\n\n\uD83D\uDCB0 Monto: *${Utils.formatCurrency(payment.amount)}*\n\uD83D\uDCCC Tipo: *${tipoLabel}*\n\uD83D\uDCB3 M\u00E9todo: *${payment.paymentMethod}*${vigencia}${clasesInfo}\n\n\u00A1Gracias por confiar en *${GYM_NAME}*! \uD83C\uDFCB\uFE0F`;
         openWA(user.phone, msg);
     }
@@ -285,12 +264,97 @@ ${FORM_LINK}`;
         openWA(user.phone, msg);
     }
 
+    // \u2500\u2500 4b. Membres\u00EDas vencidas \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+
+    function sendVencida(userId) {
+        const user = Storage.getUserById(userId);
+        if (!user) return;
+        const nombre  = user.name.split(' ')[0];
+        const payment = Storage.getIncome()
+            .filter(p => p.userId === userId && p.endDate)
+            .sort((a, b) => b.endDate.localeCompare(a.endDate))[0];
+
+        const today = Utils.getCurrentDate();
+        const dias  = payment
+            ? Math.round((new Date(today + 'T00:00:00') - new Date(payment.endDate + 'T00:00:00')) / 86400000)
+            : null;
+
+        let cuerpo;
+        if (dias === null) {
+            cuerpo = `Notamos que tu membres\u00EDa en *${GYM_NAME}* no est\u00E1 vigente actualmente.`;
+        } else if (dias <= 3) {
+            cuerpo = `Tu membres\u00EDa venci\u00F3 hace ${dias} d\u00EDa${dias === 1 ? '' : 's'} (el *${Utils.formatDate(payment.endDate)}*). \u00A1Es un buen momento para renovar y no perder el ritmo! \uD83D\uDCAA`;
+        } else if (dias <= 10) {
+            cuerpo = `Tu membres\u00EDa venci\u00F3 el *${Utils.formatDate(payment.endDate)}* (hace ${dias} d\u00EDas). Te extra\u00F1amos en el box, \u00A1renueva cuando puedas para volver a tus clases! \uD83C\uDFCB\uFE0F`;
+        } else {
+            cuerpo = `Hemos notado que tu membres\u00EDa est\u00E1 vencida desde el *${Utils.formatDate(payment.endDate)}*. Si deseas continuar con nosotros, cu\u00E9ntanos y con gusto te ayudamos a renovarla. \u00A1Nos encantar\u00EDa verte de nuevo! \u2764\uFE0F`;
+        }
+
+        const msg = `\u00A1Hola ${nombre}! \uD83D\uDC4B\n${cuerpo}\n\nCualquier duda, escr\u00EDbenos por aqu\u00ED mismo.\n\uD83D\uDCAA Equipo de ${GYM_NAME}`;
+        openWA(user.phone, msg);
+    }
+
+    function checkVencidas() {
+        const today     = Utils.getCurrentDate();
+        const todayDate = new Date(today + 'T00:00:00');
+        const users     = Users.getActiveUsers().filter(u => u.affiliationType !== 'Entrenador(a)');
+
+        const vencidas = users
+            .map(u => {
+                const payment = Storage.getIncome()
+                    .filter(p => p.userId === u.id && p.endDate)
+                    .sort((a, b) => b.endDate.localeCompare(a.endDate))[0];
+                if (!payment) return null;
+                const dias = Math.round((todayDate - new Date(payment.endDate + 'T00:00:00')) / 86400000);
+                if (dias <= 0) return null;
+                const postClases = Storage.getAttendanceByUser(u.id)
+                    .filter(a => a.status === 'presente' && a.date > payment.endDate).length;
+                return { user: u, endDate: payment.endDate, dias, postClases };
+            })
+            .filter(Boolean)
+            .sort((a, b) => b.dias - a.dias);
+
+        const container = document.getElementById('vencidasList');
+        if (!container) return;
+
+        if (vencidas.length === 0) {
+            container.innerHTML = `<p class="text-muted text-center py-3"><i class="fas fa-check-circle me-2"></i>Sin membres\u00EDas vencidas</p>`;
+            const badge = document.getElementById('vencidasBadge');
+            if (badge) badge.style.display = 'none';
+            return;
+        }
+
+        container.innerHTML = vencidas.map(item => {
+            const u = item.user;
+            let tag;
+            if (item.dias <= 3)       tag = `<span class="badge bg-warning text-dark ms-2">Hace ${item.dias} d\u00EDa${item.dias === 1 ? '' : 's'}</span>`;
+            else if (item.dias <= 10) tag = `<span class="badge bg-danger ms-2">Hace ${item.dias} d\u00EDas</span>`;
+            else                      tag = `<span class="badge bg-secondary ms-2">Hace ${item.dias} d\u00EDas</span>`;
+
+            return `<div class="d-flex align-items-center justify-content-between p-2 border rounded mb-2">
+                <span>
+                    <i class="fas fa-calendar-times text-danger me-2"></i>
+                    <strong>${Utils.escapeHtml(u.name)}</strong>
+                    ${tag}
+                    <small class="text-muted ms-2">venci\u00F3 ${Utils.formatDate(item.endDate)}</small>
+                    ${item.postClases > 0 ? `<span class="badge bg-info ms-2" title="Clases asistidas despu\u00E9s del vencimiento">${item.postClases} clase${item.postClases === 1 ? '' : 's'} post-vencimiento</span>` : ''}
+                </span>
+                <button class="btn btn-sm btn-success" onclick="WhatsApp.sendVencida('${u.id}')" title="Enviar aviso de vencimiento">
+                    <i class="fab fa-whatsapp me-1"></i>Avisar
+                </button>
+            </div>`;
+        }).join('');
+
+        const badge = document.getElementById('vencidasBadge');
+        if (badge) { badge.textContent = vencidas.length; badge.style.display = 'inline'; }
+    }
+
     // \u2500\u2500 5. Verificador de cumplea\u00F1os \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
     function checkBirthdays(modo = 'proximos') {
         const today     = Utils.getCurrentDate();
         const todayDate = new Date(today + 'T00:00:00');
-        const users     = Users.getActiveUsers();
+        const users     = Storage.getUsers(); // todos: incluye inactivos y entrenadores
 
         // Marcar bot\u00F3n activo
         document.getElementById('waBirthdayProximos')?.classList.toggle('active', modo === 'proximos');
@@ -466,19 +530,25 @@ ${FORM_LINK}`;
         const mensaje = `Cordial saludo atletas.\n\nEn este mes de ${nombreMes} 🙌🏼 celebramos con alegría el cumpleaños de:\n\n${listaCumpleaneros}\n\nDe parte del Equipo Antología Box 23, les felicitamos y obsequiamos una proteína preparada para que la reclames dentro del mes el día que quieras.\n\nFeliz cumpleaños, nos vemos en el box 🕯️🍰`;
         
         // Abrir WhatsApp con el mensaje pre-escrito
-        const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+        // En PC: copiar al portapapeles (conserva el diseño) y abrir WhatsApp Web para pegar en el grupo
         if (isDesktop()) {
-            showCopyToast(mensaje, () => window.open(url, '_blank'));
-        } else {
-            window.open(url, '_blank');
+            showCopyToast(mensaje, null, {
+                url: 'https://web.whatsapp.com/',
+                text: 'Mensaje copiado. Abre el grupo y pega con Ctrl+V'
+            });
+            return;
         }
 
+        const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+        window.open(url, '_blank');
+        
         UI.showSuccessToast(`Mensaje grupal preparado para ${cumpleaneros.length} cumpleañeros de ${nombreMes}`);
     }
 
     return {
         initialize, openNuevoIngreso, confirmacionPago, recordatorioPago,
-        recordatorioInasistencia, checkBirthdays, openWA, sendBirthday
+        recordatorioInasistencia, checkBirthdays, openWA, sendBirthday,
+        checkVencidas, sendVencida
     };
 })();
 window.WhatsApp = WhatsApp;
