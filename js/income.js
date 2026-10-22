@@ -147,23 +147,6 @@ const Income = (() => {
             const userId = document.getElementById('incomeUser')?.value;
             if (userId) {
                 // Re-aplicar sugerencia según el tipo elegido
-                function _autofillAmount() {
-                    if (document.getElementById('incomeId')?.value) return; // no pisar edición
-                    const tipo   = document.getElementById('incomeType')?.value;
-                    const userId = document.getElementById('incomeUser')?.value;
-                    const amtEl  = document.getElementById('incomeAmount');
-                    if (!tipo || !amtEl) return;
-                
-                    let amount = null;
-                    if (userId) {
-                        const last = Storage.getIncome()
-                            .filter(p => p.userId === userId && p.paymentType === tipo && Utils.parseAmount(p.amount) > 0)
-                            .sort((a, b) => (Utils.normalizeDate(b.paymentDate) || '').localeCompare(Utils.normalizeDate(a.paymentDate) || ''))[0];
-                        if (last) amount = Utils.parseAmount(last.amount);
-                    }
-                    if (amount === null) amount = DEFAULT_AMOUNTS[tipo] ?? null;
-                    if (amount !== null) amtEl.value = amount;
-                }
                 _applyLastPaymentHint(userId);
             } else {
                 recalcVigencia();
@@ -430,6 +413,26 @@ const Income = (() => {
         document.getElementById('incomeStartDate').value = today;
         document.getElementById('incomeEndDate').value   = '';
         document.getElementById('vigenciaInfo').style.display = 'none';
+    }
+
+    // ── Autocompletar monto según último pago del usuario ────────────────
+
+    function _autofillAmount() {
+        if (document.getElementById('incomeId')?.value) return; // no pisar edición
+        const tipo   = document.getElementById('incomeType')?.value;
+        const userId = document.getElementById('incomeUser')?.value;
+        const amtEl  = document.getElementById('incomeAmount');
+        if (!tipo || !amtEl) return;
+
+        let amount = null;
+        if (userId) {
+            const last = Storage.getIncome()
+                .filter(p => p.userId === userId && p.paymentType === tipo && Utils.parseAmount(p.amount) > 0)
+                .sort((a, b) => (Utils.normalizeDate(b.paymentDate) || '').localeCompare(Utils.normalizeDate(a.paymentDate) || ''))[0];
+            if (last) amount = Utils.parseAmount(last.amount);
+        }
+        if (amount === null) amount = DEFAULT_AMOUNTS[tipo] ?? null;
+        if (amount !== null) amtEl.value = amount;
     }
 
     // ── Sugerir fechas según el último pago del usuario ──────────────────
