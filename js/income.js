@@ -12,7 +12,13 @@ const Income = (() => {
     const CONTINUOUS_TYPES    = ['Mensualidad', 'Paquete clases', 'Semipersonalizado', 'Personalizado'];
     // Tipos que manejan número de clases definible
     const CLASS_PACK_TYPES    = ['Paquete clases', 'Semipersonalizado'];
-
+    const DEFAULT_AMOUNTS = {
+        'Semipersonalizado': 225000,
+        'Mensualidad':       125000,
+        'Paquete clases':    110000,
+        'Clase suelta':      15500
+    };
+    
     function initialize() {
         setupEventListeners();
         setupRealtimeValidation();
@@ -137,9 +143,27 @@ const Income = (() => {
         // Recalcular vigencia cuando cambia el tipo de pago
         document.getElementById('incomeType')?.addEventListener('change', () => {
             _toggleClassCountField();
+            _autofillAmount();
             const userId = document.getElementById('incomeUser')?.value;
             if (userId) {
                 // Re-aplicar sugerencia según el tipo elegido
+                function _autofillAmount() {
+                    if (document.getElementById('incomeId')?.value) return; // no pisar edición
+                    const tipo   = document.getElementById('incomeType')?.value;
+                    const userId = document.getElementById('incomeUser')?.value;
+                    const amtEl  = document.getElementById('incomeAmount');
+                    if (!tipo || !amtEl) return;
+                
+                    let amount = null;
+                    if (userId) {
+                        const last = Storage.getIncome()
+                            .filter(p => p.userId === userId && p.paymentType === tipo && Utils.parseAmount(p.amount) > 0)
+                            .sort((a, b) => (Utils.normalizeDate(b.paymentDate) || '').localeCompare(Utils.normalizeDate(a.paymentDate) || ''))[0];
+                        if (last) amount = Utils.parseAmount(last.amount);
+                    }
+                    if (amount === null) amount = DEFAULT_AMOUNTS[tipo] ?? null;
+                    if (amount !== null) amtEl.value = amount;
+                }
                 _applyLastPaymentHint(userId);
             } else {
                 recalcVigencia();
@@ -389,6 +413,7 @@ const Income = (() => {
         if (selBox && selName) { selBox.style.display = 'block'; selName.textContent = name; }
         // Mostrar último pago y sugerir fechas si aplica
         _applyLastPaymentHint(id);
+        _autofillAmount();
     }
 
     function clearUserSearch() {
