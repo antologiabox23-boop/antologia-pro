@@ -10,6 +10,10 @@ const Reports = (() => {
         const art = document.getElementById('accountReportTo');    if (art) art.value = end;
         const crf = document.getElementById('combinedReportFrom'); if (crf) crf.value = start;
         const crt = document.getElementById('combinedReportTo');   if (crt) crt.value = end;
+         // Reporte ranking de asistencias
+        const rm = Utils.getMonthRange(Utils.getCurrentMonth());
+        const rf = document.getElementById('rankFrom'); if (rf) rf.value = rm.start;
+        const rt = document.getElementById('rankTo');   if (rt) rt.value = rm.end;
     }
 
     function setupEventListeners() {
@@ -30,7 +34,9 @@ const Reports = (() => {
         // Movimientos por cuenta
         document.getElementById('generateAccountReport')?.addEventListener('click', () => generateAccountReport());
         document.getElementById('exportAccountReportExcel')?.addEventListener('click', exportAccountReportExcel);
-
+        // Ranking asistencias
+        document.getElementById('generateRankingReport')?.addEventListener('click', generateRankingReport);
+        document.getElementById('exportRankingReport')?.addEventListener('click', exportRankingCSV);
         // Refrescar el extracto al cerrar los modales de edición
         ['incomeModal', 'editExpenseModal'].forEach(id => {
             document.getElementById(id)?.addEventListener('hidden.bs.modal', () => {
@@ -816,7 +822,57 @@ ${table.outerHTML}
             UI.showErrorToast('Error al generar archivo Excel');
         }
     }
+     function getRankingData() {
+    const from   = document.getElementById('rankFrom')?.value;
+    const to     = document.getElementById('rankTo')?.value;
+    const top    = parseInt(document.getElementById('rankTop')?.value || '10', 10);
+    const status = document.getElementById('rankStatus')?.value || 'active';
+    if (!from || !to) { UI.showWarningToast('Selecciona el rango de fechas'); return null; }
+    if (from > to)    { UI.showErrorToast('La fecha inicial debe ser menor a la final'); return null; }
 
+    const counts = {}, last = {};
+    Storage.getAttendance().forEach(a => {
+        if (a.status !== 'presente' || a.date < from || a.date > to) return;
+        counts[a.userId] = (counts[a.userId] || 0) + 1;
+        if (!last[a.userId] || a.date > last[a.userId]) last[a.userId] = a.date;
+    });
+
+    let rows = Storage.getUsers()
+        .filter(u => u.affiliationType !== 'Entrenador(a)' && !u.name.toLowerCase().includes('clase'))
+        .filter(u => status === 'all' || u.status === 'active')
+        .map(u => ({ user: u, count: counts[u.id] || 0, last: last[u.id] || null }))
+        .filter(r => r.count > 0)
+        .sort((a, b) => b.count - a.count || a.user.name.localeCompare(b.user.name));
+
+    const total = rows.length;
+    if (top > 0) rows = rows.slice(0, top);
+    return { rows, from, to, total };
+}
+
+function generateRankingReport() {
+    const d = getRankingData();
+    if (!d) return;
+    window._rankingData = d;
+    const medals = ['🥇', '🥈', '🥉'];
+    document.getElementById('rankingList').innerHTML = d.rows.length
+        ? d.rows.map((r, i) => `<tr>
+            <td>${medals[i] || i + 1}</td>
+            <td><strong>${Utils.escapeHtml(r.user.name)}</strong></td>
+            <td class="text-center"><span class="badge bg-primary">${r.count}</span></td>
+            <td>${Utils.formatDate(r.last)}</td></tr>`).join('')
+        : '<tr><td colspan="4" class="text-center text-muted">Sin asistencias en el período</td></tr>';
+    UI.showSuccessToast(`Ranking generado (${d.rows.length} de ${d.total})`);
+}
+
+function exportRankingCSV() {
+    const d = window._rankingData;
+    if (!d) return UI.showWarningToast('Primero genera el informe');
+    let csv = 'Posición,Usuario,Documento,Clases,Última asistencia\n';
+    d.rows.forEach((r, i) => {
+        csv += `${i + 1},"${r.user.name}","${r.user.document || ''}",${r.count},${r.last || ''}\n`;
+    });
+    Utils.downloadFile('\uFEFF' + csv, `ranking_asistencias_${d.from}_${d.to}.csv`, 'text/csv;charset=utf-8');
+}
     return { initialize, editMovement };
 })();
 window.Reports = Reports;
