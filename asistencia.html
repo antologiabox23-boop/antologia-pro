@@ -685,14 +685,34 @@ function updateCounters() {
     document.getElementById('cntPresent').textContent = present;
 }
 
+/* Orden según el último día anterior con asistencia registrada */
+function getOrderedUsers() {
+    const all  = Storage.getAttendance().filter(a => a.status === 'presente');
+    const prev = [...new Set(all.filter(a => a.date < selectedDate).map(a => a.date))].sort().pop();
+    if (!prev) return usersCache;
+
+    const order = {};
+    all.filter(a => a.date === prev)
+       .sort((a, b) => String(a.time || '').padStart(5, '0').localeCompare(String(b.time || '').padStart(5, '0'))
+                    || String(a.createdAt || '').localeCompare(String(b.createdAt || '')))
+       .forEach((a, i) => { if (!(a.userId in order)) order[a.userId] = i; });
+
+    return [...usersCache].sort((a, b) => {
+        const ia = a.id in order ? order[a.id] : Infinity;
+        const ib = b.id in order ? order[b.id] : Infinity;
+        return ia === ib ? a.name.localeCompare(b.name) : ia - ib;
+    });
+}
+    
 /* ── Render lista ─────────────────────────────────────────── */
 function renderList() {
     const list = document.getElementById('userList');
     const term = searchTerm.toLowerCase();
 
+    const ordered  = getOrderedUsers();
     const filtered = term
-        ? usersCache.filter(u => u.name.toLowerCase().includes(term))
-        : usersCache;
+        ? ordered.filter(u => u.name.toLowerCase().includes(term))
+        : ordered;
 
     if (filtered.length === 0) {
         list.innerHTML = `<div class="empty-state">
