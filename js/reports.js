@@ -720,17 +720,10 @@ ${table.outerHTML}
             }
 
             // Botón WhatsApp recordatorio membresía
+            // (usa WhatsApp.openWA: en PC copia al portapapeles y abre el chat en blanco; en móvil abre wa.me con el texto)
             let waBtn = '';
             if (d.user.phone && d.membershipEnd) {
-                const clean = d.user.phone.replace(/\D/g, '');
-                const msgWA = encodeURIComponent(
-                    `Hola, *${d.user.name.split(' ')[0]}* 😊\n\n` +
-                    `Estamos realizando el cierre del mes y al revisar nuestro sistema notamos que tu membresía venció el *${Utils.formatDate(d.membershipEnd)}* y no hemos registrado tu pago.\n\n` +
-                    `Si ya cancelaste, alleganos tu comprobante para actualizar tu estado en el sistema.\n\n` +
-                    `Cualquier inquietud, con mucho gusto te atendemos. ¡Gracias por confiar en *Antología Box23* 🌟!`
-                );
-                const waUrl = `https://wa.me/57${clean}?text=${msgWA}`;
-                waBtn = `<a href="${waUrl}" target="_blank" class="btn btn-success btn-sm py-0 px-1 ms-1" title="Enviar recordatorio WhatsApp" style="font-size:11px"><i class="fab fa-whatsapp"></i></a>`;
+                waBtn = `<button type="button" class="btn btn-success btn-sm py-0 px-1 ms-1" title="Enviar recordatorio WhatsApp" style="font-size:11px" onclick="Reports.sendCombinedWA('${d.user.id}')"><i class="fab fa-whatsapp"></i></button>`;
             }
 
             return `
@@ -753,6 +746,19 @@ ${table.outerHTML}
         // Guardar datos para exportación
         window._combinedReportData = { reportData, dateFrom, dateTo };
         UI.showSuccessToast('Informe generado');
+    }
+
+    function buildCombinedWAMessage(d) {
+        return `Hola, *${d.user.name.split(' ')[0]}* 😊\n\n` +
+            `Estamos realizando el cierre del mes y al revisar nuestro sistema notamos que tu membresía venció el *${Utils.formatDate(d.membershipEnd)}* y no hemos registrado tu pago.\n\n` +
+            `Si ya cancelaste, alleganos tu comprobante para actualizar tu estado en el sistema.\n\n` +
+            `Cualquier inquietud, con mucho gusto te atendemos. ¡Gracias por confiar en *Antología Box23* 🌟!`;
+    }
+
+    function sendCombinedWA(userId) {
+        const item = window._combinedReportData?.reportData?.find(d => String(d.user.id) === String(userId));
+        if (!item || !item.user.phone || !item.membershipEnd) return;
+        WhatsApp.openWA(item.user.phone, buildCombinedWAMessage(item));
     }
 
     async function exportCombinedReport() {
@@ -873,6 +879,6 @@ function exportRankingCSV() {
     });
     Utils.downloadFile('\uFEFF' + csv, `ranking_asistencias_${d.from}_${d.to}.csv`, 'text/csv;charset=utf-8');
 }
-    return { initialize, editMovement };
+    return { initialize, editMovement, sendCombinedWA };
 })();
 window.Reports = Reports;
