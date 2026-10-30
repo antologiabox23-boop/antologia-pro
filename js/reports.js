@@ -721,18 +721,10 @@ ${table.outerHTML}
 
             // Botón WhatsApp recordatorio membresía
             let waBtn = '';
-            if (d.user.phone && d.membershipEnd) {
-                const clean = d.user.phone.replace(/\D/g, '');
-                const msgWA = encodeURIComponent(
-                    `Hola, *${d.user.name.split(' ')[0]}* 😊\n\n` +
-                    `Estamos realizando el cierre del mes y al revisar nuestro sistema notamos que tu membresía venció el *${Utils.formatDate(d.membershipEnd)}* y no hemos registrado tu pago.\n\n` +
-                    `Si ya cancelaste, alleganos tu comprobante para actualizar tu estado en el sistema.\n\n` +
-                    `Cualquier inquietud, con mucho gusto te atendemos. ¡Gracias por confiar en *Antología Box23* 🌟!`
-                );
-                const waUrl = `https://wa.me/57${clean}?text=${msgWA}`;
-                waBtn = `<a href="${waUrl}" target="_blank" class="btn btn-success btn-sm py-0 px-1 ms-1" title="Enviar recordatorio WhatsApp" style="font-size:11px"><i class="fab fa-whatsapp"></i></a>`;
+                if (d.user.phone && d.membershipEnd) {
+                    waBtn = `<button class="btn btn-success btn-sm py-0 px-1 ms-1" title="Enviar recordatorio WhatsApp" style="font-size:11px" onclick="Reports.sendCombinedWA('${d.user.id}','${d.membershipEnd}')"><i class="fab fa-whatsapp"></i></button>`;
             }
-
+            
             return `
             <tr class="${d.expiredInPeriod && d.postExpiryAttendance > 0 ? 'table-warning' : ''}">
                 <td>${i + 1}</td>
@@ -873,6 +865,18 @@ function exportRankingCSV() {
     });
     Utils.downloadFile('\uFEFF' + csv, `ranking_asistencias_${d.from}_${d.to}.csv`, 'text/csv;charset=utf-8');
 }
+
+    function sendCombinedWA(userId, membershipEnd) {
+        const user = Storage.getUserById(userId);
+        if (!user || !user.phone) return;
+        const msg =
+            `Hola, *${user.name.split(' ')[0]}* 😊\n\n` +
+            `Estamos realizando el cierre del mes y al revisar nuestro sistema notamos que tu membresía venció el *${Utils.formatDate(membershipEnd)}* y no hemos registrado tu pago.\n\n` +
+            `Si ya cancelaste, alleganos tu comprobante para actualizar tu estado en el sistema.\n\n` +
+            `Cualquier inquietud, con mucho gusto te atendemos. ¡Gracias por confiar en *Antología Box23* 🌟!`;
+        WhatsApp.openWA(user.phone, msg);
+    }
+    
     return { initialize, editMovement };
 })();
 window.Reports = Reports;
